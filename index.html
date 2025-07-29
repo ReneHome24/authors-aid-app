@@ -275,12 +275,12 @@
 
         // --- firestore.js content ---
         let dbInstance;
-        let storageInstance; // Declare storage instance globally for access
+        let storageInstanceGlobal; // Renamed to avoid redeclaration within initializeDb
         function initializeDb(config) {
             if (!dbInstance) {
                 const app = initializeApp(config);
                 dbInstance = getFirestore(app);
-                storageInstance = getStorage(app); // Initialize Storage
+                storageInstanceGlobal = getStorage(app); // Initialize Storage
             }
             return dbInstance;
         }
@@ -543,7 +543,6 @@
                         <li><strong>Suggest POV & Voice (Brainstorming):</strong> Based on your synopsis, the AI can suggest different points of view and narrative voices.</li>
                         <li><strong>Suggest Structural Template (Brainstorming):</strong> Get AI-generated structural ideas (e.g., Three-Act Structure) for your story.</li>
                         <li><strong>Generate Character Profiles (Character Development):</strong> The AI helps you create detailed character ideas based on your story's concept.</li>
-                        <li><strong>Generate World Prompts (World-building):</strong> Brainstorm elements for your story's universe with AI assistance.</li>
                         <li><strong>Generate Chapter Beats (Outline):</strong> Get a detailed chapter-by-chapter outline based on your project's synopsis, characters, and world-building.</li>
                         <li><strong>Generate Next (Chapters):</strong> Overcome writer's block! Click this button in any chapter to have the AI generate the next section of text, using your existing content and project context.</li>
                         <li><strong>Analyze Chapter (Chapters):</strong> Get high-level feedback on pacing, plot progression, and character consistency for your chapter.</li>
@@ -1337,7 +1336,7 @@
                     generateNextBtn.addEventListener('click', async () => {
                         const currentText = editor.getText();
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const outlineDoc = await getSection(userId, projectId, 'outline');
+                        const outlineDoc = await await getSection(userId, projectId, 'outline');
                         const context = `Overall Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\nOutline: ${outlineDoc ? outlineDoc.content : ''}\n\n`;
 
                         const suggestion = await generateNext(currentText, context);
