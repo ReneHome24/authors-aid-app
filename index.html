@@ -192,6 +192,8 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInAnonymously, signOut as firebaseSignOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, linkWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, addDoc, getDoc, getDocs, updateDoc, deleteDoc, serverTimestamp, query, onSnapshot, setDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -362,7 +364,7 @@
         // --- aiService.js content ---
         const API_KEY = "AIzaSyCVsziM6I1QEU22YNPGTwLvN0EuW4k2SiY";
         const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`; // Changed to gemini-2.5-flash
-        const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`; // Changed to imagen-2.5-generate-002
+        const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-2.5-generate-002:predict?key=${API_KEY}`; // Changed to imagen-2.5-generate-002
 
         // Global variable to store AI style preference
         let aiStylePreference = "";
@@ -1155,11 +1157,12 @@
                         const context = `Synopsis: ${synopsisDoc.content}\n\nCharacter Development: ${charDevDoc.content}\n\nWorld-building: ${worldDoc.content}`;
                         const outline = await generateOutlineBeats(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${outline}</div><button id="accept-outline-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
-                        // IMPORTANT: Attach the click listener to the newly created button
-                        document.getElementById('accept-outline-btn').addEventListener('click', () => {
+                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${outline}</div><button data-content="${escapeHtml(outline)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                        // Corrected: Attach the click listener to the newly created button
+                        document.getElementById('accept-outline-btn').addEventListener('click', (e) => {
+                            const outlineContent = e.target.dataset.content;
                             const currentContent = editor.getContents();
-                            const outlineDelta = new Quill.import('delta')().insert('\n' + outline);
+                            const outlineDelta = new Quill.import('delta')().insert('\n\n' + outlineContent); // Add newlines for separation
                             editor.updateContents(currentContent.concat(outlineDelta));
                             showNotification("Outline added to editor!", "success");
                             outputDiv.innerHTML = ''; // Clear suggestions after applying
@@ -1179,7 +1182,7 @@
 
                         const suggestion = await generateNext(currentText, context); // Pass context to generateNext
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${suggestion}</div><button id="accept-next-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Chapter</button>`;
+                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${suggestion}</div><button id="accept-next-btn" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Chapter</button>`;
                         document.getElementById('accept-next-btn').addEventListener('click', () => {
                             editor.insertText(editor.getLength(), ' ' + suggestion);
                             showNotification("Text added!", "success");
@@ -1277,7 +1280,13 @@
                         outputDiv.querySelectorAll('.ai-suggestion-btn').forEach(btn => {
                             btn.addEventListener('click', async () => {
                                 const promptForImage = btn.dataset.content;
-                                // Loading spinner is now handled directly in generateImage function
+                                // Show loading spinner for Imagen calls in coverDisplayContainer
+                                coverDisplayContainer.innerHTML = `
+                                    <div class="flex flex-col items-center justify-center h-full">
+                                        <p class="text-white mb-4">Generating cover for: "${promptForImage.substring(0, 50)}..."</p>
+                                        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                                    </div>
+                                `;
                                 const imageUrl = await generateImage(promptForImage);
                                 if (imageUrl) {
                                     coverDisplayContainer.innerHTML = `
