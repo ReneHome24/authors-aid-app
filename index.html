@@ -1570,6 +1570,7 @@
                         const alternativesText = await suggestAlternatives(selectedText, context);
                         outputDiv.innerHTML = '';
                         const alternatives = alternativesText.split(/\d+\.\s+/).filter(a => a.trim().length > 0);
+                        // Store the original range information in the button's dataset
                         outputDiv.innerHTML = alternatives.map(alt => `<button data-original-range-index="${range.index}" data-original-range-length="${range.length}" data-content="${escapeHtml(alt.trim())}" class="ai-suggestion-btn ai-alternative-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(alt.trim())}</button>`).join('');
                     });
                 }
