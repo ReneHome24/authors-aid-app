@@ -326,7 +326,7 @@
         function showModal(title, contentHtml, onConfirm, confirmText = 'Confirm', showCancel = true) {
             const modalContainer = document.getElementById('modal-container');
             if (!modalContainer) return;
-            modalContainer.innerHTML = `<div class="bg-gray-800 text-gray-200 rounded-lg shadow-2xl w-full max-w-lg p-6 border border-gray-700"><div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-lora font-bold">${title}</h2><button id="modal-close-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button></div><div id="modal-content">${contentHtml}</div><div class="mt-6 flex justify-end space-x-4">${showCancel ? '<button id="modal-cancel-btn" class="py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-500 transition-colors">Cancel</button>' : ''}<button id="modal-confirm-btn" type="button" class="py-2 px-4 rounded-lg accent-bg accent-bg-hover transition-colors font-semibold">${confirmText}</button></div></div>`;
+            modalContainer.innerHTML = `<div class="bg-gray-800 text-gray-200 rounded-lg shadow-2xl w-full max-w-lg p-6 border border-gray-700"><div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-lora font-bold">${title}</h2><button id="modal-close-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button></div><div id="modal-content">${contentHtml}</div><div class="mt-6 flex justify-end space-x-4">${showCancel ? '<button id="modal-cancel-btn" class="py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-500 transition-colors">Cancel</button>' : ''}<button id="modal-confirm-btn" type="submit" class="py-2 px-4 rounded-lg accent-bg accent-bg-hover transition-colors font-semibold">${confirmText}</button></div></div>`;
             modalContainer.classList.remove('hidden');
             modalContainer.classList.add('flex');
             const closeModal = () => { modalContainer.classList.add('hidden'); modalContainer.classList.remove('flex'); modalContainer.innerHTML = ''; };
@@ -334,8 +334,8 @@
             if (showCancel) {
                 document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
             }
-            // Reverted: Attach onConfirm directly to the button click for simplicity,
-            // as the form submit listener was causing issues.
+            // Modified: Removed the form.addEventListener('submit') logic and reverted to direct button click for onConfirm.
+            // This ensures the button click directly triggers the action, bypassing any potential form submission issues.
             document.getElementById('modal-confirm-btn').addEventListener('click', async () => {
                 const form = modalContainer.querySelector('form');
                 if (form && !form.checkValidity()) {
@@ -343,7 +343,11 @@
                     return;
                 }
                 await onConfirm();
-                closeModal();
+                // Only close modal if onConfirm was successful (or if it doesn't return false)
+                // This allows onConfirm to handle its own error messages and keep modal open if needed
+                if (!form || form.checkValidity()) { // If there's no form, or if form is valid
+                    closeModal();
+                }
             });
 
             // Add password toggle functionality after modal content is rendered
@@ -361,8 +365,8 @@
 
         // --- aiService.js content ---
         const API_KEY = "AIzaSyCVsziM6I1QEU22YNPGTwLvN0EuW4k2SiY";
-        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
-        const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-2.5-generate-002:predict?key=${API_KEY}`;
+        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`; // Changed to gemini-2.5-flash
+        const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-2.5-generate-002:predict?key=${API_KEY}`; // Changed to imagen-2.5-generate-002
 
         // Global variable to store AI style preference
         let aiStylePreference = "";
