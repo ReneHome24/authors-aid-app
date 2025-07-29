@@ -1004,25 +1004,8 @@
 
                 // Contextual guidance based on book type and section
                 let guidanceText = "";
-                if (sectionId === 'brainstorming') {
-                    guidanceText = `Use these tools to kickstart your book idea. For a ${project.bookType} book in the ${project.genre} genre, focus on generating strong core concepts.`;
-                } else if (sectionId === 'character_development') {
-                    guidanceText = `Develop compelling characters for your ${project.bookType} book. Consider how their traits align with the ${project.genre} genre.`;
-                } else if (sectionId === 'outline') {
-                    guidanceText = `Structure your ${project.bookType} book effectively. A solid outline is crucial for any ${project.genre} narrative.`;
-                } else if (sectionId.startsWith('chapter_')) {
-                    guidanceText = `Draft and refine your chapters. The AI can help continue your narrative or proofread your ${project.bookType} content.`;
-                } else if (sectionId === 'book_cover') {
-                    guidanceText = `Generate and refine your book cover. For a ${project.bookType} book, the cover should visually represent its ${project.genre} themes.`;
-                } else if (sectionId === 'front_matter') {
-                    guidanceText = `Craft the opening sections of your ${project.bookType} book. These set the tone for your ${project.genre} work.`;
-                } else if (sectionId === 'back_matter') {
-                    guidanceText = `Develop the closing elements of your ${project.bookType} book. The blurb is key for attracting readers in the ${project.genre} market.`;
-                }
-
-                if (guidanceText) {
-                    aiPanelHtml += `<p class="text-xs text-gray-400 mb-4 p-2 bg-gray-700 rounded-md">${guidanceText}</p>`;
-                }
+                // This section is being removed in this revert, but kept for context of what was there.
+                // It will be re-added and improved in a future step.
 
 
                 if (sectionId === 'brainstorming') {
@@ -1076,7 +1059,7 @@
                     aiPanelHtml += `
                         <div>
                             <p class="text-sm font-semibold mb-2">Generate Cover Concepts</p>
-                            <p class="text-xs text-gray-400 mb-2">Generate descriptive prompts for an AI image generator based on your synopsis. These are for the *visuals* only.</p>
+                            <p class="text-xs text-gray-400 mb-2">Generate descriptive prompts for an AI image generator based on your synopsis.</p>
                             <button id="generate-cover-concepts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Concepts</button>
                         </div>`;
                 } else if (sectionId === 'front_matter') {
