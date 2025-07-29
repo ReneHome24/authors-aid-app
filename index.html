@@ -285,7 +285,10 @@
                 await setDoc(doc(sectionsCollection, 'world_building'), { title: 'World-building', content: emptyContent, order: 3 });
                 await setDoc(doc(sectionsCollection, 'outline'), { title: 'Outline', content: emptyContent, order: 4 });
                 await setDoc(doc(sectionsCollection, 'book_cover'), { title: 'Book Cover', content: '', order: 5 });
-                await setDoc(doc(sectionsCollection, 'chapter_1'), { title: 'Chapter 1', content: emptyContent, order: 6 });
+                // Add new sections for Front and Back Matter
+                await setDoc(doc(sectionsCollection, 'front_matter'), { title: 'Front Matter', content: emptyContent, order: 6 });
+                await setDoc(doc(sectionsCollection, 'back_matter'), { title: 'Back Matter', content: emptyContent, order: 7 });
+                await setDoc(doc(sectionsCollection, 'chapter_1'), { title: 'Chapter 1', content: emptyContent, order: 8 }); // Adjust order for chapters
                 return projectRef.id;
             } catch (e) { console.error("Error creating project:", e); showNotification(`Error creating project: ${e.message}`, 'error'); }
         }
@@ -294,7 +297,9 @@
                 const sectionsCollection = collection(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`);
                 const newChapterId = `chapter_${chapterNumber}`;
                 const emptyContent = JSON.stringify({ ops: [{ insert: '\n' }] });
-                await setDoc(doc(sectionsCollection, newChapterId), { title: `Chapter ${chapterNumber}`, content: emptyContent, order: 5 + chapterNumber });
+                // Adjust order to be after existing fixed sections (brainstorming, char_dev, world_building, outline, book_cover, front_matter, back_matter)
+                // The order for chapter_1 is 8, so subsequent chapters should follow that.
+                await setDoc(doc(sectionsCollection, newChapterId), { title: `Chapter ${chapterNumber}`, content: emptyContent, order: 7 + chapterNumber });
                 return true;
             } catch (e) { console.error("Error adding chapter:", e); showNotification(`Error adding chapter: ${e.message}`, 'error'); return false; }
         }
@@ -329,19 +334,25 @@
             if (showCancel) {
                 document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
             }
-            document.getElementById('modal-confirm-btn').addEventListener('click', async () => {
-                const form = modalContainer.querySelector('form');
-                if (form && !form.checkValidity()) {
-                    form.reportValidity();
-                    return;
-                }
-                await onConfirm();
-                // Only close modal if onConfirm was successful (or if it doesn't return false)
-                // This allows onConfirm to handle its own error messages and keep modal open if needed
-                if (!form || form.checkValidity()) { // If there's no form, or if form is valid
+            // Modified: Use form submission instead of button click for onConfirm
+            const form = modalContainer.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault(); // Prevent default form submission
+                    if (!form.checkValidity()) {
+                        form.reportValidity();
+                        return;
+                    }
+                    await onConfirm();
+                    closeModal(); // Close modal after successful submission
+                });
+            } else { // Fallback for modals without a form, use the button directly
+                document.getElementById('modal-confirm-btn').addEventListener('click', async () => {
+                    await onConfirm();
                     closeModal();
-                }
-            });
+                });
+            }
+
             // Add password toggle functionality after modal content is rendered
             modalContainer.querySelectorAll('.password-toggle').forEach(toggle => {
                 toggle.addEventListener('click', () => {
@@ -933,6 +944,9 @@
                     for (const section of allSections) {
                         // Skip book_cover as it's not text content
                         if (section.id === 'book_cover') continue;
+                        // Skip front_matter and back_matter as they will be handled separately for export
+                        if (section.id === 'front_matter' || section.id === 'back_matter') continue;
+
 
                         // Add section title as a heading
                         fullHtmlContent += `<h2>${section.title}</h2>\n`;
@@ -1029,6 +1043,26 @@
                             <p class="text-sm font-semibold mb-2">Generate Cover Concepts</p>
                             <p class="text-xs text-gray-400 mb-2">Generate descriptive prompts for an AI image generator based on your synopsis.</p>
                             <button id="generate-cover-concepts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Concepts</button>
+                        </div>`;
+                } else if (sectionId === 'front_matter') {
+                    aiPanelHtml += `
+                        <div>
+                            <p class="text-sm font-semibold mb-2">Generate Front Matter</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button id="generate-dedication-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Dedication</button>
+                                <button id="generate-acknowledgments-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Acknowledgments</button>
+                                <button id="generate-preface-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Preface</button>
+                            </div>
+                        </div>`;
+                } else if (sectionId === 'back_matter') {
+                    aiPanelHtml += `
+                        <div>
+                            <p class="text-sm font-semibold mb-2">Generate Back Matter</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button id="generate-blurb-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Blurb</button>
+                                <button id="generate-author-bio-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Author Bio</button>
+                                <button id="generate-discussion-questions-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Discussion Questions</button>
+                            </div>
                         </div>`;
                 }
 
@@ -1334,6 +1368,64 @@
                         outputDiv.querySelectorAll('.ai-suggestion-btn').forEach(btn => btn.addEventListener('click', () => { editor.insertText(editor.getLength(), '\n\n' + btn.dataset.content); showNotification("Scripture added!", "success"); outputDiv.innerHTML = ''; })); // Appends scripture to the end
                     });
                 }
+
+                // New Front Matter and Back Matter listeners
+                document.getElementById('generate-dedication-btn').addEventListener('click', async () => {
+                    const projectData = await getProject(userId, projectId);
+                    const prompt = `Generate a dedication for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Make it heartfelt and concise.`;
+                    const dedicationText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                    outputDiv.innerHTML = '';
+                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${dedicationText}</div><button data-content="${escapeHtml(dedicationText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                    outputDiv.querySelector('.ai-suggestion-btn').addEventListener('click', (e) => { editor.insertText(editor.getLength(), '\n\n' + e.target.dataset.content); showNotification("Dedication added!", "success"); });
+                });
+
+                document.getElementById('generate-acknowledgments-btn').addEventListener('click', async () => {
+                    const projectData = await getProject(userId, projectId);
+                    const prompt = `Generate an acknowledgments section for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Include thanks to family, friends, and inspiration.`;
+                    const acknowledgmentsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                    outputDiv.innerHTML = '';
+                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${acknowledgmentsText}</div><button data-content="${escapeHtml(acknowledgmentsText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                    outputDiv.querySelector('.ai-suggestion-btn').addEventListener('click', (e) => { editor.insertText(editor.getLength(), '\n\n' + e.target.dataset.content); showNotification("Acknowledgments added!", "success"); });
+                });
+
+                document.getElementById('generate-preface-btn').addEventListener('click', async () => {
+                    const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
+                    const projectData = await getProject(userId, projectId);
+                    const prompt = `Generate a preface for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Briefly introduce the book's purpose or inspiration. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                    const prefaceText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                    outputDiv.innerHTML = '';
+                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${prefaceText}</div><button data-content="${escapeHtml(prefaceText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                    outputDiv.querySelector('.ai-suggestion-btn').addEventListener('click', (e) => { editor.insertText(editor.getLength(), '\n\n' + e.target.dataset.content); showNotification("Preface added!", "success"); });
+                });
+
+                document.getElementById('generate-blurb-btn').addEventListener('click', async () => {
+                    const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
+                    const projectData = await getProject(userId, projectId);
+                    const prompt = `Generate a compelling back cover blurb (2-3 paragraphs) for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}" targeting "${projectData.targetAudience}". Focus on hooks and intrigue. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                    const blurbText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                    outputDiv.innerHTML = '';
+                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${blurbText}</div><button data-content="${escapeHtml(blurbText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                    outputDiv.querySelector('.ai-suggestion-btn').addEventListener('click', (e) => { editor.insertText(editor.getLength(), '\n\n' + e.target.dataset.content); showNotification("Blurb added!", "success"); });
+                });
+
+                document.getElementById('generate-author-bio-btn').addEventListener('click', async () => {
+                    const projectData = await getProject(userId, projectId);
+                    const prompt = `Generate a concise (1-2 paragraph) author biography for Rene' Stanley, author of a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Highlight key experiences like being born in Washington D.C., teenage years in Maryland, finding solace in thoughts and observations, interest in older adults' wisdom, and military service in Desert Storm.`;
+                    const authorBioText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                    outputDiv.innerHTML = '';
+                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${authorBioText}</div><button data-content="${escapeHtml(authorBioText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                    outputDiv.querySelector('.ai-suggestion-btn').addEventListener('click', (e) => { editor.insertText(editor.getLength(), '\n\n' + e.target.dataset.content); showNotification("Author Bio added!", "success"); });
+                });
+
+                document.getElementById('generate-discussion-questions-btn').addEventListener('click', async () => {
+                    const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
+                    const projectData = await getProject(userId, projectId);
+                    const prompt = `Generate 5 thought-provoking discussion questions for a book club based on a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Focus on themes and characters. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                    const questionsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                    outputDiv.innerHTML = '';
+                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${questionsText}</div><button data-content="${escapeHtml(questionsText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                    outputDiv.querySelector('.ai-suggestion-btn').addEventListener('click', (e) => { editor.insertText(editor.getLength(), '\n\n' + e.target.dataset.content); showNotification("Discussion Questions added!", "success"); });
+                });
             };
 
             const loadSection = async (sectionId) => {
