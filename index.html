@@ -275,12 +275,12 @@
 
         // --- firestore.js content ---
         let dbInstance;
-        let storageInstanceGlobal; // Renamed to avoid redeclaration within initializeDb
+        let storageInstance; // Declare storage instance globally for access
         function initializeDb(config) {
             if (!dbInstance) {
                 const app = initializeApp(config);
                 dbInstance = getFirestore(app);
-                storageInstanceGlobal = getStorage(app); // Initialize Storage
+                storageInstance = getStorage(app); // Initialize Storage
             }
             return dbInstance;
         }
@@ -445,7 +445,8 @@
                     </div>
                 `;
 
-                const payload = { instances: { prompt: promptText }, parameters: { "sampleCount": 1} };
+                // CORRECTED: Set sampleCount to 3 for multiple images
+                const payload = { instances: { prompt: promptText }, parameters: { "sampleCount": 3} };
                 const response = await fetch(IMAGEN_API_URL, { // Call to the corrected Imagen API URL
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -471,10 +472,11 @@
                 }
 
                 const result = await response.json();
-                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                    return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                if (result.predictions && result.predictions.length > 0) { // Check for predictions array
+                    const imageUrls = result.predictions.map(pred => `data:image/png;base64,${pred.bytesBase64Encoded}`);
+                    return imageUrls; // Return an array of URLs
                 } else {
-                    console.error("Image API Error: Unexpected response structure:", result);
+                    console.error("Image API Error: Unexpected response structure or no predictions:", result);
                     return null;
                 }
             } catch (e) {
@@ -710,7 +712,8 @@
                             <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800"><h4 class="text-xl font-semibold mb-2 text-white">AI Co-Author & Ghostwriter</h4><p class="text-gray-400">Trained on your works, the AI learns your voice to help write, edit, and offer suggestions that sound authentically like you.</p></div>
                             <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800"><h4 class="text-xl font-semibold mb-2 text-white">Multi-Format Support</h4><p class="text-gray-400">Get a tailored roadmap for fiction, non-fiction, devotionals, or Bible studies.</p></div>
                             <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800"><h4 class="text-xl font-semibold mb-2 text-white">Faith-Based Assistance</h4><p class="text-gray-400">Get suggestions for relevant NIV Bible scriptures and theological insights.</p></div>
-                            <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800"><h4 class="text-xl font-semibold mb-2 text-white">Book Cover Generation</h4><p class="text-gray-400">Generate professional front, spine, and back covers using AI image prompts.</p></div>
+                            <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800"><h4 class="text-xl font-semibold mb-2 text-white">Book Cover Generation</h4><p class="text-gray-400">Generate professional front, spine, and back covers using AI image prompts.
+</p></div>
                         </div>
                     </section>
                     <section id="cta" class="py-20 bg-black/30">
@@ -1171,7 +1174,7 @@
                         const outline = await generateOutlineBeats(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${outline}</div><button data-content="${escapeHtml(outline)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg" id="accept-outline-btn">Accept & Add to Editor</button>`;
-                        // The event listener is now attached via delegation below, no need to re-attach here.
+                        // The event listener for this button is handled by delegation on outputDiv.
                     });
                 } else if (sectionId.startsWith('chapter_')) {
                     const generateNextBtn = document.getElementById('generate-next-btn');
@@ -1298,8 +1301,8 @@
                                 }
                             }
                         }
-                        // Book Cover selection
-                        else if (sectionId === 'book_cover') {
+                        // Book Cover selection (delegated)
+                        else if (sectionId === 'book_cover' && target.classList.contains('cover-image-wrapper')) { // Check for cover-image-wrapper class
                             const imageUrl = target.dataset.imageUrl;
                             if (imageUrl) {
                                 coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(el => el.classList.remove('selected'));
@@ -1336,7 +1339,7 @@
                     generateNextBtn.addEventListener('click', async () => {
                         const currentText = editor.getText();
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const outlineDoc = await await getSection(userId, projectId, 'outline');
+                        const outlineDoc = await getSection(userId, projectId, 'outline');
                         const context = `Overall Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\nOutline: ${outlineDoc ? outlineDoc.content : ''}\n\n`;
 
                         const suggestion = await generateNext(currentText, context);
@@ -1501,14 +1504,7 @@
                         coverDisplayContainer.innerHTML = `<div class="text-center text-gray-400">Your generated book cover will appear here.</div>`;
                     }
                     // Add click listeners for selection to existing images (if any)
-                    coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(imgWrapper => {
-                        imgWrapper.addEventListener('click', () => {
-                            coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(el => el.classList.remove('selected'));
-                            imgWrapper.classList.add('selected');
-                            updateProjectCover(userId, projectId, imgWrapper.dataset.imageUrl);
-                        });
-                    });
-
+                    // This is now handled by event delegation on coverDisplayContainer
                 } else {
                     coverDisplayContainer.classList.add('hidden');
                     editorContainer.classList.remove('hidden');
