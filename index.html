@@ -1074,22 +1074,7 @@
                         </div>`;
                 } else if (sectionId === 'book_cover') {
                     aiPanelHtml += `
-                        <div class="space-y-4">
-                            <div>
-                                <label for="cover-title-input" class="block text-sm font-medium text-gray-300 mb-1">Book Title</label>
-                                <input type="text" id="cover-title-input" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring" value="${escapeHtml(project.title || '')}">
-                            </div>
-                            <div>
-                                <label for="cover-author-input" class="block text-sm font-medium text-gray-300 mb-1">Author Name</label>
-                                <input type="text" id="cover-author-input" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring" value="Rene' Stanley">
-                            </div>
-                            <div>
-                                <label for="cover-blurb-input" class="block text-sm font-medium text-gray-300 mb-1">Back Cover Blurb</label>
-                                <textarea id="cover-blurb-input" class="w-full h-24 p-2 bg-gray-700 border border-gray-600 rounded-md text-sm" placeholder="Enter your book's back cover blurb here..."></textarea>
-                            </div>
-                            <button id="preview-cover-text-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Preview Cover with Text</button>
-                        </div>
-                        <div class="pt-4 border-t border-gray-700">
+                        <div>
                             <p class="text-sm font-semibold mb-2">Generate Cover Concepts</p>
                             <p class="text-xs text-gray-400 mb-2">Generate descriptive prompts for an AI image generator based on your synopsis. These are for the *visuals* only.</p>
                             <button id="generate-cover-concepts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Concepts</button>
@@ -1131,116 +1116,6 @@
                 rightSidebar.innerHTML = aiPanelHtml;
                 setupAiPanelListeners(sectionId);
             };
-
-            // New function to draw text on canvas
-            async function previewCoverWithText(imageUrl, title, author, blurb) {
-                if (!imageUrl) {
-                    showNotification("Please generate or select a base image first.", "error");
-                    return;
-                }
-
-                showNotification("Generating cover preview with text...", "info");
-
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const img = new Image();
-                img.crossOrigin = 'Anonymous'; // Required for loading cross-origin images to canvas
-
-                img.onload = () => {
-                    // Set canvas dimensions to match image
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-
-                    // Draw the image
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-                    // Basic text styling - adjust as needed for aesthetics
-                    ctx.fillStyle = '#FFFFFF'; // White text
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)'; // Black shadow
-                    ctx.shadowBlur = 5;
-                    ctx.shadowOffsetX = 2;
-                    ctx.shadowOffsetY = 2;
-
-                    // Title
-                    if (title) {
-                        const maxTitleWidth = canvas.width * 0.8;
-                        let fontSize = 0.1 * canvas.height; // Start with 10% of height
-                        ctx.font = `bold ${fontSize}px Lora, serif`;
-                        ctx.textAlign = 'center';
-
-                        // Adjust font size to fit
-                        while (ctx.measureText(title).width > maxTitleWidth && fontSize > 10) {
-                            fontSize -= 2;
-                            ctx.font = `bold ${fontSize}px Lora, serif`;
-                        }
-                        ctx.fillText(title, canvas.width / 2, canvas.height * 0.15); // Position at 15% from top
-                    }
-
-                    // Author Name
-                    if (author) {
-                        let fontSize = 0.04 * canvas.height; // 4% of height
-                        ctx.font = `${fontSize}px Inter, sans-serif`;
-                        ctx.textAlign = 'center';
-                        ctx.fillText(author, canvas.width / 2, canvas.height * 0.85); // Position at 85% from top
-                    }
-
-                    // Blurb (for back cover, assuming front cover is 2/3 of total width for now)
-                    // This is a simplified blurb placement for a single image preview.
-                    // A full back cover would require a more complex layout.
-                    if (blurb) {
-                        const blurbAreaWidth = canvas.width * 0.8; // 80% of image width
-                        const blurbX = canvas.width / 2;
-                        const blurbYStart = canvas.height * 0.3; // Start blurb lower down
-                        const lineHeight = 0.03 * canvas.height; // 3% of height for line spacing
-                        let blurbFontSize = 0.025 * canvas.height; // 2.5% of height
-                        ctx.font = `${blurbFontSize}px Inter, sans-serif`;
-                        ctx.textAlign = 'center';
-
-                        // Function to wrap text
-                        function wrapText(context, text, x, y, maxWidth, lineHeight) {
-                            const words = text.split(' ');
-                            let line = '';
-                            let testLine = '';
-                            let metrics;
-
-                            for (let n = 0; n < words.length; n++) {
-                                testLine = line + words[n] + ' ';
-                                metrics = context.measureText(testLine);
-                                const testWidth = metrics.width;
-                                if (testWidth > maxWidth && n > 0) {
-                                    context.fillText(line, x, y);
-                                    line = words[n] + ' ';
-                                    y += lineHeight;
-                                } else {
-                                    line = testLine;
-                                }
-                            }
-                            context.fillText(line, x, y);
-                        }
-                        // For simplicity, we'll place the blurb in the middle, assuming a general cover preview.
-                        // For a true back cover, this would need to be drawn on a specific 'back cover' section of a larger canvas.
-                        wrapText(ctx, blurb, blurbX, blurbYStart, blurbAreaWidth, lineHeight);
-                    }
-
-                    // Display the canvas image
-                    const finalImageUrl = canvas.toDataURL('image/png');
-                    coverDisplayContainer.innerHTML = `
-                        <div class="grid grid-cols-1 gap-4 p-4">
-                            <div class="cover-image-wrapper selected" data-image-url="${escapeHtml(finalImageUrl)}">
-                                <img src="${finalImageUrl}" class="w-full h-auto rounded-lg shadow-lg" alt="Preview Book Cover with Text"/>
-                                <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div>
-                            </div>
-                        </div>
-                    `;
-                    showNotification("Cover preview generated!", "success");
-                };
-                img.onerror = () => {
-                    showNotification("Failed to load selected image for text overlay.", "error");
-                    coverDisplayContainer.innerHTML = `<div class="text-center text-red-400">Failed to load image for preview.</div>`;
-                };
-                img.src = imageUrl;
-            }
-
 
             const setupAiPanelListeners = (sectionId) => {
                 const outputDiv = document.getElementById('ai-output');
@@ -1411,25 +1286,6 @@
 
                         // The event listener is now attached via delegation below, no need to re-attach here.
                     });
-
-                    // Listener for "Preview Cover with Text" button
-                    const previewCoverTextBtn = document.getElementById('preview-cover-text-btn');
-                    if (previewCoverTextBtn) {
-                        previewCoverTextBtn.addEventListener('click', () => {
-                            const selectedImageElement = coverDisplayContainer.querySelector('.cover-image-wrapper.selected img');
-                            if (!selectedImageElement) {
-                                showNotification("Please select a generated image first to preview with text.", "info");
-                                return;
-                            }
-                            const imageUrl = selectedImageElement.src;
-                            const title = document.getElementById('cover-title-input').value;
-                            const author = document.getElementById('cover-author-input').value;
-                            const blurb = document.getElementById('cover-blurb-input').value;
-
-                            previewCoverWithText(imageUrl, title, author, blurb);
-                        });
-                    }
-
                 } else if (sectionId === 'front_matter') {
                     aiPanelHtml += `
                         <div>
@@ -1485,7 +1341,7 @@
                     const projectData = await getProject(userId, projectId);
                     if (projectData && projectData.bookCoverUrl) {
                         coverDisplayContainer.innerHTML = `
-                            <div class="grid grid-cols-1 gap-4 p-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
                                 <div class="cover-image-wrapper selected" data-image-url="${escapeHtml(projectData.bookCoverUrl)}">
                                     <img src="${projectData.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/400x600/FF0000/FFFFFF?text=Image+Load+Error';" class="w-full h-auto rounded-lg shadow-lg" alt="Selected Book Cover"/>
                                     <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div>
