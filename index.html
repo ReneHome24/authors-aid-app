@@ -1272,12 +1272,28 @@
                     if (target) {
                         // Outline section's "Accept & Add to Editor" button
                         if (sectionId === 'outline' && target.hasAttribute('data-content')) { // Check for data-content attribute
+                            console.log("Outline section 'Accept & Add to Editor' button clicked.");
+                            if (!editor) {
+                                console.error("Quill editor instance is not initialized!");
+                                showNotification("Editor not ready. Please try again or refresh.", "error");
+                                return;
+                            }
                             const outlineContent = target.dataset.content;
-                            const currentContent = editor.getContents();
-                            const outlineDelta = new Quill.import('delta')().insert('\n\n' + outlineContent);
-                            editor.updateContents(currentContent.concat(outlineDelta));
-                            showNotification("Outline added to editor!", "success");
-                            outputDiv.innerHTML = ''; // Clear suggestions after applying
+                            console.log("Outline content to insert:", outlineContent);
+
+                            try {
+                                const currentContent = editor.getContents();
+                                console.log("Current editor content (Delta):", currentContent);
+                                const outlineDelta = new Quill.import('delta')().insert('\n\n' + outlineContent);
+                                console.log("Generated outline Delta:", outlineDelta);
+
+                                editor.updateContents(currentContent.concat(outlineDelta));
+                                showNotification("Outline added to editor!", "success");
+                                outputDiv.innerHTML = ''; // Clear suggestions after applying
+                            } catch (error) {
+                                console.error("Error updating editor content for outline:", error);
+                                showNotification(`Error adding outline: ${error.message}`, "error");
+                            }
                         }
                         // Chapter section's buttons (Generate Next, Proofread, Youth Phrases)
                         else if (sectionId.startsWith('chapter_')) {
