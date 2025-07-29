@@ -1001,6 +1001,29 @@
                         </div>
                 `;
 
+                // Contextual guidance based on book type and section
+                let guidanceText = "";
+                if (sectionId === 'brainstorming') {
+                    guidanceText = `Use these tools to kickstart your book idea. For a ${project.bookType} book in the ${project.genre} genre, focus on generating strong core concepts.`;
+                } else if (sectionId === 'character_development') {
+                    guidanceText = `Develop compelling characters for your ${project.bookType} book. Consider how their traits align with the ${project.genre} genre.`;
+                } else if (sectionId === 'outline') {
+                    guidanceText = `Structure your ${project.bookType} book effectively. A solid outline is crucial for any ${project.genre} narrative.`;
+                } else if (sectionId.startsWith('chapter_')) {
+                    guidanceText = `Draft and refine your chapters. The AI can help continue your narrative or proofread your ${project.bookType} content.`;
+                } else if (sectionId === 'book_cover') {
+                    guidanceText = `Generate and refine your book cover. For a ${project.bookType} book, the cover should visually represent its ${project.genre} themes.`;
+                } else if (sectionId === 'front_matter') {
+                    guidanceText = `Craft the opening sections of your ${project.bookType} book. These set the tone for your ${project.genre} work.`;
+                } else if (sectionId === 'back_matter') {
+                    guidanceText = `Develop the closing elements of your ${project.bookType} book. The blurb is key for attracting readers in the ${project.genre} market.`;
+                }
+
+                if (guidanceText) {
+                    aiPanelHtml += `<p class="text-xs text-gray-400 mb-4 p-2 bg-gray-700 rounded-md">${guidanceText}</p>`;
+                }
+
+
                 if (sectionId === 'brainstorming') {
                     aiPanelHtml += `
                         <div>
@@ -1050,9 +1073,24 @@
                         </div>`;
                 } else if (sectionId === 'book_cover') {
                     aiPanelHtml += `
-                        <div>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="cover-title-input" class="block text-sm font-medium text-gray-300 mb-1">Book Title</label>
+                                <input type="text" id="cover-title-input" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring" value="${escapeHtml(project.title || '')}">
+                            </div>
+                            <div>
+                                <label for="cover-author-input" class="block text-sm font-medium text-gray-300 mb-1">Author Name</label>
+                                <input type="text" id="cover-author-input" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring" value="Rene' Stanley">
+                            </div>
+                            <div>
+                                <label for="cover-blurb-input" class="block text-sm font-medium text-gray-300 mb-1">Back Cover Blurb</label>
+                                <textarea id="cover-blurb-input" class="w-full h-24 p-2 bg-gray-700 border border-gray-600 rounded-md text-sm" placeholder="Enter your book's back cover blurb here..."></textarea>
+                            </div>
+                            <button id="preview-cover-text-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Preview Cover with Text</button>
+                        </div>
+                        <div class="pt-4 border-t border-gray-700">
                             <p class="text-sm font-semibold mb-2">Generate Cover Concepts</p>
-                            <p class="text-xs text-gray-400 mb-2">Generate descriptive prompts for an AI image generator based on your synopsis.</p>
+                            <p class="text-xs text-gray-400 mb-2">Generate descriptive prompts for an AI image generator based on your synopsis. These are for the *visuals* only.</p>
                             <button id="generate-cover-concepts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Concepts</button>
                         </div>`;
                 } else if (sectionId === 'front_matter') {
@@ -1092,6 +1130,116 @@
                 rightSidebar.innerHTML = aiPanelHtml;
                 setupAiPanelListeners(sectionId);
             };
+
+            // New function to draw text on canvas
+            async function previewCoverWithText(imageUrl, title, author, blurb) {
+                if (!imageUrl) {
+                    showNotification("Please generate or select a base image first.", "error");
+                    return;
+                }
+
+                showNotification("Generating cover preview with text...", "info");
+
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.crossOrigin = 'Anonymous'; // Required for loading cross-origin images to canvas
+
+                img.onload = () => {
+                    // Set canvas dimensions to match image
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+
+                    // Draw the image
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    // Basic text styling - adjust as needed for aesthetics
+                    ctx.fillStyle = '#FFFFFF'; // White text
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)'; // Black shadow
+                    ctx.shadowBlur = 5;
+                    ctx.shadowOffsetX = 2;
+                    ctx.shadowOffsetY = 2;
+
+                    // Title
+                    if (title) {
+                        const maxTitleWidth = canvas.width * 0.8;
+                        let fontSize = 0.1 * canvas.height; // Start with 10% of height
+                        ctx.font = `bold ${fontSize}px Lora, serif`;
+                        ctx.textAlign = 'center';
+
+                        // Adjust font size to fit
+                        while (ctx.measureText(title).width > maxTitleWidth && fontSize > 10) {
+                            fontSize -= 2;
+                            ctx.font = `bold ${fontSize}px Lora, serif`;
+                        }
+                        ctx.fillText(title, canvas.width / 2, canvas.height * 0.15); // Position at 15% from top
+                    }
+
+                    // Author Name
+                    if (author) {
+                        let fontSize = 0.04 * canvas.height; // 4% of height
+                        ctx.font = `${fontSize}px Inter, sans-serif`;
+                        ctx.textAlign = 'center';
+                        ctx.fillText(author, canvas.width / 2, canvas.height * 0.85); // Position at 85% from top
+                    }
+
+                    // Blurb (for back cover, assuming front cover is 2/3 of total width for now)
+                    // This is a simplified blurb placement for a single image preview.
+                    // A full back cover would require a more complex layout.
+                    if (blurb) {
+                        const blurbAreaWidth = canvas.width * 0.8; // 80% of image width
+                        const blurbX = canvas.width / 2;
+                        const blurbYStart = canvas.height * 0.3; // Start blurb lower down
+                        const lineHeight = 0.03 * canvas.height; // 3% of height for line spacing
+                        let blurbFontSize = 0.025 * canvas.height; // 2.5% of height
+                        ctx.font = `${blurbFontSize}px Inter, sans-serif`;
+                        ctx.textAlign = 'center';
+
+                        // Function to wrap text
+                        function wrapText(context, text, x, y, maxWidth, lineHeight) {
+                            const words = text.split(' ');
+                            let line = '';
+                            let testLine = '';
+                            let metrics;
+
+                            for (let n = 0; n < words.length; n++) {
+                                testLine = line + words[n] + ' ';
+                                metrics = context.measureText(testLine);
+                                const testWidth = metrics.width;
+                                if (testWidth > maxWidth && n > 0) {
+                                    context.fillText(line, x, y);
+                                    line = words[n] + ' ';
+                                    y += lineHeight;
+                                } else {
+                                    line = testLine;
+                                }
+                            }
+                            context.fillText(line, x, y);
+                        }
+                        // For simplicity, we'll place the blurb in the middle, assuming a general cover preview.
+                        // For a true back cover, this would need to be drawn on a specific 'back cover' section of a larger canvas.
+                        wrapText(ctx, blurb, blurbX, blurbYStart, blurbAreaWidth, lineHeight);
+                    }
+
+                    // Display the canvas image
+                    const finalImageUrl = canvas.toDataURL('image/png');
+                    coverDisplayContainer.innerHTML = `
+                        <div class="grid grid-cols-1 gap-4 p-4">
+                            <div class="cover-image-wrapper selected" data-image-url="${escapeHtml(finalImageUrl)}">
+                                <img src="${finalImageUrl}" class="w-full h-auto rounded-lg shadow-lg" alt="Preview Book Cover with Text"/>
+                                <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div>
+                            </div>
+                        </div>
+                    `;
+                    showNotification("Cover preview generated!", "success");
+                };
+                img.onerror = () => {
+                    showNotification("Failed to load selected image for text overlay.", "error");
+                    coverDisplayContainer.innerHTML = `<div class="text-center text-red-400">Failed to load image for preview.</div>`;
+                };
+                img.src = imageUrl;
+            }
+
 
             const setupAiPanelListeners = (sectionId) => {
                 const outputDiv = document.getElementById('ai-output');
@@ -1262,250 +1410,61 @@
 
                         // The event listener is now attached via delegation below, no need to re-attach here.
                     });
-                }
 
-                // IMPORTANT: Event Delegation for all dynamically created AI suggestion buttons
-                // This single listener handles clicks on all buttons with class 'ai-suggestion-btn'
-                // that are children of outputDiv, even if they are added to the DOM later.
-                outputDiv.addEventListener('click', async (e) => {
-                    const target = e.target.closest('.ai-suggestion-btn');
-                    if (target) {
-                        // Outline section's "Accept & Add to Editor" button
-                        if (sectionId === 'outline' && target.hasAttribute('data-content')) { // Check for data-content attribute
-                            console.log("Outline section 'Accept & Add to Editor' button clicked.");
-                            if (!editor) {
-                                console.error("Quill editor instance is not initialized!");
-                                showNotification("Editor not ready. Please try again or refresh.", "error");
+                    // Listener for "Preview Cover with Text" button
+                    const previewCoverTextBtn = document.getElementById('preview-cover-text-btn');
+                    if (previewCoverTextBtn) {
+                        previewCoverTextBtn.addEventListener('click', () => {
+                            const selectedImageElement = coverDisplayContainer.querySelector('.cover-image-wrapper.selected img');
+                            if (!selectedImageElement) {
+                                showNotification("Please select a generated image first to preview with text.", "info");
                                 return;
                             }
-                            const outlineContent = target.dataset.content;
-                            console.log("Outline content to insert:", outlineContent);
+                            const imageUrl = selectedImageElement.src;
+                            const title = document.getElementById('cover-title-input').value;
+                            const author = document.getElementById('cover-author-input').value;
+                            const blurb = document.getElementById('cover-blurb-input').value;
 
-                            try {
-                                // Corrected: Use Quill.import('delta') to get the Delta constructor
-                                const Delta = Quill.import('delta');
-                                const currentContent = editor.getContents();
-                                console.log("Current editor content (Delta):", currentContent);
-                                const outlineDelta = new Delta().insert('\n\n' + outlineContent);
-                                console.log("Generated outline Delta:", outlineDelta);
-
-                                editor.updateContents(currentContent.concat(outlineDelta));
-                                showNotification("Outline added to editor!", "success");
-                                outputDiv.innerHTML = ''; // Clear suggestions after applying
-                            } catch (error) {
-                                console.error("Error updating editor content for outline:", error);
-                                showNotification(`Error adding outline: ${error.message}`, "error");
-                            }
-                        }
-                        // Chapter section's buttons (Generate Next, Proofread, Youth Phrases)
-                        else if (sectionId.startsWith('chapter_')) {
-                            if (target.hasAttribute('data-content')) { // For generateNext and youth phrases
-                                editor.insertText(editor.getLength(), ' ' + target.dataset.content);
-                                showNotification("Text added!", "success");
-                                outputDiv.innerHTML = '';
-                            } else if (target.hasAttribute('data-original') && target.hasAttribute('data-proposed')) { // For proofread
-                                const originalText = target.dataset.original;
-                                const proposedText = target.dataset.proposed;
-                                const editorContent = editor.getText();
-                                const index = editorContent.indexOf(originalText);
-                                if (index !== -1) {
-                                    editor.setSelection(index, originalText.length);
-                                    editor.deleteText(index, originalText.length);
-                                    editor.insertText(index, proposedText);
-                                    showNotification("Fix applied!", "success");
-                                    outputDiv.innerHTML = '';
-                                } else {
-                                    showNotification("Could not find original text in editor.", "error");
-                                }
-                            }
-                        }
-                        // Book Cover concept selection and image generation
-                        else if (sectionId === 'book_cover' && target.classList.contains('ai-suggestion-btn') && target.hasAttribute('data-content')) {
-                            const promptText = target.dataset.content;
-                            const imageUrls = await generateImage(promptText); // Call generateImage
-                            if (imageUrls && imageUrls.length > 0) {
-                                let imagesHtml = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">`;
-                                imageUrls.forEach(url => {
-                                    imagesHtml += `
-                                        <div class="cover-image-wrapper" data-image-url="${escapeHtml(url)}">
-                                            <img src="${url}" onerror="this.onerror=null;this.src='https://placehold.co/400x600/FF0000/FFFFFF?text=Image+Load+Error';" class="w-full h-auto rounded-lg shadow-lg" alt="Generated Book Cover"/>
-                                            <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div>
-                                        </div>
-                                    `;
-                                });
-                                imagesHtml += `</div>`;
-                                coverDisplayContainer.innerHTML = imagesHtml;
-                                showNotification('Images generated! Click to select and save.', 'success');
-                            } else {
-                                coverDisplayContainer.innerHTML = `<div class="text-center text-red-400">Failed to generate images. Please try again.</div>`;
-                            }
-                            outputDiv.innerHTML = ''; // Clear the text concepts after generating images
-                        }
-                        // Book Cover image selection (delegated)
-                        else if (sectionId === 'book_cover' && target.classList.contains('cover-image-wrapper')) { // Check for cover-image-wrapper class
-                            const imageUrl = target.dataset.imageUrl;
-                            if (imageUrl) {
-                                coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(el => el.classList.remove('selected'));
-                                target.classList.add('selected');
-                                // Upload to Firebase Storage and save URL to Firestore
-                                try {
-                                    const storageRef = ref(storageInstance, `artifacts/${appId}/users/${currentUserId}/project_covers/${projectId}_${Date.now()}.png`);
-                                    await uploadString(storageRef, imageUrl, 'data_url');
-                                    const downloadURL = await getDownloadURL(storageRef);
-                                    await updateProjectCover(currentUserId, projectId, downloadURL);
-                                    showNotification('Book cover uploaded and saved!', 'success');
-                                } catch (storageError) {
-                                    console.error("Error uploading cover to storage:", storageError);
-                                    showNotification(`Failed to save cover: ${storageError.message}`, 'error');
-                                }
-                            }
-                        }
-                        // Front Matter and Back Matter accept buttons
-                        else if ((sectionId === 'front_matter' || sectionId === 'back_matter') && target.hasAttribute('data-content')) {
-                             const contentToInsert = target.dataset.content;
-                             editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
-                             showNotification("Content added to editor!", "success");
-                             outputDiv.innerHTML = ''; // Clear suggestions after applying
-                        }
-                    }
-                });
-
-
-                // Re-attach specific listeners for buttons that are NOT dynamically replaced within outputDiv
-                // (e.g., Generate Next, Analyze Chapter, Proofread Chapter, Suggest Youth Phrases)
-                // These buttons are always present in the AI panel once the section is loaded.
-                const generateNextBtn = document.getElementById('generate-next-btn');
-                if (generateNextBtn) {
-                    generateNextBtn.addEventListener('click', async () => {
-                        const currentText = editor.getText();
-                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const outlineDoc = await getSection(userId, projectId, 'outline');
-                        const context = `Overall Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\nOutline: ${outlineDoc ? outlineDoc.content : ''}\n\n`;
-
-                        const suggestion = await generateNext(currentText, context);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${suggestion}</div><button data-content="${escapeHtml(suggestion)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Chapter</button>`;
-                    });
-                }
-                const analyzeChapterBtn = document.getElementById('analyze-chapter-btn');
-                if (analyzeChapterBtn) {
-                    analyzeChapterBtn.addEventListener('click', async () => {
-                        const chapterText = editor.getText();
-                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const charDevDoc = await getSection(userId, projectId, 'character_development');
-                        const context = `Synopsis: ${synopsisDoc.content}\n\nCharacter Development: ${charDevDoc.content}`;
-                        const analysis = await analyzeChapter(chapterText, context);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${analysis}</div>`;
-                    });
-                }
-                const proofreadBtn = document.getElementById('proofread-chapter-btn');
-                if (proofreadBtn) {
-                    proofreadBtn.addEventListener('click', async () => {
-                        const chapterText = editor.getText();
-                        const suggestionsText = await proofreadChapter(chapterText);
-                        const suggestions = suggestionsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0).map(s => {
-                            const match = s.match(/Original:\s*(.*?)\s*Proposed:\s*(.*)/is);
-                            if (match && match[1] && match[2]) {
-                                return { original: match[1].trim(), proposed: match[2].trim(), full: s.trim() };
-                            }
-                            return { original: s.trim(), proposed: s.trim(), full: s.trim() };
+                            previewCoverWithText(imageUrl, title, author, blurb);
                         });
+                    }
 
-                        if (suggestions.length > 0) {
-                            outputDiv.innerHTML = `
-                                <p class="mb-2">Click a suggestion to apply it:</p>
-                                ${suggestions.map((suggestion, index) => `
-                                    <button data-original="${escapeHtml(suggestion.original)}" data-proposed="${escapeHtml(suggestion.proposed)}"
-                                            class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm">
-                                        <strong>Suggestion ${index + 1}:</strong> <span class="line-through text-red-300">${escapeHtml(suggestion.original)}</span> → <span class="text-green-300">${escapeHtml(suggestion.proposed)}</span>
-                                    </button>
-                                `).join('')}
-                            `;
-                        } else {
-                            outputDiv.innerHTML = `<p>No proofreading suggestions found or text is already perfect!</p>`;
-                        }
-                    });
-                }
-                const suggestYouthPhrasesBtn = document.getElementById('suggest-youth-phrases-btn');
-                if (suggestYouthPhrasesBtn) {
-                    suggestYouthPhrasesBtn.disabled = false;
-                    suggestYouthPhrasesBtn.classList.remove('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
-                    suggestYouthPhrasesBtn.classList.add('accent-bg', 'accent-bg-hover');
-
-                    suggestYouthPhrasesBtn.addEventListener('click', async () => {
-                        const range = editor.getSelection();
-                        if (!range || range.length === 0) { showNotification("Please select text (e.g., dialogue) in the editor to get youth phrase suggestions.", "info"); return; }
-                        const selectedText = editor.getText(range.index, range.length);
-                        const context = editor.getText(Math.max(0, range.index - 100), 200 + range.length); // Broader context
-                        const phrasesText = await suggestYouthPhrases(selectedText, context);
-                        outputDiv.innerHTML = ''; // Clear loading after response
-                        const phrases = phrasesText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                        outputDiv.innerHTML = phrases.map(phrase => `<button data-phrase="${escapeHtml(phrase.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(phrase.trim())}</button>`).join('');
-                    });
+                } else if (sectionId === 'front_matter') {
+                    aiPanelHtml += `
+                        <div>
+                            <p class="text-sm font-semibold mb-2">Generate Front Matter</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button id="generate-dedication-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Dedication</button>
+                                <button id="generate-acknowledgments-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Acknowledge</button>
+                                <button id="generate-preface-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Preface</button>
+                            </div>
+                        </div>`;
+                } else if (sectionId === 'back_matter') {
+                    aiPanelHtml += `
+                        <div>
+                            <p class="text-sm font-semibold mb-2">Generate Back Matter</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button id="generate-blurb-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Blurb</button>
+                                <button id="generate-author-bio-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Author Bio</button>
+                                <button id="generate-discussion-questions-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Discussion Questions</button>
+                            </div>
+                        </div>`;
                 }
 
-                // Front Matter and Back Matter button listeners
-                const generateDedicationBtn = document.getElementById('generate-dedication-btn');
-                if (generateDedicationBtn) {
-                    generateDedicationBtn.addEventListener('click', async () => {
-                        const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate a dedication for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Make it heartfelt and concise.`;
-                        const dedicationText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${dedicationText}</div><button data-content="${escapeHtml(dedicationText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
-                    });
-                }
+                aiPanelHtml += `
+                    <div class="pt-4 border-t border-gray-700 flex-shrink-0">
+                        <p class="text-sm font-semibold mb-2">Editing & Faith Tools</p>
+                        <div class="grid grid-cols-2 gap-2"> <!-- Two columns for editing buttons -->
+                            <button id="suggest-alternatives-btn" class="w-full bg-gray-600 text-gray-400 font-semibold py-2 px-4 rounded-lg cursor-not-allowed" disabled>Suggest Alternatives</button>
+                            <button id="suggest-scripture-btn" class="w-full bg-gray-600 text-gray-400 font-semibold py-2 px-4 rounded-lg cursor-not-allowed" disabled>Suggest Scripture</button>
+                            <button id="suggest-youth-phrases-btn" class="w-full bg-gray-600 text-gray-400 font-semibold py-2 px-4 rounded-lg cursor-not-allowed" disabled>Suggest Youth Phrases</button>
+                        </div>
+                    </div>
+                    <div id="ai-output" class="mt-4 text-sm text-gray-300 space-y-2 flex-grow overflow-y-auto"></div>
+                    </div>`;
 
-                const generateAcknowledgmentsBtn = document.getElementById('generate-acknowledgments-btn');
-                if (generateAcknowledgmentsBtn) {
-                    generateAcknowledgmentsBtn.addEventListener('click', async () => {
-                        const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate an acknowledgments section for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Include thanks to family, friends, and inspiration.`;
-                        const acknowledgmentsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${acknowledgmentsText}</div><button data-content="${escapeHtml(acknowledgmentsText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
-                    });
-                }
-
-                const generatePrefaceBtn = document.getElementById('generate-preface-btn');
-                if (generatePrefaceBtn) {
-                    generatePrefaceBtn.addEventListener('click', async () => {
-                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate a preface for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Briefly introduce the book's purpose or inspiration. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
-                        const prefaceText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${prefaceText}</div><button data-content="${escapeHtml(prefaceText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
-                    });
-                }
-
-                const generateBlurbBtn = document.getElementById('generate-blurb-btn');
-                if (generateBlurbBtn) {
-                    generateBlurbBtn.addEventListener('click', async () => {
-                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate a compelling back cover blurb (2-3 paragraphs) for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}" targeting "${projectData.targetAudience}". Focus on hooks and intrigue. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
-                        const blurbText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${blurbText}</div><button data-content="${escapeHtml(blurbText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
-                    });
-                }
-
-                const generateAuthorBioBtn = document.getElementById('generate-author-bio-btn');
-                if (generateAuthorBioBtn) {
-                    generateAuthorBioBtn.addEventListener('click', async () => {
-                        const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate a concise (1-2 paragraph) author biography for Rene' Stanley, author of a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Highlight key experiences like being born in Washington D.C., teenage years in Maryland, finding solace in thoughts and observations, interest in older adults' wisdom, and military service in Desert Storm.`;
-                        const authorBioText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${authorBioText}</div><button data-content="${escapeHtml(authorBioText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
-                    });
-                }
-
-                const generateDiscussionQuestionsBtn = document.getElementById('generate-discussion-questions-btn');
-                if (generateDiscussionQuestionsBtn) {
-                    generateDiscussionQuestionsBtn.addEventListener('click', async () => {
-                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate 5 thought-provoking discussion questions for a book club based on a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Focus on themes and characters. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
-                        const questionsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${questionsText}</div><button data-content="${escapeHtml(questionsText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
-                    });
-                }
+                rightSidebar.innerHTML = aiPanelHtml;
+                setupAiPanelListeners(sectionId);
             };
 
             const loadSection = async (sectionId) => {
