@@ -1305,6 +1305,7 @@
             };
 
             const loadSection = async (sectionId) => {
+                console.log(`loadSection called for sectionId: ${sectionId}`);
                 const sectionData = await getSection(userId, projectId, sectionId);
                 const currentSectionTitleElement = document.getElementById('section-title'); // Get element inside this function
                 if (currentSectionTitleElement) { // Check if it exists
@@ -1315,11 +1316,13 @@
                 activeSectionId = sectionId;
 
                 if (sectionId === 'book_cover') {
+                    console.log("Loading Book Cover section.");
                     editorContainer.classList.add('hidden');
                     coverDisplayContainer.classList.remove('hidden');
                     // Display previously saved cover if available
                     const projectData = await getProject(userId, projectId);
                     if (projectData && projectData.bookCoverUrl) {
+                        console.log("Found existing book cover URL:", projectData.bookCoverUrl);
                         coverDisplayContainer.innerHTML = `
                             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
                                 <div class="cover-image-wrapper selected" data-image-url="${escapeHtml(projectData.bookCoverUrl)}">
@@ -1329,14 +1332,17 @@
                             </div>
                         `;
                     } else {
+                        console.log("No existing book cover found.");
                         coverDisplayContainer.innerHTML = `<div class="text-center text-gray-400">Your generated book cover will appear here.</div>`;
                     }
                     // Add click listeners for selection to existing images (if any)
                     // This is now handled by event delegation on coverDisplayContainer
                 } else {
+                    console.log(`Loading editor section: ${sectionId}`);
                     coverDisplayContainer.classList.add('hidden');
                     editorContainer.classList.remove('hidden');
                     if (!editor) {
+                        console.log("Initializing Quill editor for the first time.");
                         const toolbarOptions = [['bold', 'italic', 'underline'], [{ 'header': 1 }, { 'header': 2 }], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['clean']];
                         // Initialize Quill with the toolbar and editor container
                         editor = new Quill('#editor', {
@@ -1349,10 +1355,17 @@
                             showNotification('Progress Saved', 'success', 1500);
                         }, 1500));
                     }
+                    console.log("Attempting to set editor content for section:", sectionId);
+                    console.log("Section data content:", sectionData.content);
                     try {
+                        // Attempt to parse as JSON (Quill Delta format)
                         editor.setContents(JSON.parse(sectionData.content));
+                        console.log("Editor content set from JSON successfully.");
                     } catch(e) {
+                        // If parsing fails, treat as plain text
+                        console.warn("Failed to parse section content as JSON (Quill Delta). Setting as plain text.", e);
                         editor.setText(sectionData.content || '');
+                        showNotification('Warning: Content loaded as plain text. Formatting may be lost.', 'warning', 3000);
                     }
                 }
 
