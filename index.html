@@ -381,7 +381,7 @@
 
 
         // --- aiService.js content ---
-        const API_KEY = "AIzaSyCVsziM6I1QEU22YNPGTwLvN0EuW4k2SiY"; // Keep this empty, Canvas will inject the key at runtime
+        const API_KEY = "AIzaSyCVsziM6I1QEU22YNPGTwLvN0EuW4k2SiY"; // User's provided API Key
         const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`; // Changed to gemini-2.5-flash
         // CORRECTED: Use the stable imagegeneration model
         const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`; // Corrected Imagen model
@@ -1100,7 +1100,7 @@
                     <div class="pt-4 border-t border-gray-700 flex-shrink-0">
                         <p class="text-sm font-semibold mb-2">Editing & Faith Tools</p>
                         <div class="grid grid-cols-2 gap-2"> <!-- Two columns for editing buttons -->
-                            <button id="suggest-alternatives-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest Alternatives</button>
+                            <button id="suggest-alternatives-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Alternative Words</button> <!-- Renamed button -->
                             <button id="suggest-scripture-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest Scripture</button>
                             <button id="suggest-youth-phrases-btn" class="w-full bg-gray-600 text-gray-400 font-semibold py-2 px-4 rounded-lg cursor-not-allowed" disabled>Suggest Youth Phrases</button>
                         </div>
@@ -1263,7 +1263,7 @@
 
                     // New: Suggest Youth Phrases listener
                     if (suggestYouthPhrasesBtn) {
-                        suggestYouthPhrasesBtn.disabled = false;
+                        suggestYouthPhragesBtn.disabled = false;
                         suggestYouthPhrasesBtn.classList.remove('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
                         suggestYouthPhrasesBtn.classList.add('accent-bg', 'accent-bg-hover');
 
@@ -1298,7 +1298,7 @@
                 // This single listener handles clicks on all buttons with class 'ai-suggestion-btn'
                 // that are children of outputDiv, even if they are added to the DOM later.
                 outputDiv.addEventListener('click', async (e) => {
-                    const target = e.target.closest('.ai-suggestion-btn, .ai-title-suggestion-btn, .ai-cover-concept-btn'); // Include new title and cover concept suggestion classes
+                    const target = e.target.closest('.ai-suggestion-btn, .ai-title-suggestion-btn, .ai-cover-concept-btn, .cover-image-wrapper'); // Include new title and cover concept suggestion classes AND cover-image-wrapper
                     if (target) {
                         // Title suggestion button handling
                         if (target.classList.contains('ai-title-suggestion-btn')) {
@@ -1334,6 +1334,27 @@
                                 outputDiv.innerHTML = ''; // Clear concepts after generating images
                             }
                         }
+                        // Book Cover Image Selection (Problem 2.1 Fix)
+                        else if (sectionId === 'book_cover' && target.classList.contains('cover-image-wrapper')) {
+                            const imageUrl = target.dataset.imageUrl;
+                            if (imageUrl) {
+                                // Remove 'selected' class from all other images
+                                coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(el => el.classList.remove('selected'));
+                                // Add 'selected' class to the clicked image
+                                target.classList.add('selected');
+                                // Save the selected image URL to Firestore
+                                try {
+                                    const storageRef = ref(storageInstance, `artifacts/${appId}/users/${currentUserId}/project_covers/${projectId}_${Date.now()}.png`);
+                                    await uploadString(storageRef, imageUrl, 'data_url');
+                                    const downloadURL = await getDownloadURL(storageRef);
+                                    await updateProjectCover(currentUserId, projectId, downloadURL);
+                                    showNotification('Book cover uploaded and saved!', 'success');
+                                } catch (storageError) {
+                                    console.error("Error uploading cover to storage:", storageError);
+                                    showNotification(`Failed to save cover: ${storageError.message}`, 'error');
+                                }
+                            }
+                        }
                         // Outline section's "Accept & Add to Editor" button
                         else if (sectionId === 'outline' && target.hasAttribute('data-content')) { // Check for data-content attribute
                             const outlineContent = target.dataset.content;
@@ -1364,31 +1385,31 @@
                                 }
                             }
                         }
-                        // PROBLEM 2 FIX: General handling for other AI suggestions (concepts, characters, world-building, front/back matter, scripture, alternatives)
+                        // General handling for other AI suggestions (concepts, characters, world-building, front/back matter, scripture, alternatives)
                         else if (target.classList.contains('ai-suggestion-btn') && target.hasAttribute('data-content')) {
                             const contentToInsert = target.dataset.content;
-                            // For sections where content should be appended
-                            editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
-                            showNotification("Content added to editor!", "success");
-                            outputDiv.innerHTML = ''; // Clear suggestions after applying
-                        }
-                        // Book Cover selection (delegated)
-                        else if (sectionId === 'book_cover' && target.classList.contains('cover-image-wrapper')) { // Check for cover-image-wrapper class
-                            const imageUrl = target.dataset.imageUrl;
-                            if (imageUrl) {
-                                coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(el => el.classList.remove('selected'));
-                                target.classList.add('selected');
-                                // Upload to Firebase Storage and save URL to Firestore
-                                try {
-                                    const storageRef = ref(storageInstance, `artifacts/${appId}/users/${currentUserId}/project_covers/${projectId}_${Date.now()}.png`);
-                                    await uploadString(storageRef, imageUrl, 'data_url');
-                                    const downloadURL = await getDownloadURL(storageRef);
-                                    await updateProjectCover(currentUserId, projectId, downloadURL);
-                                    showNotification('Book cover uploaded and saved!', 'success');
-                                } catch (storageError) {
-                                    console.error("Error uploading cover to storage:", storageError);
-                                    showNotification(`Failed to save cover: ${storageError.message}`, 'error');
+                            // Problem 2.2 Fix: Handle replacement for "Alternative Words"
+                            if (target.classList.contains('ai-alternative-btn')) {
+                                const originalRangeIndex = parseInt(target.dataset.originalRangeIndex);
+                                const originalRangeLength = parseInt(target.dataset.originalRangeLength);
+
+                                // Ensure a valid range before attempting replacement
+                                if (!isNaN(originalRangeIndex) && !isNaN(originalRangeLength) && originalRangeLength > 0) {
+                                    editor.setSelection(originalRangeIndex, originalRangeLength);
+                                    editor.deleteText(originalRangeIndex, originalRangeLength);
+                                    editor.insertText(originalRangeIndex, contentToInsert);
+                                    showNotification("Alternative applied!", "success");
+                                    outputDiv.innerHTML = ''; // Clear suggestions after applying
+                                } else {
+                                    // Fallback to appending if original range data is missing or invalid
+                                    editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
+                                    showNotification("Content added to editor (selected text could not be replaced).", "info");
                                 }
+                            } else {
+                                // For sections where content should be appended (e.g., concepts, scripture, etc.)
+                                editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
+                                showNotification("Content added to editor!", "success");
+                                outputDiv.innerHTML = ''; // Clear suggestions after applying
                             }
                         }
                     }
