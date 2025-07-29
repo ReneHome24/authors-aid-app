@@ -373,7 +373,7 @@
         const API_KEY = "AIzaSyCVsziM6I1QEU22YNPGTwLvN0EuW4k2SiY";
         const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`; // Changed to gemini-2.5-flash
         // CORRECTED: Use the stable imagegeneration model
-        const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagegeneration@006:predict?key=${API_KEY}`; // Corrected Imagen model
+        const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`; // Corrected Imagen model and endpoint
 
 
         // Global variable to store AI style preference
@@ -445,7 +445,7 @@
                     </div>
                 `;
 
-                // CORRECTED: Set sampleCount to 3 for multiple images
+                // Set sampleCount to 3 for multiple images
                 const payload = { instances: { prompt: promptText }, parameters: { "sampleCount": 3} };
                 const response = await fetch(IMAGEN_API_URL, { // Call to the corrected Imagen API URL
                     method: 'POST',
