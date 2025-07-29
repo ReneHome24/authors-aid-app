@@ -334,24 +334,17 @@
             if (showCancel) {
                 document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
             }
-            // Modified: Use form submission instead of button click for onConfirm
-            const form = modalContainer.querySelector('form');
-            if (form) {
-                form.addEventListener('submit', async (e) => {
-                    e.preventDefault(); // Prevent default form submission
-                    if (!form.checkValidity()) {
-                        form.reportValidity();
-                        return;
-                    }
-                    await onConfirm();
-                    closeModal(); // Close modal after successful submission
-                });
-            } else { // Fallback for modals without a form, use the button directly
-                document.getElementById('modal-confirm-btn').addEventListener('click', async () => {
-                    await onConfirm();
-                    closeModal();
-                });
-            }
+            // Reverted: Attach onConfirm directly to the button click for simplicity,
+            // as the form submit listener was causing issues.
+            document.getElementById('modal-confirm-btn').addEventListener('click', async () => {
+                const form = modalContainer.querySelector('form');
+                if (form && !form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+                await onConfirm();
+                closeModal();
+            });
 
             // Add password toggle functionality after modal content is rendered
             modalContainer.querySelectorAll('.password-toggle').forEach(toggle => {
