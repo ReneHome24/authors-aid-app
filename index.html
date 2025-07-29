@@ -334,8 +334,8 @@
             if (showCancel) {
                 document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
             }
-            // Modified: Removed the form.addEventListener('submit') logic and reverted to direct button click for onConfirm.
-            // This ensures the button click directly triggers the action, bypassing any potential form submission issues.
+            // Reverted: Attach onConfirm directly to the button click for simplicity,
+            // as the form submit listener was causing issues.
             document.getElementById('modal-confirm-btn').addEventListener('click', async () => {
                 const form = modalContainer.querySelector('form');
                 if (form && !form.checkValidity()) {
@@ -343,11 +343,7 @@
                     return;
                 }
                 await onConfirm();
-                // Only close modal if onConfirm was successful (or if it doesn't return false)
-                // This allows onConfirm to handle its own error messages and keep modal open if needed
-                if (!form || form.checkValidity()) { // If there's no form, or if form is valid
-                    closeModal();
-                }
+                closeModal();
             });
 
             // Add password toggle functionality after modal content is rendered
@@ -851,7 +847,7 @@
             appContainer.appendChild(renderHeader(true, true, userId)); // Pass userId to header
             const mainContent = document.createElement('main');
             mainContent.className = "flex flex-grow flex-col h-full min-h-0"; /* Added min-h-0 */
-            mainContent.innerHTML = `<div class="text-center text-gray-400 p-8 w-full">Loading project...</div>`;
+            mainContent.innerHTML = `<div class="text-center text-gray-400">Loading project...</div>`;
             appContainer.appendChild(mainContent);
 
             const project = await getProject(userId, projectId);
