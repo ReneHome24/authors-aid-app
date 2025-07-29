@@ -362,7 +362,7 @@
         // --- aiService.js content ---
         const API_KEY = "AIzaSyCVsziM6I1QEU22YNPGTwLvN0EuW4k2SiY";
         const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`; // Changed to gemini-2.5-flash
-        const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-2.5-generate-002:predict?key=${API_KEY}`; // Changed to imagen-2.5-generate-002
+        const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`; // Changed to imagen-2.5-generate-002
 
         // Global variable to store AI style preference
         let aiStylePreference = "";
@@ -1156,11 +1156,13 @@
                         const outline = await generateOutlineBeats(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${outline}</div><button id="accept-outline-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                        // IMPORTANT: Attach the click listener to the newly created button
                         document.getElementById('accept-outline-btn').addEventListener('click', () => {
                             const currentContent = editor.getContents();
                             const outlineDelta = new Quill.import('delta')().insert('\n' + outline);
                             editor.updateContents(currentContent.concat(outlineDelta));
                             showNotification("Outline added to editor!", "success");
+                            outputDiv.innerHTML = ''; // Clear suggestions after applying
                         });
                     });
                 } else if (sectionId.startsWith('chapter_')) {
