@@ -1359,14 +1359,15 @@
                                 // Save the selected image URL to Firestore
                                 try {
                                     const storageRef = ref(storageInstance, `artifacts/${appId}/users/${currentUserId}/project_covers/${projectId}_${Date.now()}.png`);
-                                    // Fetch the image data as a Blob or ArrayBuffer to upload
-                                    const response = await fetch(imageUrl);
-                                    const blob = await response.blob();
-                                    await uploadString(storageRef, imageUrl, 'data_url'); // Still using data_url for direct base64 string
+                                    // It's better to upload the base64 string directly if it's already in that format
+                                    // or convert it to a Blob if it's a URL. For simplicity with data:image/png;base64,
+                                    // uploadString with 'data_url' format is appropriate.
+                                    await uploadString(storageRef, imageUrl, 'data_url');
                                     const downloadURL = await getDownloadURL(storageRef);
                                     await updateProjectCover(currentUserId, projectId, downloadURL);
                                     showNotification('Book cover uploaded and saved!', 'success');
-                                    // No need to re-render dashboard immediately, it will update on navigation
+                                    // Re-render dashboard to show updated thumbnail
+                                    renderDashboard(currentUserId);
                                 } catch (storageError) {
                                     console.error("Error uploading cover to storage:", storageError);
                                     showNotification(`Failed to save cover: ${storageError.message}`, 'error');
@@ -1406,18 +1407,17 @@
                         // General handling for other AI suggestions (concepts, characters, world-building, front/back matter, scripture, alternatives)
                         else if (target.classList.contains('ai-suggestion-btn') && target.hasAttribute('data-content')) {
                             const contentToInsert = target.dataset.content;
-                            // Problem 2.2 Fix: Handle replacement for "Alternative Words"
+                            // Problem: Alternative Words - Use the stored selection range for replacement
                             if (target.classList.contains('ai-alternative-btn')) {
-                                // Use the stored currentSelectionRange
                                 if (currentSelectionRange && currentSelectionRange.length > 0) {
                                     editor.setSelection(currentSelectionRange.index, currentSelectionRange.length);
                                     editor.deleteText(currentSelectionRange.index, currentSelectionRange.length);
                                     editor.insertText(currentSelectionRange.index, contentToInsert);
                                     showNotification("Alternative applied!", "success");
                                     outputDiv.innerHTML = ''; // Clear suggestions after applying
-                                    currentSelectionRange = null; // Clear the stored range
+                                    currentSelectionRange = null; // Clear the stored range after use
                                 } else {
-                                    // Fallback to appending if no valid selection was stored
+                                    // Fallback to appending if no valid selection was stored (shouldn't happen if logic is correct)
                                     editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
                                     showNotification("Content added to editor (selected text could not be replaced).", "info");
                                 }
@@ -1565,46 +1565,6 @@
                         const prompt = `Generate 5 thought-provoking discussion questions for a book club based on a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Focus on themes and characters. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
                         const questionsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
                         outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${questionsText}</div><button data-content="${escapeHtml(questionsText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
-                    });
-                }
-
-                // Problem: Alternative Words - Capture selection range when button is clicked
-                const suggestAlternativesBtn = document.getElementById('suggest-alternatives-btn');
-                if (suggestAlternativesBtn) {
-                    suggestAlternativesBtn.disabled = false;
-                    suggestAlternativesBtn.classList.remove('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
-                    suggestAlternativesBtn.classList.add('accent-bg', 'accent-bg-hover');
-                    suggestAlternativesBtn.addEventListener('click', async () => {
-                        const range = editor.getSelection();
-                        if (!range || range.length === 0) { showNotification("Please select text in the editor to get alternative suggestions.", "info"); return; }
-
-                        // Store the current selection range globally
-                        currentSelectionRange = range;
-
-                        const selectedText = editor.getText(range.index, range.length);
-                        const context = editor.getText(Math.max(0, range.index - 100), 200 + range.length); // Broader context
-                        const alternativesText = await suggestAlternatives(selectedText, context);
-                        outputDiv.innerHTML = '';
-                        const alternatives = alternativesText.split(/\d+\.\s+/).filter(a => a.trim().length > 0);
-                        // No need to store range in individual buttons now, as it's global
-                        outputDiv.innerHTML = alternatives.map(alt => `<button data-content="${escapeHtml(alt.trim())}" class="ai-suggestion-btn ai-alternative-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(alt.trim())}</button>`).join('');
-                    });
-                }
-
-                const suggestScriptureBtn = document.getElementById('suggest-scripture-btn');
-                if (suggestScriptureBtn) {
-                    suggestScriptureBtn.disabled = false;
-                    suggestScriptureBtn.classList.remove('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
-                    suggestScriptureBtn.classList.add('accent-bg', 'accent-bg-hover');
-                    suggestScriptureBtn.addEventListener('click', async () => {
-                        const range = editor.getSelection();
-                        if (!range || range.length === 0) { showNotification("Please select text in the editor to get scripture suggestions.", "info"); return; }
-                        const selectedText = editor.getText(range.index, range.length);
-                        const context = editor.getText(Math.max(0, range.index - 200), 400 + range.length); // Broader context
-                        const scriptureText = await suggestScripture(selectedText, context);
-                        outputDiv.innerHTML = '';
-                        const scriptures = scriptureText.split(/\d+\.\s+/).filter(s => s.trim().length > 0);
-                        outputDiv.innerHTML = scriptures.map(scr => `<button data-content="${escapeHtml(scr.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(scr.trim())}</button>`).join('');
                     });
                 }
             };
