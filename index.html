@@ -528,8 +528,8 @@
         // --- views.js content ---
         const appContainer = document.getElementById('app-container');
         let currentUserId = null;
-        // Moved storageInstance declaration here to avoid redeclaration error
-        // let storageInstance; // Removed this line as it's declared once in initializeDb
+        // This variable will store the current selection range for 'Alternative Words'
+        let currentSelectionRange = null;
 
         // Function to render the Help modal
         function renderHelpModal() {
@@ -777,7 +777,7 @@
                 <div class="project-card bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col justify-between">
                     <div>
                         <div class="flex items-center mb-2">
-                            ${p.bookCoverUrl ? `<img src="${p.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/60x90/1F2937/D1D5DB?text=No+Cover';" class="w-12 h-18 object-cover rounded-md mr-3 shadow-md" alt="Book Cover Thumbnail"/>` : `<img src="https://placehold.co/60x90/1F2937/D1D5DB?text=No+Cover" class="w-12 h-18 object-cover rounded-md mr-3 shadow-md" alt="Placeholder Cover"/>`}
+                            ${p.bookCoverUrl ? `<img src="${p.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/60x90/1F2937/D1D5DB?text=Image+Load+Error';" class="w-12 h-18 object-cover rounded-md mr-3 shadow-md" alt="Book Cover Thumbnail"/>` : `<img src="https://placehold.co/60x90/1F2937/D1D5DB?text=No+Cover" class="w-12 h-18 object-cover rounded-md mr-3 shadow-md" alt="Placeholder Cover"/>`}
                             <h3 class="text-xl font-lora font-semibold text-white">${p.title || 'Untitled Project'}</h3>
                         </div>
                         <p class="text-sm text-gray-500 mt-1">Created: ${p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</p>
@@ -1291,7 +1291,8 @@
                         const conceptsText = await generateCoverConcepts(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         const concepts = conceptsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-cover-concept="${escapeHtml(concept.trim())}" class="ai-cover-concept-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHtml(concept.trim().substring(0, 80))}...</button>`).join('');
+                        // Changed data attribute to data-full-concept and added class for specific handling
+                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-full-concept="${escapeHtml(concept.trim())}" class="ai-cover-concept-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHtml(concept.trim())}</button>`).join('');
 
                         // The event listener is now attached via delegation below, no need to re-attach here.
                     });
@@ -1314,28 +1315,38 @@
                                 outputDiv.innerHTML = ''; // Clear suggestions after applying
                             }
                         }
-                        // Book Cover Concept button handling
+                        // Book Cover Concept button handling (now opens an editable modal)
                         else if (target.classList.contains('ai-cover-concept-btn')) {
-                            const promptText = target.dataset.coverConcept;
-                            if (promptText) {
-                                const imageUrls = await generateImage(promptText);
-                                if (imageUrls && imageUrls.length > 0) {
-                                    coverDisplayContainer.innerHTML = `
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
-                                            ${imageUrls.map(url => `
-                                                <div class="cover-image-wrapper" data-image-url="${escapeHtml(url)}">
-                                                    <img src="${url}" onerror="this.onerror=null;this.src='https://placehold.co/400x600/FF0000/FFFFFF?text=Image+Load+Error';" class="w-full h-auto rounded-lg shadow-lg" alt="Generated Book Cover"/>
-                                                    <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div>
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                    `;
-                                    showNotification('Images generated! Click to select your favorite.', 'success');
+                            const fullConcept = target.dataset.fullConcept;
+                            showModal('Edit Image Prompt', `
+                                <div class="space-y-4">
+                                    <p class="text-gray-400">Review and edit the prompt before generating images:</p>
+                                    <textarea id="image-prompt-editor" class="w-full h-40 p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 accent-ring">${escapeHtml(fullConcept)}</textarea>
+                                </div>
+                            `, async () => {
+                                const editedPrompt = document.getElementById('image-prompt-editor').value;
+                                if (editedPrompt) {
+                                    const imageUrls = await generateImage(editedPrompt);
+                                    if (imageUrls && imageUrls.length > 0) {
+                                        coverDisplayContainer.innerHTML = `
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
+                                                ${imageUrls.map(url => `
+                                                    <div class="cover-image-wrapper" data-image-url="${escapeHtml(url)}">
+                                                        <img src="${url}" onerror="this.onerror=null;this.src='https://placehold.co/400x600/FF0000/FFFFFF?text=Image+Load+Error';" class="w-full h-auto rounded-lg shadow-lg" alt="Generated Book Cover"/>
+                                                        <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div>
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        `;
+                                        showNotification('Images generated! Click to select your favorite.', 'success');
+                                    } else {
+                                        showNotification('Failed to generate images.', 'error');
+                                    }
                                 } else {
-                                    showNotification('Failed to generate images.', 'error');
+                                    showNotification('Image prompt cannot be empty.', 'error');
                                 }
                                 outputDiv.innerHTML = ''; // Clear concepts after generating images
-                            }
+                            }, 'Generate Images');
                         }
                         // Book Cover Image Selection (Problem 2.1 Fix)
                         else if (sectionId === 'book_cover' && target.classList.contains('cover-image-wrapper')) {
@@ -1348,7 +1359,10 @@
                                 // Save the selected image URL to Firestore
                                 try {
                                     const storageRef = ref(storageInstance, `artifacts/${appId}/users/${currentUserId}/project_covers/${projectId}_${Date.now()}.png`);
-                                    await uploadString(storageRef, imageUrl, 'data_url');
+                                    // Fetch the image data as a Blob or ArrayBuffer to upload
+                                    const response = await fetch(imageUrl);
+                                    const blob = await response.blob();
+                                    await uploadString(storageRef, imageUrl, 'data_url'); // Still using data_url for direct base64 string
                                     const downloadURL = await getDownloadURL(storageRef);
                                     await updateProjectCover(currentUserId, projectId, downloadURL);
                                     showNotification('Book cover uploaded and saved!', 'success');
@@ -1394,18 +1408,16 @@
                             const contentToInsert = target.dataset.content;
                             // Problem 2.2 Fix: Handle replacement for "Alternative Words"
                             if (target.classList.contains('ai-alternative-btn')) {
-                                const originalRangeIndex = parseInt(target.dataset.originalRangeIndex);
-                                const originalRangeLength = parseInt(target.dataset.originalRangeLength);
-
-                                // Ensure a valid range before attempting replacement
-                                if (!isNaN(originalRangeIndex) && !isNaN(originalRangeLength) && originalRangeLength > 0) {
-                                    editor.setSelection(originalRangeIndex, originalRangeLength);
-                                    editor.deleteText(originalRangeIndex, originalRangeLength);
-                                    editor.insertText(originalRangeIndex, contentToInsert);
+                                // Use the stored currentSelectionRange
+                                if (currentSelectionRange && currentSelectionRange.length > 0) {
+                                    editor.setSelection(currentSelectionRange.index, currentSelectionRange.length);
+                                    editor.deleteText(currentSelectionRange.index, currentSelectionRange.length);
+                                    editor.insertText(currentSelectionRange.index, contentToInsert);
                                     showNotification("Alternative applied!", "success");
                                     outputDiv.innerHTML = ''; // Clear suggestions after applying
+                                    currentSelectionRange = null; // Clear the stored range
                                 } else {
-                                    // Fallback to appending if original range data is missing or invalid
+                                    // Fallback to appending if no valid selection was stored
                                     editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
                                     showNotification("Content added to editor (selected text could not be replaced).", "info");
                                 }
@@ -1556,7 +1568,7 @@
                     });
                 }
 
-                // Problem 1 & 2 Fixes: Enable and attach listeners for Suggest Alternatives and Suggest Scripture
+                // Problem: Alternative Words - Capture selection range when button is clicked
                 const suggestAlternativesBtn = document.getElementById('suggest-alternatives-btn');
                 if (suggestAlternativesBtn) {
                     suggestAlternativesBtn.disabled = false;
@@ -1565,13 +1577,17 @@
                     suggestAlternativesBtn.addEventListener('click', async () => {
                         const range = editor.getSelection();
                         if (!range || range.length === 0) { showNotification("Please select text in the editor to get alternative suggestions.", "info"); return; }
+
+                        // Store the current selection range globally
+                        currentSelectionRange = range;
+
                         const selectedText = editor.getText(range.index, range.length);
                         const context = editor.getText(Math.max(0, range.index - 100), 200 + range.length); // Broader context
                         const alternativesText = await suggestAlternatives(selectedText, context);
                         outputDiv.innerHTML = '';
                         const alternatives = alternativesText.split(/\d+\.\s+/).filter(a => a.trim().length > 0);
-                        // Store the original range information in the button's dataset
-                        outputDiv.innerHTML = alternatives.map(alt => `<button data-original-range-index="${range.index}" data-original-range-length="${range.length}" data-content="${escapeHtml(alt.trim())}" class="ai-suggestion-btn ai-alternative-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(alt.trim())}</button>`).join('');
+                        // No need to store range in individual buttons now, as it's global
+                        outputDiv.innerHTML = alternatives.map(alt => `<button data-content="${escapeHtml(alt.trim())}" class="ai-suggestion-btn ai-alternative-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(alt.trim())}</button>`).join('');
                     });
                 }
 
