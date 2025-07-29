@@ -479,7 +479,8 @@
                     console.error("Image API Error: Unexpected response structure or no predictions:", result);
                     return null;
                 }
-            } catch (e) {
+            }
+            catch (e) {
                 console.error("Error calling Imagen API:", e);
                 showNotification(`Image generation failed: ${e.message}`, 'error');
                 return null;
