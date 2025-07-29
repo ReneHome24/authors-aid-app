@@ -1282,9 +1282,10 @@
                             console.log("Outline content to insert:", outlineContent);
 
                             try {
+                                // Corrected: Use Quill.Delta directly
                                 const currentContent = editor.getContents();
                                 console.log("Current editor content (Delta):", currentContent);
-                                const outlineDelta = new Quill.import('delta')().insert('\n\n' + outlineContent);
+                                const outlineDelta = new Quill.Delta().insert('\n\n' + outlineContent);
                                 console.log("Generated outline Delta:", outlineDelta);
 
                                 editor.updateContents(currentContent.concat(outlineDelta));
