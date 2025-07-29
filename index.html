@@ -1485,7 +1485,7 @@
                     const projectData = await getProject(userId, projectId);
                     if (projectData && projectData.bookCoverUrl) {
                         coverDisplayContainer.innerHTML = `
-                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
+                            <div class="grid grid-cols-1 gap-4 p-4">
                                 <div class="cover-image-wrapper selected" data-image-url="${escapeHtml(projectData.bookCoverUrl)}">
                                     <img src="${projectData.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/400x600/FF0000/FFFFFF?text=Image+Load+Error';" class="w-full h-auto rounded-lg shadow-lg" alt="Selected Book Cover"/>
                                     <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div>
