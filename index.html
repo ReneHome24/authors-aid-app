@@ -275,15 +275,7 @@
 
         // --- firestore.js content ---
         let dbInstance;
-        let storageInstance; // Declare storage instance globally for access
-        function initializeDb(config) {
-            if (!dbInstance) {
-                const app = initializeApp(config);
-                dbInstance = getFirestore(app);
-                storageInstance = getStorage(app); // Initialize Storage
-            }
-            return dbInstance;
-        }
+        function initializeDb(config) { if (!dbInstance) { const app = initializeApp(config); dbInstance = getFirestore(app); } return dbInstance; }
         function getProjectsCollection(userId) { return collection(dbInstance, `artifacts/${appId}/users/${userId}/projects`); }
         async function createProject(userId, data) {
             try {
@@ -372,9 +364,7 @@
         // --- aiService.js content ---
         const API_KEY = "AIzaSyCVsziM6I1QEU22YNPGTwLvN0EuW4k2SiY";
         const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`; // Changed to gemini-2.5-flash
-        // CORRECTED: Use the stable imagegeneration model
-        const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagegeneration@006:generateContent?key=${API_KEY}`; // Corrected Imagen model
-
+        const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-2.5-generate-002:predict?key=${API_KEY}`; // Changed to imagen-2.5-generate-002
 
         // Global variable to store AI style preference
         let aiStylePreference = "";
@@ -446,7 +436,7 @@
                 `;
 
                 const payload = { instances: { prompt: promptText }, parameters: { "sampleCount": 3} };
-                const response = await fetch(IMAGEN_API_URL, { // Call to the corrected Imagen API URL
+                const response = await fetch(IMAGEN_API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -456,9 +446,7 @@
                     const errorData = await response.json();
                     console.error("Image API Error Response:", errorData);
                     let errorMessage = `Image generation failed with status ${response.status}.`;
-                    if (response.status === 404) { // Specific check for 404
-                         errorMessage += " The image generation model might not be available or the name is incorrect. Please check Google Cloud documentation for available Imagen models.";
-                    } else if (response.status === 403) {
+                    if (response.status === 403) {
                         errorMessage += " This usually means the Imagen API is not enabled for your Google Cloud project or your API key has insufficient permissions.";
                     } else if (response.status === 429) {
                         errorMessage += " You've exceeded your Imagen API quota. Please try again later.";
@@ -542,6 +530,7 @@
                         <li><strong>Suggest POV & Voice (Brainstorming):</strong> Based on your synopsis, the AI can suggest different points of view and narrative voices.</li>
                         <li><strong>Suggest Structural Template (Brainstorming):</strong> Get AI-generated structural ideas (e.g., Three-Act Structure) for your story.</li>
                         <li><strong>Generate Character Profiles (Character Development):</strong> The AI helps you create detailed character ideas based on your story's concept.</li>
+                        <li><strong>Generate World Prompts (World-building):</strong> Brainstorm elements for your story's universe with AI assistance.</li>
                         <li><strong>Generate Chapter Beats (Outline):</strong> Get a detailed chapter-by-chapter outline based on your project's synopsis, characters, and world-building.</li>
                         <li><strong>Generate Next (Chapters):</strong> Overcome writer's block! Click this button in any chapter to have the AI generate the next section of text, using your existing content and project context.</li>
                         <li><strong>Analyze Chapter (Chapters):</strong> Get high-level feedback on pacing, plot progression, and character consistency for your chapter.</li>
@@ -1170,7 +1159,17 @@
                         const outline = await generateOutlineBeats(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${outline}</div><button data-content="${escapeHtml(outline)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
-                        // The event listener is now attached via delegation below, no need to re-attach here.
+                        // Corrected: Attach the click listener to the newly created button
+                        // IMPORTANT: Event delegation is not needed here as the button is replaced entirely.
+                        // The listener must be attached *after* the button is in the DOM.
+                        document.getElementById('accept-outline-btn').addEventListener('click', (e) => {
+                            const outlineContent = e.target.dataset.content;
+                            const currentContent = editor.getContents();
+                            const outlineDelta = new Quill.import('delta')().insert('\n\n' + outlineContent); // Add newlines for separation
+                            editor.updateContents(currentContent.concat(outlineDelta));
+                            showNotification("Outline added to editor!", "success");
+                            outputDiv.innerHTML = ''; // Clear suggestions after applying
+                        });
                     });
                 } else if (sectionId.startsWith('chapter_')) {
                     const generateNextBtn = document.getElementById('generate-next-btn');
@@ -1186,7 +1185,11 @@
 
                         const suggestion = await generateNext(currentText, context); // Pass context to generateNext
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${suggestion}</div><button data-content="${escapeHtml(suggestion)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Chapter</button>`;
+                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${suggestion}</div><button id="accept-next-btn" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Chapter</button>`;
+                        document.getElementById('accept-next-btn').addEventListener('click', () => {
+                            editor.insertText(editor.getLength(), ' ' + suggestion);
+                            showNotification("Text added!", "success");
+                        });
                     });
                     analyzeChapterBtn.addEventListener('click', async () => {
                         const chapterText = editor.getText();
@@ -1222,6 +1225,26 @@
                                     </button>
                                 `).join('')}
                             `;
+                            outputDiv.querySelectorAll('.ai-suggestion-btn').forEach(btn => {
+                                btn.addEventListener('click', () => {
+                                    const originalText = btn.dataset.original;
+                                    const proposedText = btn.dataset.proposed;
+
+                                    // Find the original text in the editor and replace it
+                                    const editorContent = editor.getText();
+                                    const index = editorContent.indexOf(originalText);
+
+                                    if (index !== -1) {
+                                        editor.setSelection(index, originalText.length);
+                                        editor.deleteText(index, originalText.length);
+                                        editor.insertText(index, proposedText);
+                                        showNotification("Fix applied!", "success");
+                                        outputDiv.innerHTML = ''; // Clear suggestions after applying one
+                                    } else {
+                                        showNotification("Could not find original text in editor.", "error");
+                                    }
+                                });
+                            });
                         } else {
                             outputDiv.innerHTML = `<p>No proofreading suggestions found or text is already perfect!</p>`;
                         }
@@ -1242,6 +1265,7 @@
                             outputDiv.innerHTML = ''; // Clear loading after response
                             const phrases = phrasesText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                             outputDiv.innerHTML = phrases.map(phrase => `<button data-phrase="${escapeHtml(phrase.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(phrase.trim())}</button>`).join('');
+                            outputDiv.querySelectorAll('.ai-suggestion-btn').forEach(btn => btn.addEventListener('click', () => { editor.deleteText(range.index, range.length); editor.insertText(range.index, btn.dataset.phrase); outputDiv.innerHTML = ''; showNotification("Youth phrase applied!", "success"); }));
                         });
                     }
 
@@ -1256,202 +1280,158 @@
                         const concepts = conceptsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                         outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHtml(concept.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHtml(concept.trim().substring(0, 80))}...</button>`).join('');
 
-                        // The event listener is now attached via delegation below, no need to re-attach here.
+                        outputDiv.querySelectorAll('.ai-suggestion-btn').forEach(btn => {
+                            btn.addEventListener('click', async () => {
+                                const promptForImage = btn.dataset.content;
+                                // Show loading spinner for Imagen calls in coverDisplayContainer
+                                coverDisplayContainer.innerHTML = `
+                                    <div class="flex flex-col items-center justify-center h-full">
+                                        <p class="text-white mb-4">Generating cover for: "${promptForImage.substring(0, 50)}..."</p>
+                                        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                                    </div>
+                                `;
+                                const imageUrl = await generateImage(promptForImage);
+                                if (imageUrl) {
+                                    coverDisplayContainer.innerHTML = `
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
+                                            <div class="cover-image-wrapper" data-image-url="${escapeHtml(imageUrl)}">
+                                                <img src="${imageUrl}" onerror="this.onerror=null;this.src='https://placehold.co/400x600/FF0000/FFFFFF?text=Image+Load+Error';" class="w-full h-auto rounded-lg shadow-lg" alt="Generated Book Cover"/>
+                                                <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div>
+                                            </div>
+                                            <div class="cover-image-wrapper" data-image-url="https://placehold.co/400x600/111827/FFFFFF?text=More+Options+Coming">
+                                                <img src="https://placehold.co/400x600/111827/FFFFFF?text=More+Options+Coming" class="w-full h-auto rounded-lg" alt="Placeholder for more options"/>
+                                                <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div>
+                                            </div>
+                                            <div class="cover-image-wrapper" data-image-url="https://placehold.co/400x600/374151/FFFFFF?text=More+Options+Coming">
+                                                <img src="https://placehold.co/400x600/374151/FFFFFF?text=More+Options+Coming" class="w-full h-auto rounded-lg" alt="Placeholder for more options"/>
+                                                <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div>
+                                            </div>
+                                        </div>
+                                    `;
+                                    // Add click listeners for selection
+                                    coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(imgWrapper => {
+                                        imgWrapper.addEventListener('click', () => {
+                                            // Remove 'selected' from all
+                                            coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(el => el.classList.remove('selected'));
+                                            // Add 'selected' to the clicked one
+                                            imgWrapper.classList.add('selected');
+                                            // Save the selected image URL to Firestore
+                                            updateProjectCover(userId, projectId, imgWrapper.dataset.imageUrl);
+                                        });
+                                    });
+                                    showNotification("Book cover generated! Click to select.", "success");
+
+                                    // Pre-select the first generated image if there's one
+                                    const firstGeneratedCover = coverDisplayContainer.querySelector('.cover-image-wrapper');
+                                    if (firstGeneratedCover) {
+                                        firstGeneratedCover.classList.add('selected');
+                                        updateProjectCover(userId, projectId, firstGeneratedCover.dataset.imageUrl);
+                                    }
+
+                                } else {
+                                    coverDisplayContainer.innerHTML = `<p class="text-red-400 text-center">Failed to generate book cover. Please try again or check API status.</p>`;
+                                }
+                            });
+                        });
                     });
                 }
 
-                // IMPORTANT: Event Delegation for all dynamically created AI suggestion buttons
-                // This single listener handles clicks on all buttons with class 'ai-suggestion-btn'
-                // that are children of outputDiv, even if they are added to the DOM later.
+                // Generic listeners for tools available in most sections
+                const suggestAlternativesBtn = document.getElementById('suggest-alternatives-btn');
+                const suggestScriptureBtn = document.getElementById('suggest-scripture-btn');
+
+                // Enable the "Suggest Alternatives" button
+                if (suggestAlternativesBtn) {
+                    suggestAlternativesBtn.disabled = false;
+                    suggestAlternativesBtn.classList.remove('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
+                    suggestAlternativesBtn.classList.add('accent-bg', 'accent-bg-hover');
+
+                    suggestAlternativesBtn.addEventListener('click', async () => {
+                        const range = editor.getSelection();
+                        if (!range || range.length === 0) { showNotification("Please select text in the editor to get alternatives.", "info"); return; }
+                        const selectedText = editor.getText(range.index, range.length);
+                        const context = editor.getText(Math.max(0, range.index - 50), 100 + range.length);
+                        const altsText = await suggestAlternatives(selectedText, context);
+                        outputDiv.innerHTML = ''; // Clear loading after response
+                        const alts = altsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
+                        outputDiv.innerHTML = alts.map(alt => `<button data-alt="${escapeHtml(alt.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(alt.trim())}</button>`).join('');
+                        outputDiv.querySelectorAll('.ai-suggestion-btn').forEach(btn => btn.addEventListener('click', () => { editor.deleteText(range.index, range.length); editor.insertText(range.index, btn.dataset.alt); outputDiv.innerHTML = ''; showNotification("Alternative applied!", "success"); }));
+                    });
+                }
+
+                if (suggestScriptureBtn) {
+                    suggestScriptureBtn.disabled = false;
+                    suggestScriptureBtn.classList.remove('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
+                    suggestScriptureBtn.classList.add('accent-bg', 'accent-bg-hover');
+
+                     suggestScriptureBtn.addEventListener('click', async () => {
+                        const range = editor.getSelection();
+                        if (!range || range.length === 0) { showNotification("Please select text in the editor to get scripture suggestions.", "info"); return; }
+                        const selectedText = editor.getText(range.index, range.length);
+                        const scripturesText = await suggestScripture(selectedText, editor.getText());
+                        outputDiv.innerHTML = ''; // Clear loading after response
+                        const scriptures = scripturesText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
+                        outputDiv.innerHTML = scriptures.map(scripture => `<button data-content="${escapeHtml(scripture.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(scripture.trim())}</button>`).join('');
+                        outputDiv.querySelectorAll('.ai-suggestion-btn').forEach(btn => btn.addEventListener('click', () => { editor.insertText(editor.getLength(), '\n\n' + btn.dataset.content); showNotification("Scripture added!", "success"); outputDiv.innerHTML = ''; })); // Appends scripture to the end
+                    });
+                }
+
+                // New Front Matter and Back Matter listeners
+                // Event delegation for dynamically created buttons within outputDiv
                 outputDiv.addEventListener('click', async (e) => {
                     const target = e.target.closest('.ai-suggestion-btn');
-                    if (target) {
-                        // Outline section's "Accept & Add to Editor" button
-                        if (sectionId === 'outline' && target.id === 'accept-outline-btn') {
-                            const outlineContent = target.dataset.content;
-                            const currentContent = editor.getContents();
-                            const outlineDelta = new Quill.import('delta')().insert('\n\n' + outlineContent);
-                            editor.updateContents(currentContent.concat(outlineDelta));
-                            showNotification("Outline added to editor!", "success");
-                            outputDiv.innerHTML = ''; // Clear suggestions after applying
-                        }
-                        // Chapter section's buttons (Generate Next, Proofread, Youth Phrases)
-                        else if (sectionId.startsWith('chapter_')) {
-                            if (target.hasAttribute('data-content')) { // For generateNext and youth phrases
-                                editor.insertText(editor.getLength(), ' ' + target.dataset.content);
-                                showNotification("Text added!", "success");
-                                outputDiv.innerHTML = '';
-                            } else if (target.hasAttribute('data-original') && target.hasAttribute('data-proposed')) { // For proofread
-                                const originalText = target.dataset.original;
-                                const proposedText = target.dataset.proposed;
-                                const editorContent = editor.getText();
-                                const index = editorContent.indexOf(originalText);
-                                if (index !== -1) {
-                                    editor.setSelection(index, originalText.length);
-                                    editor.deleteText(index, originalText.length);
-                                    editor.insertText(index, proposedText);
-                                    showNotification("Fix applied!", "success");
-                                    outputDiv.innerHTML = '';
-                                } else {
-                                    showNotification("Could not find original text in editor.", "error");
-                                }
-                            }
-                        }
-                        // Book Cover selection
-                        else if (sectionId === 'book_cover') {
-                            const imageUrl = target.dataset.imageUrl;
-                            if (imageUrl) {
-                                coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(el => el.classList.remove('selected'));
-                                target.classList.add('selected');
-                                updateProjectCover(userId, projectId, imageUrl);
-                            }
-                        }
-                        // Front Matter and Back Matter accept buttons
-                        else if ((sectionId === 'front_matter' || sectionId === 'back_matter') && target.hasAttribute('data-content')) {
-                             const contentToInsert = target.dataset.content;
-                             editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
-                             showNotification("Content added to editor!", "success");
-                             outputDiv.innerHTML = ''; // Clear suggestions after applying
-                        }
+                    if (target && target.hasAttribute('data-content')) {
+                        const contentToInsert = target.dataset.content;
+                        editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
+                        showNotification("Content added to editor!", "success");
+                        outputDiv.innerHTML = ''; // Clear suggestions after applying
                     }
                 });
 
+                document.getElementById('generate-dedication-btn').addEventListener('click', async () => {
+                    const projectData = await getProject(userId, projectId);
+                    const prompt = `Generate a dedication for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Make it heartfelt and concise.`;
+                    const dedicationText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${dedicationText}</div><button data-content="${escapeHtml(dedicationText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                });
 
-                // Re-attach specific listeners for buttons that are NOT dynamically replaced within outputDiv
-                // (e.g., Generate Next, Analyze Chapter, Proofread Chapter, Suggest Youth Phrases)
-                // These buttons are always present in the AI panel once the section is loaded.
-                const generateNextBtn = document.getElementById('generate-next-btn');
-                if (generateNextBtn) {
-                    generateNextBtn.addEventListener('click', async () => {
-                        const currentText = editor.getText();
-                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const outlineDoc = await getSection(userId, projectId, 'outline');
-                        const context = `Overall Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\nOutline: ${outlineDoc ? outlineDoc.content : ''}\n\n`;
+                document.getElementById('generate-acknowledgments-btn').addEventListener('click', async () => {
+                    const projectData = await getProject(userId, projectId);
+                    const prompt = `Generate an acknowledgments section for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Include thanks to family, friends, and inspiration.`;
+                    const acknowledgmentsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${acknowledgmentsText}</div><button data-content="${escapeHtml(acknowledgmentsText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                });
 
-                        const suggestion = await generateNext(currentText, context);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${suggestion}</div><button data-content="${escapeHtml(suggestion)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Chapter</button>`;
-                    });
-                }
-                const analyzeChapterBtn = document.getElementById('analyze-chapter-btn');
-                if (analyzeChapterBtn) {
-                    analyzeChapterBtn.addEventListener('click', async () => {
-                        const chapterText = editor.getText();
-                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const charDevDoc = await getSection(userId, projectId, 'character_development');
-                        const context = `Synopsis: ${synopsisDoc.content}\n\nCharacter Development: ${charDevDoc.content}`;
-                        const analysis = await analyzeChapter(chapterText, context);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${analysis}</div>`;
-                    });
-                }
-                const proofreadBtn = document.getElementById('proofread-chapter-btn');
-                if (proofreadBtn) {
-                    proofreadBtn.addEventListener('click', async () => {
-                        const chapterText = editor.getText();
-                        const suggestionsText = await proofreadChapter(chapterText);
-                        const suggestions = suggestionsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0).map(s => {
-                            const match = s.match(/Original:\s*(.*?)\s*Proposed:\s*(.*)/is);
-                            if (match && match[1] && match[2]) {
-                                return { original: match[1].trim(), proposed: match[2].trim(), full: s.trim() };
-                            }
-                            return { original: s.trim(), proposed: s.trim(), full: s.trim() };
-                        });
+                document.getElementById('generate-preface-btn').addEventListener('click', async () => {
+                    const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
+                    const projectData = await getProject(userId, projectId);
+                    const prompt = `Generate a preface for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Briefly introduce the book's purpose or inspiration. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                    const prefaceText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${prefaceText}</div><button data-content="${escapeHtml(prefaceText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                });
 
-                        if (suggestions.length > 0) {
-                            outputDiv.innerHTML = `
-                                <p class="mb-2">Click a suggestion to apply it:</p>
-                                ${suggestions.map((suggestion, index) => `
-                                    <button data-original="${escapeHtml(suggestion.original)}" data-proposed="${escapeHtml(suggestion.proposed)}"
-                                            class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm">
-                                        <strong>Suggestion ${index + 1}:</strong> <span class="line-through text-red-300">${escapeHtml(suggestion.original)}</span> → <span class="text-green-300">${escapeHtml(suggestion.proposed)}</span>
-                                    </button>
-                                `).join('')}
-                            `;
-                        } else {
-                            outputDiv.innerHTML = `<p>No proofreading suggestions found or text is already perfect!</p>`;
-                        }
-                    });
-                }
-                const suggestYouthPhrasesBtn = document.getElementById('suggest-youth-phrases-btn');
-                if (suggestYouthPhrasesBtn) {
-                    suggestYouthPhrasesBtn.disabled = false;
-                    suggestYouthPhrasesBtn.classList.remove('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
-                    suggestYouthPhrasesBtn.classList.add('accent-bg', 'accent-bg-hover');
+                document.getElementById('generate-blurb-btn').addEventListener('click', async () => {
+                    const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
+                    const projectData = await getProject(userId, projectId);
+                    const prompt = `Generate a compelling back cover blurb (2-3 paragraphs) for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}" targeting "${projectData.targetAudience}". Focus on hooks and intrigue. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                    const blurbText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${blurbText}</div><button data-content="${escapeHtml(blurbText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                });
 
-                    suggestYouthPhrasesBtn.addEventListener('click', async () => {
-                        const range = editor.getSelection();
-                        if (!range || range.length === 0) { showNotification("Please select text (e.g., dialogue) in the editor to get youth phrase suggestions.", "info"); return; }
-                        const selectedText = editor.getText(range.index, range.length);
-                        const context = editor.getText(Math.max(0, range.index - 100), 200 + range.length); // Broader context
-                        const phrasesText = await suggestYouthPhrases(selectedText, context);
-                        outputDiv.innerHTML = ''; // Clear loading after response
-                        const phrases = phrasesText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                        outputDiv.innerHTML = phrases.map(phrase => `<button data-phrase="${escapeHtml(phrase.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(phrase.trim())}</button>`).join('');
-                    });
-                }
+                document.getElementById('generate-author-bio-btn').addEventListener('click', async () => {
+                    const projectData = await getProject(userId, projectId);
+                    const prompt = `Generate a concise (1-2 paragraph) author biography for Rene' Stanley, author of a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Highlight key experiences like being born in Washington D.C., teenage years in Maryland, finding solace in thoughts and observations, interest in older adults' wisdom, and military service in Desert Storm.`;
+                    const authorBioText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${authorBioText}</div><button data-content="${escapeHtml(authorBioText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                });
 
-                // Front Matter and Back Matter button listeners
-                const generateDedicationBtn = document.getElementById('generate-dedication-btn');
-                if (generateDedicationBtn) {
-                    generateDedicationBtn.addEventListener('click', async () => {
-                        const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate a dedication for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Make it heartfelt and concise.`;
-                        const dedicationText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${dedicationText}</div><button data-content="${escapeHtml(dedicationText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
-                    });
-                }
-
-                const generateAcknowledgmentsBtn = document.getElementById('generate-acknowledgments-btn');
-                if (generateAcknowledgmentsBtn) {
-                    generateAcknowledgmentsBtn.addEventListener('click', async () => {
-                        const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate an acknowledgments section for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Include thanks to family, friends, and inspiration.`;
-                        const acknowledgmentsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${acknowledgmentsText}</div><button data-content="${escapeHtml(acknowledgmentsText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
-                    });
-                }
-
-                const generatePrefaceBtn = document.getElementById('generate-preface-btn');
-                if (generatePrefaceBtn) {
-                    generatePrefaceBtn.addEventListener('click', async () => {
-                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate a preface for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Briefly introduce the book's purpose or inspiration. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
-                        const prefaceText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${prefaceText}</div><button data-content="${escapeHtml(prefaceText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
-                    });
-                }
-
-                const generateBlurbBtn = document.getElementById('generate-blurb-btn');
-                if (generateBlurbBtn) {
-                    generateBlurbBtn.addEventListener('click', async () => {
-                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate a compelling back cover blurb (2-3 paragraphs) for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}" targeting "${projectData.targetAudience}". Focus on hooks and intrigue. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
-                        const blurbText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${blurbText}</div><button data-content="${escapeHtml(blurbText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
-                    });
-                }
-
-                const generateAuthorBioBtn = document.getElementById('generate-author-bio-btn');
-                if (generateAuthorBioBtn) {
-                    generateAuthorBioBtn.addEventListener('click', async () => {
-                        const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate a concise (1-2 paragraph) author biography for Rene' Stanley, author of a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Highlight key experiences like being born in Washington D.C., teenage years in Maryland, finding solace in thoughts and observations, interest in older adults' wisdom, and military service in Desert Storm.`;
-                        const authorBioText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${authorBioText}</div><button data-content="${escapeHtml(authorBioText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
-                    });
-                }
-
-                const generateDiscussionQuestionsBtn = document.getElementById('generate-discussion-questions-btn');
-                if (generateDiscussionQuestionsBtn) {
-                    generateDiscussionQuestionsBtn.addEventListener('click', async () => {
-                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate 5 thought-provoking discussion questions for a book club based on a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Focus on themes and characters. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
-                        const questionsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${questionsText}</div><button data-content="${escapeHtml(questionsText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
-                    });
-                }
+                document.getElementById('generate-discussion-questions-btn').addEventListener('click', async () => {
+                    const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
+                    const projectData = await getProject(userId, projectId);
+                    const prompt = `Generate 5 thought-provoking discussion questions for a book club based on a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Focus on themes and characters. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                    const questionsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${questionsText}</div><button data-content="${escapeHtml(questionsText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                });
             };
 
             const loadSection = async (sectionId) => {
