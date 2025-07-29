@@ -445,7 +445,7 @@
                     </div>
                 `;
 
-                const payload = { instances: { prompt: promptText }, parameters: { "sampleCount": 1} };
+                const payload = { instances: { prompt: promptText }, parameters: { "sampleCount": 3} };
                 const response = await fetch(IMAGEN_API_URL, { // Call to the corrected Imagen API URL
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
