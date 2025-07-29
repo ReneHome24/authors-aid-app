@@ -776,7 +776,10 @@
             let listHtml = projects.map(p => `
                 <div class="project-card bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col justify-between">
                     <div>
-                        <h3 class="text-xl font-lora font-semibold text-white">${p.title || 'Untitled Project'}</h3>
+                        <div class="flex items-center mb-2">
+                            ${p.bookCoverUrl ? `<img src="${p.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/60x90/1F2937/D1D5DB?text=No+Cover';" class="w-12 h-18 object-cover rounded-md mr-3 shadow-md" alt="Book Cover Thumbnail"/>` : `<img src="https://placehold.co/60x90/1F2937/D1D5DB?text=No+Cover" class="w-12 h-18 object-cover rounded-md mr-3 shadow-md" alt="Placeholder Cover"/>`}
+                            <h3 class="text-xl font-lora font-semibold text-white">${p.title || 'Untitled Project'}</h3>
+                        </div>
                         <p class="text-sm text-gray-500 mt-1">Created: ${p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</p>
                     </div>
                     <div class="flex mt-4 space-x-2">
@@ -1263,7 +1266,7 @@
 
                     // New: Suggest Youth Phrases listener
                     if (suggestYouthPhrasesBtn) {
-                        suggestYouthPhragesBtn.disabled = false;
+                        suggestYouthPhrasesBtn.disabled = false;
                         suggestYouthPhrasesBtn.classList.remove('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
                         suggestYouthPhrasesBtn.classList.add('accent-bg', 'accent-bg-hover');
 
@@ -1349,6 +1352,7 @@
                                     const downloadURL = await getDownloadURL(storageRef);
                                     await updateProjectCover(currentUserId, projectId, downloadURL);
                                     showNotification('Book cover uploaded and saved!', 'success');
+                                    // No need to re-render dashboard immediately, it will update on navigation
                                 } catch (storageError) {
                                     console.error("Error uploading cover to storage:", storageError);
                                     showNotification(`Failed to save cover: ${storageError.message}`, 'error');
