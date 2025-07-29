@@ -328,6 +328,17 @@
                 showNotification(`Error saving cover: ${e.message}`, 'error');
             }
         }
+        // New function to update project title
+        async function updateProjectTitle(userId, projectId, newTitle) {
+            try {
+                const projectRef = doc(getProjectsCollection(userId), projectId);
+                await updateDoc(projectRef, { title: newTitle, lastModified: serverTimestamp() });
+                showNotification('Project title updated!', 'success');
+            } catch (e) {
+                console.error("Error updating project title:", e);
+                showNotification(`Error updating project title: ${e.message}`, 'error');
+            }
+        }
         async function deleteProject(userId, projectId) { try { await deleteDoc(doc(getProjectsCollection(userId), projectId)); showNotification('Project deleted.', 'success'); } catch (e) { console.error("Error deleting project:", e); showNotification(`Error deleting project: ${e.message}`, 'error'); } }
 
         // --- utils.js content ---
@@ -370,11 +381,10 @@
 
 
         // --- aiService.js content ---
-        const API_KEY = "AIzaSyCVsziM6I1QEU22YNPGTwLvN0EuW4k2SiY";
+        const API_KEY = ""; // Keep this empty, Canvas will inject the key at runtime
         const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`; // Changed to gemini-2.5-flash
         // CORRECTED: Use the stable imagegeneration model
-        const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`; // Corrected Imagen model and endpoint
-
+        const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`; // Corrected Imagen model
 
         // Global variable to store AI style preference
         let aiStylePreference = "";
@@ -445,7 +455,7 @@
                     </div>
                 `;
 
-                // Set sampleCount to 3 for multiple images
+                // CORRECTED: Set sampleCount to 3 for multiple images
                 const payload = { instances: { prompt: promptText }, parameters: { "sampleCount": 3} };
                 const response = await fetch(IMAGEN_API_URL, { // Call to the corrected Imagen API URL
                     method: 'POST',
@@ -479,8 +489,7 @@
                     console.error("Image API Error: Unexpected response structure or no predictions:", result);
                     return null;
                 }
-            }
-            catch (e) {
+            } catch (e) {
                 console.error("Error calling Imagen API:", e);
                 showNotification(`Image generation failed: ${e.message}`, 'error');
                 return null;
@@ -507,6 +516,11 @@
             ${currentText}
             ---
             Continue:`;
+            return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+        }
+        // New AI function to generate titles
+        async function generateTitles(context) {
+            const prompt = `You are an AI creative assistant for authors. Based on the following synopsis or brainstorming content, generate a numbered list of 5 distinct and compelling title suggestions for a Christian book. Titles should be concise and impactful, reflecting the themes and genre.\n\nContent:\n---\n${context}\n---\n\nGenerate 5 title suggestions:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
 
@@ -879,7 +893,7 @@
                 <div class="flex flex-grow overflow-hidden"> <!-- Changed to overflow-hidden to contain internal scrolling -->
                     <div id="left-sidebar" class="w-2/12 bg-gray-800 p-4 border-r border-gray-700 flex flex-col overflow-y-auto"></div>
                     <div id="center-panel" class="w-7/12 p-8 flex flex-col overflow-y-auto bg-[#111827]">
-                        <h3 id="section-title" class="text-3xl font-lora font-bold mb-4 text-white"></h3>
+                        <h3 id="section-title" class="text-3xl font-lora font-bold mb-4 text-white">${project.title || 'Untitled Page'}</h3> <!-- Updated to display project title -->
                         <div id="editor-container" class="flex-grow relative flex flex-col"> <!-- Added flex flex-col -->
                            <div id="editor-toolbar"></div>
                            <div id="editor" class="flex-grow"></div> <!-- Removed h-full, added flex-grow -->
@@ -919,7 +933,7 @@
 
             const renderSidebar = () => {
                 leftSidebar.innerHTML = `
-                    <h2 class="text-lg font-bold font-lora mb-4">${project.title}</h2>
+                    <h2 class="text-lg font-bold font-lora mb-4">${project.title || 'Untitled Project'}</h2> <!-- Display updated project title -->
                     <nav id="project-sections" class="flex flex-col space-y-2 flex-grow overflow-y-auto">
                         ${sections.map(s => `<a href="#" data-section-id="${s.id}" class="section-link p-2 rounded-md hover:bg-gray-700 transition-colors ${s.id === activeSectionId ? 'bg-blue-600 text-white' : ''}">${s.title}</a>`).join('')}
                     </nav>
@@ -992,7 +1006,6 @@
 
 
             const renderAiPanel = (sectionId) => {
-                // Initialize aiPanelHtml with the common header part
                 let aiPanelHtml = `
                     <h3 class="text-lg font-bold mb-4">AI Co-Author</h3>
                     <div class="space-y-4 flex-grow flex flex-col">
@@ -1003,7 +1016,6 @@
                         </div>
                 `;
 
-                // Add section-specific AI tools
                 if (sectionId === 'brainstorming') {
                     aiPanelHtml += `
                         <div>
@@ -1018,7 +1030,11 @@
                         <div class="pt-4 border-t border-gray-700">
                             <p class="text-sm font-semibold mb-2">Suggest Structural Template</p>
                             <button id="generate-structure-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest</button>
-                        </div>`;
+                        </div>
+                        <div class="pt-4 border-t border-gray-700">
+                            <p class="text-sm font-semibold mb-2">Suggest Titles</p>
+                            <button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest Titles</button>
+                        </div>`; // New button for title suggestions
                 } else if (sectionId === 'character_development') {
                      aiPanelHtml += `
                         <div>
@@ -1080,7 +1096,6 @@
                         </div>`;
                 }
 
-                // Final common part of the AI panel HTML
                 aiPanelHtml += `
                     <div class="pt-4 border-t border-gray-700 flex-shrink-0">
                         <p class="text-sm font-semibold mb-2">Editing & Faith Tools</p>
@@ -1091,22 +1106,14 @@
                         </div>
                     </div>
                     <div id="ai-output" class="mt-4 text-sm text-gray-300 space-y-2 flex-grow overflow-y-auto"></div>
-                    </div>`; // Closing div for 'space-y-4 flex-grow flex flex-col'
+                    </div>`;
 
-                // Set the innerHTML of the right sidebar
                 rightSidebar.innerHTML = aiPanelHtml;
-                // Now, attach event listeners to the newly rendered elements
                 setupAiPanelListeners(sectionId);
             };
 
             const setupAiPanelListeners = (sectionId) => {
                 const outputDiv = document.getElementById('ai-output');
-                // Ensure outputDiv exists before proceeding
-                if (!outputDiv) {
-                    console.error("Error: AI output container (ai-output) not found in the DOM.");
-                    showNotification("AI panel not fully loaded. Please try refreshing.", "error");
-                    return;
-                }
 
                 // Initialize AI Style Preference input and listener
                 const aiStyleInput = document.getElementById('ai-style-preference-input');
@@ -1129,7 +1136,7 @@
                         outputDiv.innerHTML = ''; // Clear loading after response
                         const concepts = conceptsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                         outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHtml(concept.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Suggestion ${index + 1}:</strong> ${escapeHtml(concept.trim().substring(0, 80))}...</button>`).join('');
-                        outputDiv.querySelectorAll('.ai-suggestion-btn').forEach(btn => btn.addEventListener('click', () => { editor.setText(btn.dataset.content); showNotification("Concept added to editor!", "success"); }));
+                        // The event listener for this button is handled by delegation on outputDiv.
                     });
 
                     document.getElementById('generate-pov-btn').addEventListener('click', async () => {
@@ -1139,7 +1146,7 @@
                         outputDiv.innerHTML = ''; // Clear loading after response
                         const povs = povsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                         outputDiv.innerHTML = povs.map((pov, index) => `<button data-content="${escapeHtml(pov.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(pov.trim().substring(0, 80))}...</button>`).join('');
-                        outputDiv.querySelectorAll('.ai-suggestion-btn').forEach(btn => btn.addEventListener('click', () => { editor.insertText(editor.getLength(), '\n\n' + btn.dataset.content); showNotification("POV suggestion added!", "success"); }));
+                        // The event listener for this button is handled by delegation on outputDiv.
                     });
 
                      document.getElementById('generate-structure-btn').addEventListener('click', async () => {
@@ -1149,8 +1156,19 @@
                         outputDiv.innerHTML = ''; // Clear loading after response
                         const structures = structuresText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                         outputDiv.innerHTML = structures.map((structure, index) => `<button data-content="${escapeHtml(structure.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(structure.trim().substring(0, 80))}...</button>`).join('');
-                        outputDiv.querySelectorAll('.ai-suggestion-btn').forEach(btn => btn.addEventListener('click', () => { editor.insertText(editor.getLength(), '\n\n' + btn.dataset.content); showNotification("Structure suggestion added!", "success"); }));
+                        // The event listener for this button is handled by delegation on outputDiv.
                     });
+
+                    // New: Generate Titles listener
+                    document.getElementById('generate-titles-btn').addEventListener('click', async () => {
+                        const context = editor.getText().trim();
+                        if (!context) { showNotification("Please write a synopsis or brainstorming content in the editor first.", "error"); return; }
+                        const titlesText = await generateTitles(context);
+                        outputDiv.innerHTML = ''; // Clear loading after response
+                        const titles = titlesText.split(/\d+\.\s+/).filter(t => t.trim().length > 0);
+                        outputDiv.innerHTML = titles.map((title, index) => `<button data-title="${escapeHtml(title.trim())}" class="ai-title-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Title ${index + 1}:</strong> ${escapeHtml(title.trim())}</button>`).join('');
+                    });
+
                 } else if (sectionId === 'character_development') {
                     const generateBtn = document.getElementById('generate-characters-btn');
                     generateBtn.addEventListener('click', async () => {
@@ -1160,7 +1178,7 @@
                         outputDiv.innerHTML = ''; // Clear loading after response
                         const characters = charactersText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                         outputDiv.innerHTML = characters.map((char, index) => `<button data-content="${escapeHtml(char.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Character ${index + 1}:</strong> ${escapeHtml(char.trim().substring(0, 80))}...</button>`).join('');
-                        outputDiv.querySelectorAll('.ai-suggestion-btn').forEach(btn => btn.addEventListener('click', () => { editor.setText(btn.dataset.content); showNotification("Character profile added!", "success"); }));
+                        // The event listener for this button is handled by delegation on outputDiv.
                     });
                 } else if (sectionId === 'world_building') {
                     const generateBtn = document.getElementById('generate-world-btn');
@@ -1172,7 +1190,7 @@
                         outputDiv.innerHTML = ''; // Clear loading after response
                         const prompts = worldText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                         outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHtml(prompt.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHtml(prompt.trim().substring(0, 80))}...</button>`).join('');
-                        outputDiv.querySelectorAll('.ai-suggestion-btn').forEach(btn => btn.addEventListener('click', () => { editor.setText(btn.dataset.content); showNotification("World-building idea added!", "success"); }));
+                        // The event listener for this button is handled by delegation on outputDiv.
                     });
                 }
                 else if (sectionId === 'outline') {
@@ -1257,7 +1275,7 @@
                             const phrasesText = await suggestYouthPhrases(selectedText, context);
                             outputDiv.innerHTML = ''; // Clear loading after response
                             const phrases = phrasesText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                            outputDiv.innerHTML = phrases.map(phrase => `<button data-phrase="${escapeHtml(phrase.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(phrase.trim())}</button>`).join('');
+                            outputDiv.innerHTML = phrases.map(phrase => `<button data-content="${escapeHtml(phrase.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(phrase.trim())}</button>`).join('');
                         });
                     }
 
@@ -1274,49 +1292,224 @@
 
                         // The event listener is now attached via delegation below, no need to re-attach here.
                     });
-                } else if (sectionId === 'front_matter') {
-                    aiPanelHtml += `
-                        <div>
-                            <p class="text-sm font-semibold mb-2">Generate Front Matter</p>
-                            <div class="grid grid-cols-2 gap-2">
-                                <button id="generate-dedication-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Dedication</button>
-                                <button id="generate-acknowledgments-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Acknowledge</button>
-                                <button id="generate-preface-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Preface</button>
-                            </div>
-                        </div>`;
-                } else if (sectionId === 'back_matter') {
-                    aiPanelHtml += `
-                        <div>
-                            <p class="text-sm font-semibold mb-2">Generate Back Matter</p>
-                            <div class="grid grid-cols-2 gap-2">
-                                <button id="generate-blurb-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Blurb</button>
-                                <button id="generate-author-bio-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Author Bio</button>
-                                <button id="generate-discussion-questions-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Discussion Questions</button>
-                            </div>
-                        </div>`;
                 }
 
-                // Final common part of the AI panel HTML
-                aiPanelHtml += `
-                    <div class="pt-4 border-t border-gray-700 flex-shrink-0">
-                        <p class="text-sm font-semibold mb-2">Editing & Faith Tools</p>
-                        <div class="grid grid-cols-2 gap-2"> <!-- Two columns for editing buttons -->
-                            <button id="suggest-alternatives-btn" class="w-full bg-gray-600 text-gray-400 font-semibold py-2 px-4 rounded-lg cursor-not-allowed" disabled>Suggest Alternatives</button>
-                            <button id="suggest-scripture-btn" class="w-full bg-gray-600 text-gray-400 font-semibold py-2 px-4 rounded-lg cursor-not-allowed" disabled>Suggest Scripture</button>
-                            <button id="suggest-youth-phrases-btn" class="w-full bg-gray-600 text-gray-400 font-semibold py-2 px-4 rounded-lg cursor-not-allowed" disabled>Suggest Youth Phrases</button>
-                        </div>
-                    </div>
-                    <div id="ai-output" class="mt-4 text-sm text-gray-300 space-y-2 flex-grow overflow-y-auto"></div>
-                    </div>`; // Closing div for 'space-y-4 flex-grow flex flex-col'
+                // IMPORTANT: Event Delegation for all dynamically created AI suggestion buttons
+                // This single listener handles clicks on all buttons with class 'ai-suggestion-btn'
+                // that are children of outputDiv, even if they are added to the DOM later.
+                outputDiv.addEventListener('click', async (e) => {
+                    const target = e.target.closest('.ai-suggestion-btn, .ai-title-suggestion-btn'); // Include new title suggestion class
+                    if (target) {
+                        // Title suggestion button handling
+                        if (target.classList.contains('ai-title-suggestion-btn')) {
+                            const newTitle = target.dataset.title;
+                            if (newTitle) {
+                                await updateProjectTitle(userId, projectId, newTitle);
+                                project.title = newTitle; // Update local project object
+                                sectionTitle.textContent = newTitle; // Update editor header
+                                renderSidebar(); // Re-render sidebar to update project title there
+                                outputDiv.innerHTML = ''; // Clear suggestions after applying
+                            }
+                        }
+                        // Outline section's "Accept & Add to Editor" button
+                        else if (sectionId === 'outline' && target.hasAttribute('data-content')) { // Check for data-content attribute
+                            const outlineContent = target.dataset.content;
+                            // PROBLEM 1 FIX: Use setText to replace content, ensuring it loads correctly
+                            editor.setText(outlineContent);
+                            showNotification("Outline added to editor!", "success");
+                            outputDiv.innerHTML = ''; // Clear suggestions after applying
+                        }
+                        // Chapter section's buttons (Generate Next, Proofread, Youth Phrases)
+                        else if (sectionId.startsWith('chapter_')) {
+                            if (target.hasAttribute('data-content')) { // For generateNext and youth phrases
+                                editor.insertText(editor.getLength(), ' ' + target.dataset.content);
+                                showNotification("Text added!", "success");
+                                outputDiv.innerHTML = '';
+                            } else if (target.hasAttribute('data-original') && target.hasAttribute('data-proposed')) { // For proofread
+                                const originalText = target.dataset.original;
+                                const proposedText = target.dataset.proposed;
+                                const editorContent = editor.getText();
+                                const index = editorContent.indexOf(originalText);
+                                if (index !== -1) {
+                                    editor.setSelection(index, originalText.length);
+                                    editor.deleteText(index, originalText.length);
+                                    editor.insertText(index, proposedText);
+                                    showNotification("Fix applied!", "success");
+                                    outputDiv.innerHTML = '';
+                                } else {
+                                    showNotification("Could not find original text in editor.", "error");
+                                }
+                            }
+                        }
+                        // PROBLEM 2 FIX: General handling for other AI suggestions (concepts, characters, world-building, front/back matter)
+                        else if (target.classList.contains('ai-suggestion-btn') && target.hasAttribute('data-content')) {
+                            const contentToInsert = target.dataset.content;
+                            // For sections where content should be appended
+                            editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
+                            showNotification("Content added to editor!", "success");
+                            outputDiv.innerHTML = ''; // Clear suggestions after applying
+                        }
+                        // Book Cover selection (delegated)
+                        else if (sectionId === 'book_cover' && target.classList.contains('cover-image-wrapper')) { // Check for cover-image-wrapper class
+                            const imageUrl = target.dataset.imageUrl;
+                            if (imageUrl) {
+                                coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(el => el.classList.remove('selected'));
+                                target.classList.add('selected');
+                                // Upload to Firebase Storage and save URL to Firestore
+                                try {
+                                    const storageRef = ref(storageInstance, `artifacts/${appId}/users/${currentUserId}/project_covers/${projectId}_${Date.now()}.png`);
+                                    await uploadString(storageRef, imageUrl, 'data_url');
+                                    const downloadURL = await getDownloadURL(storageRef);
+                                    await updateProjectCover(currentUserId, projectId, downloadURL);
+                                    showNotification('Book cover uploaded and saved!', 'success');
+                                } catch (storageError) {
+                                    console.error("Error uploading cover to storage:", storageError);
+                                    showNotification(`Failed to save cover: ${storageError.message}`, 'error');
+                                }
+                            }
+                        }
+                    }
+                });
 
-                // Set the innerHTML of the right sidebar
-                rightSidebar.innerHTML = aiPanelHtml;
-                // Now, attach event listeners to the newly rendered elements
-                setupAiPanelListeners(sectionId);
+
+                // Re-attach specific listeners for buttons that are NOT dynamically replaced within outputDiv
+                // (e.g., Generate Next, Analyze Chapter, Proofread Chapter, Suggest Youth Phrases)
+                // These buttons are always present in the AI panel once the section is loaded.
+                const generateNextBtn = document.getElementById('generate-next-btn');
+                if (generateNextBtn) {
+                    generateNextBtn.addEventListener('click', async () => {
+                        const currentText = editor.getText();
+                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
+                        const outlineDoc = await getSection(userId, projectId, 'outline');
+                        const context = `Overall Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\nOutline: ${outlineDoc ? outlineDoc.content : ''}\n\n`;
+
+                        const suggestion = await generateNext(currentText, context);
+                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${suggestion}</div><button data-content="${escapeHtml(suggestion)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Chapter</button>`;
+                    });
+                }
+                const analyzeChapterBtn = document.getElementById('analyze-chapter-btn');
+                if (analyzeChapterBtn) {
+                    analyzeChapterBtn.addEventListener('click', async () => {
+                        const chapterText = editor.getText();
+                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
+                        const charDevDoc = await getSection(userId, projectId, 'character_development');
+                        const context = `Synopsis: ${synopsisDoc.content}\n\nCharacter Development: ${charDevDoc.content}`;
+                        const analysis = await analyzeChapter(chapterText, context);
+                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${analysis}</div>`;
+                    });
+                }
+                const proofreadBtn = document.getElementById('proofread-chapter-btn');
+                if (proofreadBtn) {
+                    proofreadBtn.addEventListener('click', async () => {
+                        const chapterText = editor.getText();
+                        const suggestionsText = await proofreadChapter(chapterText);
+                        const suggestions = suggestionsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0).map(s => {
+                            const match = s.match(/Original:\s*(.*?)\s*Proposed:\s*(.*)/is);
+                            if (match && match[1] && match[2]) {
+                                return { original: match[1].trim(), proposed: match[2].trim(), full: s.trim() };
+                            }
+                            return { original: s.trim(), proposed: s.trim(), full: s.trim() };
+                        });
+
+                        if (suggestions.length > 0) {
+                            outputDiv.innerHTML = `
+                                <p class="mb-2">Click a suggestion to apply it:</p>
+                                ${suggestions.map((suggestion, index) => `
+                                    <button data-original="${escapeHtml(suggestion.original)}" data-proposed="${escapeHtml(suggestion.proposed)}"
+                                            class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm">
+                                        <strong>Suggestion ${index + 1}:</strong> <span class="line-through text-red-300">${escapeHtml(suggestion.original)}</span> → <span class="text-green-300">${escapeHtml(suggestion.proposed)}</span>
+                                    </button>
+                                `).join('')}
+                            `;
+                        } else {
+                            outputDiv.innerHTML = `<p>No proofreading suggestions found or text is already perfect!</p>`;
+                        }
+                    });
+                }
+                const suggestYouthPhrasesBtn = document.getElementById('suggest-youth-phrases-btn');
+                if (suggestYouthPhrasesBtn) {
+                    suggestYouthPhrasesBtn.disabled = false;
+                    suggestYouthPhrasesBtn.classList.remove('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
+                    suggestYouthPhrasesBtn.classList.add('accent-bg', 'accent-bg-hover');
+
+                    suggestYouthPhrasesBtn.addEventListener('click', async () => {
+                        const range = editor.getSelection();
+                        if (!range || range.length === 0) { showNotification("Please select text (e.g., dialogue) in the editor to get youth phrase suggestions.", "info"); return; }
+                        const selectedText = editor.getText(range.index, range.length);
+                        const context = editor.getText(Math.max(0, range.index - 100), 200 + range.length); // Broader context
+                        const phrasesText = await suggestYouthPhrases(selectedText, context);
+                        outputDiv.innerHTML = ''; // Clear loading after response
+                        const phrases = phrasesText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
+                        outputDiv.innerHTML = phrases.map(phrase => `<button data-content="${escapeHtml(phrase.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(phrase.trim())}</button>`).join('');
+                    });
+                }
+
+                // Front Matter and Back Matter button listeners
+                const generateDedicationBtn = document.getElementById('generate-dedication-btn');
+                if (generateDedicationBtn) {
+                    generateDedicationBtn.addEventListener('click', async () => {
+                        const projectData = await getProject(userId, projectId);
+                        const prompt = `Generate a dedication for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Make it heartfelt and concise.`;
+                        const dedicationText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${dedicationText}</div><button data-content="${escapeHtml(dedicationText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                    });
+                }
+
+                const generateAcknowledgmentsBtn = document.getElementById('generate-acknowledgments-btn');
+                if (generateAcknowledgmentsBtn) {
+                    generateAcknowledgmentsBtn.addEventListener('click', async () => {
+                        const projectData = await getProject(userId, projectId);
+                        const prompt = `Generate an acknowledgments section for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Include thanks to family, friends, and inspiration.`;
+                        const acknowledgmentsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${acknowledgmentsText}</div><button data-content="${escapeHtml(acknowledgmentsText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                    });
+                }
+
+                const generatePrefaceBtn = document.getElementById('generate-preface-btn');
+                if (generatePrefaceBtn) {
+                    generatePrefaceBtn.addEventListener('click', async () => {
+                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
+                        const projectData = await getProject(userId, projectId);
+                        const prompt = `Generate a preface for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Briefly introduce the book's purpose or inspiration. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                        const prefaceText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${prefaceText}</div><button data-content="${escapeHtml(prefaceText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                    });
+                }
+
+                const generateBlurbBtn = document.getElementById('generate-blurb-btn');
+                if (generateBlurbBtn) {
+                    generateBlurbBtn.addEventListener('click', async () => {
+                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
+                        const projectData = await getProject(userId, projectId);
+                        const prompt = `Generate a compelling back cover blurb (2-3 paragraphs) for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}" targeting "${projectData.targetAudience}". Focus on hooks and intrigue. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                        const blurbText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${blurbText}</div><button data-content="${escapeHtml(blurbText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                    });
+                }
+
+                const generateAuthorBioBtn = document.getElementById('generate-author-bio-btn');
+                if (generateAuthorBioBtn) {
+                    generateAuthorBioBtn.addEventListener('click', async () => {
+                        const projectData = await getProject(userId, projectId);
+                        const prompt = `Generate a concise (1-2 paragraph) author biography for Rene' Stanley, author of a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Highlight key experiences like being born in Washington D.C., teenage years in Maryland, finding solace in thoughts and observations, interest in older adults' wisdom, and military service in Desert Storm.`;
+                        const authorBioText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${authorBioText}</div><button data-content="${escapeHtml(authorBioText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                    });
+                }
+
+                const generateDiscussionQuestionsBtn = document.getElementById('generate-discussion-questions-btn');
+                if (generateDiscussionQuestionsBtn) {
+                    generateDiscussionQuestionsBtn.addEventListener('click', async () => {
+                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
+                        const projectData = await getProject(userId, projectId);
+                        const prompt = `Generate 5 thought-provoking discussion questions for a book club based on a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Focus on themes and characters. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                        const questionsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${questionsText}</div><button data-content="${escapeHtml(questionsText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                    });
+                }
             };
 
             const loadSection = async (sectionId) => {
-                console.log(`loadSection called for sectionId: ${sectionId}`);
                 const sectionData = await getSection(userId, projectId, sectionId);
                 const currentSectionTitleElement = document.getElementById('section-title'); // Get element inside this function
                 if (currentSectionTitleElement) { // Check if it exists
@@ -1327,33 +1520,36 @@
                 activeSectionId = sectionId;
 
                 if (sectionId === 'book_cover') {
-                    console.log("Loading Book Cover section.");
                     editorContainer.classList.add('hidden');
                     coverDisplayContainer.classList.remove('hidden');
                     // Display previously saved cover if available
                     const projectData = await getProject(userId, projectId);
                     if (projectData && projectData.bookCoverUrl) {
-                        console.log("Found existing book cover URL:", projectData.bookCoverUrl);
                         coverDisplayContainer.innerHTML = `
                             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
                                 <div class="cover-image-wrapper selected" data-image-url="${escapeHtml(projectData.bookCoverUrl)}">
                                     <img src="${projectData.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/400x600/FF0000/FFFFFF?text=Image+Load+Error';" class="w-full h-auto rounded-lg shadow-lg" alt="Selected Book Cover"/>
                                     <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div>
                                 </div>
+                                <div class="cover-image-wrapper" data-image-url="https://placehold.co/400x600/111827/FFFFFF?text=More+Options+Coming">
+                                    <img src="https://placehold.co/400x600/111827/FFFFFF?text=More+Options+Coming" class="w-full h-auto rounded-lg" alt="Placeholder for more options"/>
+                                    <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div>
+                                </div>
+                                <div class="cover-image-wrapper" data-image-url="https://placehold.co/400x600/374151/FFFFFF?text=More+Options+Coming">
+                                    <img src="https://placehold.co/400x600/374151/FFFFFF?text=More+Options+Coming" class="w-full h-auto rounded-lg" alt="Placeholder for more options"/>
+                                    <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div>
+                                </div>
                             </div>
                         `;
                     } else {
-                        console.log("No existing book cover found.");
                         coverDisplayContainer.innerHTML = `<div class="text-center text-gray-400">Your generated book cover will appear here.</div>`;
                     }
                     // Add click listeners for selection to existing images (if any)
                     // This is now handled by event delegation on coverDisplayContainer
                 } else {
-                    console.log(`Loading editor section: ${sectionId}`);
                     coverDisplayContainer.classList.add('hidden');
                     editorContainer.classList.remove('hidden');
                     if (!editor) {
-                        console.log("Initializing Quill editor for the first time.");
                         const toolbarOptions = [['bold', 'italic', 'underline'], [{ 'header': 1 }, { 'header': 2 }], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['clean']];
                         // Initialize Quill with the toolbar and editor container
                         editor = new Quill('#editor', {
@@ -1366,17 +1562,10 @@
                             showNotification('Progress Saved', 'success', 1500);
                         }, 1500));
                     }
-                    console.log("Attempting to set editor content for section:", sectionId);
-                    console.log("Section data content:", sectionData.content);
                     try {
-                        // Attempt to parse as JSON (Quill Delta format)
                         editor.setContents(JSON.parse(sectionData.content));
-                        console.log("Editor content set from JSON successfully.");
                     } catch(e) {
-                        // If parsing fails, treat as plain text
-                        console.warn("Failed to parse section content as JSON (Quill Delta). Setting as plain text.", e);
                         editor.setText(sectionData.content || '');
-                        showNotification('Warning: Content loaded as plain text. Formatting may be lost.', 'warning', 3000);
                     }
                 }
 
