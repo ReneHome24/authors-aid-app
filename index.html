@@ -631,7 +631,7 @@ Generate 5 character profiles:`;
         async function generateTitles(context) {
             // CORRECTED PROMPT: Removed "numbered list of 5 distinct and compelling title suggestions for a Christian book."
             // The prompt now focuses only on generating the titles themselves, allowing parseNumberedAiList to handle numbering for display.
-            const prompt = `You are an AI creative assistant for authors. Based on the following synopsis or brainstorming content, generate 5 distinct and compelling title suggestions for a Christian book. Titles should be concise and impactful, reflecting the themes and genre.\n\nContent:\n---\n${context}\n---\n\nGenerate 5 title suggestions:`;
+            const prompt = `You are an AI creative assistant for authors. Based on the following synopsis or brainstorming content, generate 5 distinct and compelling title suggestions for a Christian book. Titles should be concise and impactful, reflecting the themes and genre. Provide ONLY the title and optional subtitle. Do NOT include any descriptive sentences or explanations after the title.\n\nContent:\n---\n${context}\n---\n\nGenerate 5 title suggestions:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
 
@@ -1317,14 +1317,12 @@ Generate 5 character profiles:`;
                         const titlesText = await generateTitles(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
 
-                        // Use parseNumberedAiList to get clean titles.
-                        // The `parseNumberedAiList` function with `keepNumbers = false` will strip the leading "1. ", "2. " etc.
-                        // The `stripMarkdownAndHtml` will remove any bolding or other markdown.
+                        // Use parseNumberedAiList to get clean titles (without leading numbers in the content itself)
                         const titles = parseNumberedAiList(titlesText, false).map(t => stripMarkdownAndHtml(t.trim()));
 
                         outputDiv.innerHTML = titles.map((cleanTitle, index) => {
-                            // The `data-content` attribute will store the clean title text (e.g., "My Awesome Book Title")
-                            // The visible text on the button will now be "Title X: Clean Title"
+                            // The `data-content` attribute will store the clean title text
+                            // The visible text on the button will include "Title X: " for clarity in the list of suggestions.
                             return `<button data-content="${escapeHtml(cleanTitle)}" class="ai-title-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Title ${index + 1}:</strong> ${escapeHtml(cleanTitle)}</button>`;
                         }).join('');
                     });
