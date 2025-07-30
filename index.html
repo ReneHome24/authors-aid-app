@@ -77,9 +77,21 @@
             border-radius: 8px;
             padding: 1rem;
             overflow-y: auto; /* Ensure Quill editor content scrolls */
-            /* FIX: Ensure text starts at the top - Adjusted padding-top */
-            padding-top: 0.5rem; /* Reduced from 1rem to 0.5rem */
+            /* FIX: Ensure text starts at the top */
+            padding-top: 0 !important; /* Set to 0 and use !important to override Quill's default */
+            padding-bottom: 1rem; /* Keep existing bottom padding */
         }
+        /* Adjust the first line of content within Quill to start immediately */
+        .ql-editor p:first-child,
+        .ql-editor h1:first-child,
+        .ql-editor h2:first-child,
+        .ql-editor h3:first-child,
+        .ql-editor ol:first-child,
+        .ql-editor ul:first-child {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+
         .ql-toolbar {
             background-color: #1F2937 !important;
             border-top-left-radius: 8px !important;
@@ -1667,7 +1679,7 @@ Generate 5 character profiles:`;
                             showModal('Edit Image Prompt', `
                                 <div class="space-y-4">
                                     <p class="text-gray-400">Review and edit the prompt before generating images:</p>
-                                    <textarea id="image-prompt-editor" class="w-full h-40 p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 accent-ring">${escapeHtml(fullConcept)}</textarea>
+                                    <textarea id="image-prompt-editor" class="w-full h-40 p-2 bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring">${escapeHtml(fullConcept)}</textarea>
                                 </div>
                             `, async () => {
                                 const editedPrompt = document.getElementById('image-prompt-editor').value;
