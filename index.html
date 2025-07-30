@@ -77,6 +77,8 @@
             border-radius: 8px;
             padding: 1rem;
             overflow-y: auto; /* Ensure Quill editor content scrolls */
+            /* FIX: Ensure text starts at the top - Adjusted padding-top */
+            padding-top: 0.5rem; /* Reduced from 1rem to 0.5rem */
         }
         .ql-toolbar {
             background-color: #1F2937 !important;
@@ -300,15 +302,17 @@
                 const emptyContent = JSON.stringify({ ops: [{ insert: '\n' }] });
                 // Added new 'metadata' section at order 0
                 await setDoc(doc(sectionsCollection, 'metadata'), { title: 'Project Metadata', content: JSON.stringify({ authorName: '', copyrightYear: '', publisher: '', isbn: '', seriesName: '', seriesNumber: '', lccn: '' }), order: 0 }); // Added LCCN
-                await setDoc(doc(sectionsCollection, 'brainstorming'), { title: 'Brainstorming', content: emptyContent, order: 1 });
-                await setDoc(doc(sectionsCollection, 'character_development'), { title: 'Character Development', content: emptyContent, order: 2 });
-                await setDoc(doc(sectionsCollection, 'world_building'), { title: 'World-building', content: emptyContent, order: 3 });
-                await setDoc(doc(sectionsCollection, 'outline'), { title: 'Outline', content: emptyContent, order: 4 });
-                await setDoc(doc(sectionsCollection, 'book_cover'), { title: 'Book Cover', content: '', order: 5 });
+                await setDoc(doc(sectionsCollection, 'brainstorming'), { title: 'Synopsis & Brainstorming', content: emptyContent, order: 1 });
+                // NEW: Add 'book_titles' section after brainstorming, before character_development
+                await setDoc(doc(sectionsCollection, 'book_titles'), { title: 'Book Titles', content: emptyContent, order: 2 });
+                await setDoc(doc(sectionsCollection, 'character_development'), { title: 'Character Development', content: emptyContent, order: 3 });
+                await setDoc(doc(sectionsCollection, 'world_building'), { title: 'World-building', content: emptyContent, order: 4 });
+                await setDoc(doc(sectionsCollection, 'outline'), { title: 'Outline', content: emptyContent, order: 5 });
+                await setDoc(doc(sectionsCollection, 'book_cover'), { title: 'Book Cover', content: '', order: 6 });
                 // Add new sections for Front and Back Matter
-                await setDoc(doc(sectionsCollection, 'front_matter'), { title: 'Front Matter', content: emptyContent, order: 6 });
-                await setDoc(doc(sectionsCollection, 'back_matter'), { title: 'Back Matter', content: emptyContent, order: 7 });
-                await setDoc(doc(sectionsCollection, 'chapter_1'), { title: 'Chapter 1', content: emptyContent, order: 8 }); // Adjust order for chapters
+                await setDoc(doc(sectionsCollection, 'front_matter'), { title: 'Front Matter', content: emptyContent, order: 7 });
+                await setDoc(doc(sectionsCollection, 'back_matter'), { title: 'Back Matter', content: emptyContent, order: 8 });
+                await setDoc(doc(sectionsCollection, 'chapter_1'), { title: 'Chapter 1', content: emptyContent, order: 9 }); // Adjust order for chapters
                 return projectRef.id;
             } catch (e) { console.error("Error creating project:", e); showNotification(`Error creating project: ${e.message}`, 'error'); }
         }
@@ -317,9 +321,9 @@
                 const sectionsCollection = collection(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`);
                 const newChapterId = `chapter_${chapterNumber}`;
                 const emptyContent = JSON.stringify({ ops: [{ insert: '\n' }] });
-                // Adjust order to be after existing fixed sections (metadata, brainstorming, char_dev, world_building, outline, book_cover, front_matter, back_matter)
-                // The order for chapter_1 is 8, so subsequent chapters should follow that.
-                await setDoc(doc(sectionsCollection, newChapterId), { title: `Chapter ${chapterNumber}`, content: emptyContent, order: 7 + chapterNumber });
+                // Adjust order to be after existing fixed sections (metadata, brainstorming, book_titles, char_dev, world_building, outline, book_cover, front_matter, back_matter)
+                // The order for chapter_1 is 9, so subsequent chapters should follow that.
+                await setDoc(doc(sectionsCollection, newChapterId), { title: `Chapter ${chapterNumber}`, content: emptyContent, order: 8 + chapterNumber });
                 return true;
             } catch (e) { console.error("Error adding chapter:", e); showNotification(`Error adding chapter: ${e.message}`, 'error'); return false; }
         }
@@ -521,6 +525,46 @@ The Magician: Possesses special knowledge or abilities, often transforming thing
 The Shadow: Represents the dark side of human nature, often the antagonist or an internal struggle within the protagonist.
 Understanding these different types of characters can help authors create a diverse and compelling cast, ensuring that each character serves a purpose in advancing the plot, exploring themes, and engaging the reader.
 `;
+        // Function to call Imagen API for image generation
+        async function generateImage(prompt) {
+            try {
+                // Show loading spinner for image generation
+                document.getElementById('ai-output').innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading-spinner"></div><span class="ml-2">Generating images...</span></div>`;
+
+                const payload = { instances: { prompt: prompt }, parameters: { "sampleCount": 3 } }; // Request 3 images
+                const response = await fetch(IMAGEN_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error("Imagen API Error Response:", errorData);
+                    let errorMessage = `Image generation failed with status ${response.status}.`;
+                    if (errorData && errorData.error && errorData.error.message) {
+                        errorMessage += ` Details: ${errorData.error.message}`;
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                const result = await response.json();
+                if (result.predictions && result.predictions.length > 0) {
+                    return result.predictions.map(p => `data:image/png;base64,${p.bytesBase64Encoded}`);
+                } else {
+                    console.error("Imagen Error: Unexpected response structure:", result);
+                    return [];
+                }
+            } catch (e) {
+                console.error("Error calling Imagen API:", e);
+                showNotification(`Image generation failed: ${e.message}`, 'error');
+                return [];
+            } finally {
+                // Clear loading spinner after response
+                document.getElementById('ai-output').innerHTML = '';
+            }
+        }
+
 
         async function callGemini(contents) {
             try {
@@ -579,9 +623,14 @@ Understanding these different types of characters can help authors create a dive
         }
 
 
-        async function generateConcepts(idea) { const prompt = `You are an AI story consultant. Based on the user's basic idea, generate a numbered list of 5 distinct core concept ideas for a new book. Each concept should be a single, concise paragraph. The tone should be encouraging and creative.\n\nBasic Idea: "${idea}"`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
+        async function generateSynopsisIdeas(idea) {
+            // Updated prompt to be more specific about Christian literature
+            const prompt = `You are an AI story consultant for Christian literature. Based on the user's basic idea, generate a numbered list of 5 distinct core concept ideas for a new Christian book. Each concept should be a single, concise paragraph, focusing on themes relevant to Christian faith, values, or life experiences. The tone should be encouraging and creative.\n\nBasic Idea: "${idea}"`;
+            return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+        }
         async function generateOutlineBeats(context) {
-            const prompt = `You are an AI outliner for an author. Based on the provided project details (synopsis, characters, world-building), generate a detailed chapter-by-chapter outline with key beats for each chapter.
+            // Ensure outline generation uses all relevant context
+            const prompt = `You are an AI outliner for a Christian author. Based on the provided project details (synopsis, characters, world-building, and desired book title), generate a detailed chapter-by-chapter outline with key beats for each chapter. Ensure the outline aligns with Christian themes and values established in the context.
             For each chapter, list the chapter title, and then provide a numbered list of key beats for that chapter. For example:
             Chapter 1: The Beginning
             1. Beat 1 of Chapter 1: Introduce protagonist and their core conflict.
@@ -597,7 +646,8 @@ Understanding these different types of characters can help authors create a dive
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateCharacterProfiles(context) {
-            const prompt = `You are an AI character developer. Based on the provided project details (synopsis), generate a numbered list of 5 distinct character profile ideas. Each profile should include a name, a brief backstory, core motivations, personality quirks, and **explicitly identify what type of character they are based on the following taxonomy (By Role, By Dynamism and Complexity, and By Archetype).**
+            // Ensure character generation uses synopsis and title context
+            const prompt = `You are an AI character developer for Christian fiction. Based on the provided project details (synopsis, book title), generate a numbered list of 5 distinct character profile ideas. Each profile should include a name, a brief backstory, core motivations, personality quirks, and **explicitly identify what type of character they are based on the following taxonomy (By Role, By Dynamism and Complexity, and By Archetype).** Ensure characters are suitable for a Christian narrative, exploring themes of faith, redemption, struggle, or virtue.
 
 ${characterTypesKnowledge}
 
@@ -609,21 +659,36 @@ ${context}
 Generate 5 character profiles:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        async function generateWorldPrompts(context) { const prompt = `You are an AI world-builder. Based on the provided project details (synopsis, characters), generate a numbered list of 5 distinct world-building element ideas. These could include magic systems, futuristic technologies, societal structures, or key historical events relevant to the story.\n\nProject Details:\n---\n${context}\n---\n\nGenerate 5 world-building prompts:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
-        async function suggestAlternatives(selectedText, context) { const prompt = `You are an AI thesaurus and editor. Given the following selected word/phrase and its surrounding context, provide a numbered list of 5 alternative words or short phrases that would fit well.\n\nContext:\n---\n${context}\n---\n\nSelected Text: "${selectedText}"\n\nProvide 5 alternatives:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
+        async function generateWorldPrompts(context) {
+            // Ensure world-building generation uses synopsis, title, and character context
+            const prompt = `You are an AI world-builder for Christian narratives. Based on the provided project details (synopsis, book title, characters), generate a numbered list of 5 distinct world-building element ideas. These could include unique faith-based societal structures, spiritual challenges, miraculous phenomena, or historical events relevant to a Christian story.
+            \n\nProject Details:\n---\n${context}\n---\n\nGenerate 5 world-building prompts:`;
+            return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+        }
+        async function suggestAlternatives(selectedText, context) { const prompt = `You are an AI thesaurus and editor for Christian literature. Given the following selected word/phrase and its surrounding context, provide a numbered list of 5 alternative words or short phrases that would fit well within a Christian-themed manuscript, considering tone and theological appropriateness.\n\nContext:\n---\n${context}\n---\n\nSelected Text: "${selectedText}"\n\nProvide 5 alternatives:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function suggestScripture(selectedText, context) { const prompt = `You are a theological assistant specializing in the NIV Bible. Based on the following selected text, suggest a numbered list of 3 relevant NIV Bible scriptures. For each, provide the reference and the full verse text.\n\nSelected Text for Context:\n---\n${context}\n---\n\nSuggest 3 relevant NIV scriptures:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
-        async function suggestPOVs(context) { const prompt = `You are an AI writing coach. Based on the story's synopsis, generate a numbered list of 3 potential Point of View (POV) & Voice choices (e.g., First Person, Third Person Limited). For each, briefly explain how that choice would shape the narration and affect the reader's experience.\n\nSynopsis:\n---\n${context}\n---\n\nGenerate 3 POV & Voice options:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
-        async function suggestStructures(context) { const prompt = `You are an AI writing coach. Based on the story's synopsis, suggest a numbered list of 3 potential structural templates (e.g., Three-Act Structure, Hero's Journey, Fichtean Curve). For each, briefly explain why that structure would be a good fit for the story.\n\nSynopsis:\n---\n${context}\n---\n\nSuggest 3 structural templates:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
-        async function analyzeChapter(chapterText, context) { const prompt = `You are an AI developmental editor. Review the following book chapter in the context of the provided project details. Provide high-level feedback on Pacing, Plot Progression, and Character Consistency. The feedback should be constructive and encouraging.\n\nProject Details:\n---\n${context}\n---\n\nChapter Text to Analyze:\n---\n${chapterText}\n---\n\nProvide your analysis:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
+        async function suggestPOVs(context) { const prompt = `You are an AI writing coach for Christian authors. Based on the story's synopsis, generate a numbered list of 3 potential Point of View (POV) & Voice choices (e.g., First Person, Third Person Limited). For each, briefly explain how that choice would shape the narration and affect the reader's experience, particularly in a Christian context.\n\nSynopsis:\n---\n${context}\n-\n\nGenerate 3 POV & Voice options:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
+        async function suggestStructures(context) { const prompt = `You are an AI writing coach for Christian authors. Based on the story's synopsis, suggest a numbered list of 3 potential structural templates (e.g., Three-Act Structure, Hero's Journey, Fichtean Curve). For each, briefly explain why that structure would be a good fit for the story, considering its Christian themes.\n\nSynopsis:\n---\n${context}\n---\n\nSuggest 3 structural templates:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
+        async function analyzeChapter(chapterText, context) {
+            // Ensure chapter analysis uses full project context
+            const prompt = `You are an AI developmental editor for Christian manuscripts. Review the following book chapter in the context of the provided project details (synopsis, characters, world-building, outline, and book title). Provide high-level feedback on Pacing, Plot Progression, and Character Consistency, specifically noting how well it integrates Christian themes or moral lessons. The feedback should be constructive and encouraging.\n\nProject Details:\n---\n${context}\n---\n\nChapter Text to Analyze:\n---\n${chapterText}\n---\n\nProvide your analysis:`;
+            return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+        }
         async function proofreadChapter(chapterText) { const prompt = `You are an AI proofreader. Review the following text and provide a numbered list of suggested corrections for any grammatical errors, spelling mistakes, or punctuation issues. For each suggestion, clearly state the original text and the proposed change.\n\nText to Proofread:\n---\n${chapterText}\n---\n\nSuggestions:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function suggestYouthPhrases(selectedText, context) { const prompt = `You are an AI dialogue coach. Given the following selected text (likely dialogue) and its surrounding context, provide a numbered list of 5 alternative phrases that sound more contemporary or like common youth slang. Ensure suggestions are appropriate and fit a Christian context if possible.\n\nContext:\n---\n${context}\n---\n\nSelected Text: "${selectedText}"\n\nProvide 5 youth phrase alternatives:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); } // New AI function
         async function generateCoverConcepts(context) {
             // CORRECTED PROMPT: Explicitly tell AI to generate ONLY the descriptive prompt, no "Concept: " prefix.
-            const prompt = `You are an AI art director. Based on the provided book synopsis, generate 3 distinct and compelling visual concepts for a book cover. Each concept should be a short, descriptive paragraph that could be used as a prompt for an AI image generator. Provide ONLY the descriptive image prompt text. Do NOT include any "Concept X:" prefixes or introductory sentences like "Here are 3 distinct and compelling visual concepts...".\n\nSynopsis:\n---\n${context}\n---\n\nGenerate 3 book cover concepts:`;
+            // Emphasize Christian themes for cover concepts
+            const prompt = `You are an AI art director for Christian book covers. Based on the provided book synopsis, generate 3 distinct and compelling visual concepts for a book cover. Each concept should be a short, descriptive paragraph that could be used as a prompt for an AI image generator. Focus on imagery that reflects Christian themes, symbolism, or the spiritual journey of the characters. Provide ONLY the descriptive image prompt text. Do NOT include any "Concept X:" prefixes or introductory sentences like "Here are 3 distinct and compelling visual concepts...".\n\nSynopsis:\n---\n${context}\n---\n\nGenerate 3 book cover concepts:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateNext(currentText, context) { // Changed 'style' to 'context' for clarity
-            const prompt = `Continue the following text, keeping in mind the following project context:\n\n${context}\n\nProvide the next paragraph or section to logically follow the existing content. Ensure the tone and style are consistent with the provided context.
+            // Ensure 'Continue Writing' uses full project context
+            const prompt = `You are a Christian ghostwriter. Continue the following text, providing the next paragraph or section to logically follow the existing content. Keep in mind the following project context, ensuring the tone, style, and Christian themes are consistent with the overall manuscript.
+            Project Context:
+            ---
+            ${context}
+            ---
             Current Text:
             ---
             ${currentText}
@@ -633,9 +698,9 @@ Generate 5 character profiles:`;
         }
         // New AI function to generate titles
         async function generateTitles(context) {
-            // CORRECTED PROMPT: Removed "numbered list of 5 distinct and compelling title suggestions for a Christian book."
-            // The prompt now focuses only on generating the titles themselves, allowing parseNumberedAiList to handle numbering for display.
-            const prompt = `You are an AI creative assistant for authors. Based on the following synopsis or brainstorming content, generate 5 distinct and compelling title suggestions for a Christian book. Provide ONLY the title and optional subtitle. Do NOT include any descriptive sentences or explanations after the title.\n\nContent:\n---\n${context}\n---\n\nGenerate 5 title suggestions:`;
+            // Ensure title generation uses synopsis context and asks for Christian titles
+            const prompt = `You are an AI creative assistant for Christian authors. Based on the following synopsis or brainstorming content, generate 5 distinct and compelling title suggestions for a Christian book. Provide ONLY the title and optional subtitle. Do NOT include any descriptive sentences or explanations after the title.
+            \n\nContent:\n---\n${context}\n---\n\nGenerate 5 title suggestions:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
 
@@ -664,7 +729,7 @@ Generate 5 character profiles:`;
                     <h4 class="text-md font-semibold text-white mt-4">Using the Editor:</h4>
                     <p>The main editor screen is where your writing and AI tools come together. It's divided into three main panels:</p>
                     <ul class="list-disc list-inside space-y-1">
-                        <li><strong>Left Sidebar:</strong> Navigate between different sections of your project (Brainstorming, Character Development, Outline, Chapters, Book Cover, etc.).</li>
+                        <li><strong>Left Sidebar:</strong> Navigate between different sections of your project (Synopsis & Brainstorming, Book Titles, Character Development, Outline, Chapters, Book Cover, etc.).</li>
                         <li><strong>Center Panel:</strong> This is your primary writing area, powered by Quill.js. Type directly here, and your progress is automatically saved.</li>
                         <li><strong>Right Sidebar (AI Co-Author):</strong> This is where you interact with the AI tools.</li>
                     </ul>
@@ -672,16 +737,17 @@ Generate 5 character profiles:`;
                     <h4 class="text-md font-semibold text-white mt-4">AI Co-Author Features:</h4>
                     <ul class="list-disc list-inside space-y-1">
                         <li><strong>AI Style Preference:</strong> Use the text area at the top to describe the writing style or tone you'd like the AI to adopt (e.g., "Write in a formal, encouraging tone," "Use concise, impactful language"). This preference is applied to all AI-generated content.</li>
-                        <li><strong>Generate Synopsis Ideas (Brainstorming):</strong> Provide a basic idea in the editor, and the AI will generate core concept ideas for your book.</li>
-                        <li><strong>POV & Voice (Brainstorming):</strong> Based on your synopsis, the AI can suggest different points of view and narrative voices.</li>
-                        <li><strong>Structural Template (Brainstorming):</strong> Get AI-generated structural ideas (e.g., Three-Act Structure) for your story.</li>
+                        <li><strong>Generate Synopsis Ideas (Synopsis & Brainstorming):</strong> Provide a basic idea in the editor, and the AI will generate core concept ideas for your book.</li>
+                        <li><strong>Generate Titles (Book Titles):</strong> Based on your synopsis, the AI can suggest compelling book titles.</li>
+                        <li><strong>POV & Voice (Synopsis & Brainstorming):</strong> Based on your synopsis, the AI can suggest different points of view and narrative voices.</li>
+                        <li><strong>Structural Template (Synopsis & Brainstorming):</strong> Get AI-generated structural ideas (e.g., Three-Act Structure) for your story.</li>
                         <li><strong>Generate Character Profiles (Character Development):</strong> The AI helps you create detailed character ideas based on your story's concept.</li>
                         <li><strong>Generate Chapter Beats (Outline):</strong> Get a detailed chapter-by-chapter outline based on your project's synopsis, characters, and world-building.</li>
-                        <li><strong>Generate Next (Chapters):</strong> Overcome writer's block! Click this button in any chapter to have the AI generate the next section of text, using your existing content and project context.</li>
+                        <li><strong>Continue Writing (Chapters):</strong> Overcome writer's block! Click this button in any chapter to have the AI generate the next section of text, using your existing content and project context.</li>
                         <li><strong>Analyze Chapter (Chapters):</strong> Get high-level feedback on pacing, plot progression, and character consistency for your chapter.</li>
                         <li><strong>Proofread Chapter (Chapters):</strong> Receive suggested corrections for grammar, spelling, and punctuation. Click on a suggestion to apply the fix directly to your text.</li>
                         <li><strong>Suggest Youth Phrases (Chapters):</strong> Select text (e.g., dialogue) and get contemporary youth slang suggestions, suitable for a Christian context.</li>
-                        <li><strong>Generate Cover Concepts (Book Cover):</strong> Get descriptive prompts for an AI image generator based on your book's synopsis. Click a concept to generate a visual book cover.</li>
+                        <li><strong>Generate Image Prompts (Book Cover):</strong> Get descriptive prompts for an AI image generator based on your book's synopsis. Click a concept to generate a visual book cover.</li>
                         <li><strong>Select Book Cover (Book Cover):</strong> After generating images, click on your preferred cover to highlight it and save its URL to your project.</li>
                     </ul>
 
@@ -1055,7 +1121,7 @@ Generate 5 character profiles:`;
             const coverDisplayContainer = document.getElementById('cover-display-container');
             const metadataFormContainer = document.getElementById('metadata-form-container');
 
-            let activeSectionId = 'brainstorming';
+            let activeSectionId = 'brainstorming'; // Default to brainstorming
             let editor;
             let sections = [];
 
@@ -1106,7 +1172,8 @@ Generate 5 character profiles:`;
 
                     for (const section of allSections) {
                         // Skip book_cover and metadata as they are not text content for export
-                        if (section.id === 'book_cover' || section.id === 'metadata') continue;
+                        if (section.id === 'book_cover' || section.id === 'metadata' || section.id === 'book_titles') continue; // Skip book_titles as it's for suggestions
+
                         // Handle front_matter and back_matter with page breaks
                         if (section.id === 'front_matter' || section.id === 'back_matter') {
                             fullHtmlContent += `<h2>${section.title}</h2>\n`;
@@ -1166,21 +1233,28 @@ Generate 5 character profiles:`;
                         <div>
                             <p class="text-sm font-semibold mb-2">Generate Synopsis Ideas</p>
                             <textarea id="ai-idea-input" class="w-full h-24 p-2 bg-gray-700 border border-gray-600 rounded-md text-sm" placeholder="e.g., A story about a family..."></textarea>
-                            <button id="generate-concepts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate</button>
+                            <button id="generate-synopsis-concepts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate</button>
                         </div>
                         <div class="pt-4 border-t border-gray-700">
                             <p class="text-sm font-semibold mb-2">Brainstorming Tools</p>
                             <div class="grid grid-cols-2 gap-2">
                                 <button id="generate-pov-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">POV & Voice</button>
                                 <button id="generate-structure-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Structural Template</button>
-                                <button id="generate-titles-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button>
                             </div>
                         </div>`;
-                } else if (sectionId === 'character_development') {
+                } else if (sectionId === 'book_titles') { // NEW SECTION for book titles
+                    aiPanelHtml += `
+                        <div>
+                            <p class="text-sm font-semibold mb-2">Generate Book Titles</p>
+                            <p class="text-xs text-gray-400 mb-2">Generate title suggestions based on your synopsis.</p>
+                            <button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button>
+                        </div>`;
+                }
+                else if (sectionId === 'character_development') {
                      aiPanelHtml += `
                         <div>
                             <p class="text-sm font-semibold mb-2">Generate Character Profiles</p>
-                            <p class="text-xs text-gray-400 mb-2">Let the AI create character ideas based on your story's concept.</p>
+                            <p class="text-xs text-gray-400 mb-2">Let the AI create character ideas based on your story's concept and title.</p>
                             <button id="generate-characters-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Characters</button>
                         </div>`;
                 } else if (sectionId === 'world_building') {
@@ -1203,7 +1277,7 @@ Generate 5 character profiles:`;
                         <div>
                             <p class="text-sm font-semibold mb-2">Drafting & Revising</p>
                             <div class="grid grid-cols-2 gap-2"> <!-- Two columns for drafting buttons -->
-                                <button id="generate-next-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Next</button>
+                                <button id="continue-writing-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Continue Writing</button> <!-- Renamed button -->
                                 <button id="analyze-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Analyze Chapter</button>
                                 <button id="proofread-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Proofread Chapter</button>
                             </div>
@@ -1211,9 +1285,9 @@ Generate 5 character profiles:`;
                 } else if (sectionId === 'book_cover') {
                     aiPanelHtml += `
                         <div>
-                            <p class="text-sm font-semibold mb-2">Generate Cover Concepts</p>
+                            <p class="text-sm font-semibold mb-2">Generate Image Prompts</p> <!-- Renamed from Generate Cover Concepts -->
                             <p class="text-xs text-gray-400 mb-2">Generate descriptive prompts for an AI image generator based on your synopsis.</p>
-                            <button id="generate-cover-concepts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Concepts</button>
+                            <button id="generate-image-prompts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Image Prompts</button>
                         </div>`;
                 } else if (sectionId === 'front_matter') {
                     aiPanelHtml += `
@@ -1281,10 +1355,10 @@ Generate 5 character profiles:`;
                 if (sectionId === 'brainstorming') {
                     const ideaInput = document.getElementById('ai-idea-input');
 
-                    document.getElementById('generate-concepts-btn').addEventListener('click', async () => {
+                    document.getElementById('generate-synopsis-concepts-btn').addEventListener('click', async () => {
                         const idea = editor.getText().trim() || ideaInput.value;
                         if (!idea) { showNotification("Please enter a basic idea in the editor or the text box.", "error"); return; }
-                        const conceptsText = await generateConcepts(idea);
+                        const conceptsText = await generateSynopsisIdeas(idea); // Renamed function call
                         outputDiv.innerHTML = ''; // Clear loading after response
                         // Use parseNumberedAiList to get clean suggestions, removing numbers
                         const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
@@ -1314,10 +1388,12 @@ Generate 5 character profiles:`;
                         outputDiv.innerHTML = structures.map((structure, index) => `<button data-content="${escapeHtml(structure)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(structure.substring(0, 80))}...</button>`).join('');
                     });
 
-                    // New: Generate Titles listener
+                } else if (sectionId === 'book_titles') { // NEW: Title generation logic
                     document.getElementById('generate-titles-btn').addEventListener('click', async () => {
-                        const context = editor.getText().trim();
-                        if (!context) { showNotification("Please write a synopsis or brainstorming content in the editor first.", "error"); return; }
+                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
+                        const context = synopsisDoc ? synopsisDoc.content.trim() : '';
+                        if (!context) { showNotification("Please write your book's synopsis in the 'Synopsis & Brainstorming' section first to generate titles.", "error"); return; }
+
                         const titlesText = await generateTitles(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
 
@@ -1330,12 +1406,13 @@ Generate 5 character profiles:`;
                             return `<button data-content="${escapeHtml(cleanTitle)}" class="ai-title-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Title ${index + 1}:</strong> ${escapeHtml(cleanTitle)}</button>`;
                         }).join('');
                     });
-
-                } else if (sectionId === 'character_development') {
+                }
+                else if (sectionId === 'character_development') {
                     const generateBtn = document.getElementById('generate-characters-btn');
                     generateBtn.addEventListener('click', async () => {
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const context = `Synopsis: ${synopsisDoc.content}`;
+                        const projectData = await getProject(userId, projectId); // Fetch project data for title
+                        const context = `Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\nBook Title: ${projectData ? projectData.title : ''}`;
                         const charactersText = await generateCharacterProfiles(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         // Use parseNumberedAiList to get clean suggestions, removing numbers
@@ -1353,7 +1430,8 @@ Generate 5 character profiles:`;
                     generateBtn.addEventListener('click', async () => {
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const charDevDoc = await getSection(userId, projectId, 'character_development');
-                        const context = `Synopsis: ${charDevDoc.content}\n\nCharacter Development: ${charDevDoc.content}`;
+                        const projectData = await getProject(userId, projectId); // Fetch project data for title
+                        const context = `Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\nBook Title: ${projectData ? projectData.title : ''}\nCharacter Development: ${charDevDoc ? charDevDoc.content : ''}`;
                         const worldText = await generateWorldPrompts(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         // Use parseNumberedAiList to get clean suggestions, removing numbers
@@ -1369,7 +1447,8 @@ Generate 5 character profiles:`;
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const charDevDoc = await getSection(userId, projectId, 'character_development');
                         const worldDoc = await getSection(userId, projectId, 'world_building');
-                        const context = `Synopsis: ${synopsisDoc.content}\n\nCharacter Development: ${charDevDoc.content}\n\nWorld-building: ${worldDoc.content}`;
+                        const projectData = await getProject(userId, projectId); // Fetch project data for title
+                        const context = `Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\nBook Title: ${projectData ? projectData.title : ''}\nCharacter Development: ${charDevDoc ? charDevDoc.content : ''}\nWorld-building: ${worldDoc ? worldDoc.content : ''}`;
                         const outline = await generateOutlineBeats(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         showContentInModal('Generated Outline', outline, (content) => {
@@ -1379,20 +1458,29 @@ Generate 5 character profiles:`;
                         });
                     });
                 } else if (sectionId.startsWith('chapter_')) {
-                    const generateNextBtn = document.getElementById('generate-next-btn');
+                    const continueWritingBtn = document.getElementById('continue-writing-btn'); // Renamed button
                     const analyzeChapterBtn = document.getElementById('analyze-chapter-btn');
                     const proofreadBtn = document.getElementById('proofread-chapter-btn');
                     const suggestYouthPhrasesBtn = document.getElementById('suggest-youth-phrases-btn'); // Get the new button
                     const suggestAlternativesBtn = document.getElementById('suggest-alternatives-btn'); // Get the alternative words button
                     const suggestScriptureBtn = document.getElementById('suggest-scripture-btn'); // Get the scripture button
 
-                    generateNextBtn.addEventListener('click', async () => {
+                    continueWritingBtn.addEventListener('click', async () => { // Event listener for renamed button
                         const currentText = editor.getText();
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const outlineDoc = await getSection(userId, projectId, 'outline');
-                        const context = `Overall Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\nOutline: ${outlineDoc ? outlineDoc.content : ''}\n\n`;
+                        const charDevDoc = await getSection(userId, projectId, 'character_development');
+                        const worldDoc = await getSection(userId, projectId, 'world_building');
+                        const projectData = await getProject(userId, projectId); // Fetch project data for title
 
-                        const suggestion = await generateNext(currentText, context); // Pass context to generateNext
+                        // Construct comprehensive context for AI
+                        const context = `Overall Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\n` +
+                                       `Book Title: ${projectData ? projectData.title : ''}\n` +
+                                       `Outline: ${outlineDoc ? outlineDoc.content : ''}\n` +
+                                       `Character Development: ${charDevDoc ? charDevDoc.content : ''}\n` +
+                                       `World-building: ${worldDoc ? worldDoc.content : ''}\n\n`;
+
+                        const suggestion = await generateNext(currentText, context); // Pass comprehensive context
                         outputDiv.innerHTML = ''; // Clear loading after response
                         showContentInModal('Generated Next Section', suggestion, (content) => {
                             editor.insertText(editor.getLength(), ' ' + content);
@@ -1404,7 +1492,13 @@ Generate 5 character profiles:`;
                         const chapterText = editor.getText();
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const charDevDoc = await getSection(userId, projectId, 'character_development');
-                        const context = `Synopsis: ${synopsisDoc.content}\n\nCharacter Development: ${charDevDoc.content}`;
+                        const outlineDoc = await getSection(userId, projectId, 'outline');
+                        const projectData = await getProject(userId, projectId); // Fetch project data for title
+
+                        const context = `Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\n` +
+                                        `Book Title: ${projectData ? projectData.title : ''}\n` +
+                                        `Character Development: ${charDevDoc ? charDevDoc.content : ''}\n` +
+                                        `Outline: ${outlineDoc ? outlineDoc.content : ''}`;
                         const analysis = await analyzeChapter(chapterText, context);
                         outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${analysis}</div>`;
                     });
@@ -1508,17 +1602,17 @@ Generate 5 character profiles:`;
                     }
 
                 } else if (sectionId === 'book_cover') {
-                    const generateBtn = document.getElementById('generate-cover-concepts-btn');
+                    const generateBtn = document.getElementById('generate-image-prompts-btn'); // Renamed button
                     generateBtn.addEventListener('click', async () => {
-                        outputDiv.innerHTML = `<p>Generating cover concepts...</p>`;
+                        outputDiv.innerHTML = `<p>Generating image prompts...</p>`;
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const context = `Synopsis: ${synopsisDoc.content}`;
+                        const context = `Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
                         const conceptsText = await generateCoverConcepts(context); // Call AI to get concepts
                         outputDiv.innerHTML = ''; // Clear loading after response
                         // Use parseNumberedAiList to get clean suggestions, removing numbers
                         const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
                         // Changed data attribute to data-full-concept and added class for specific handling
-                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-full-concept="${escapeHtml(concept)}" class="ai-cover-concept-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHtml(concept)}</button>`).join('');
+                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-full-concept="${escapeHtml(concept)}" class="ai-cover-concept-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Prompt ${index + 1}:</strong> ${escapeHtml(concept)}</button>`).join('');
 
                         // The event listener is now attached via delegation below, no need to re-attach here.
                     });
@@ -1660,15 +1754,23 @@ Generate 5 character profiles:`;
 
 
                 // Re-attach specific listeners for buttons that are NOT dynamically replaced within outputDiv
-                // (e.g., Generate Next, Analyze Chapter, Proofread Chapter)
+                // (e.g., Continue Writing, Analyze Chapter, Proofread Chapter)
                 // These buttons are always present in the AI panel once the section is loaded.
-                const generateNextBtn = document.getElementById('generate-next-btn');
-                if (generateNextBtn) {
-                    generateNextBtn.addEventListener('click', async () => {
+                const continueWritingBtn = document.getElementById('continue-writing-btn'); // Renamed button
+                if (continueWritingBtn) {
+                    continueWritingBtn.addEventListener('click', async () => {
                         const currentText = editor.getText();
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const outlineDoc = await getSection(userId, projectId, 'outline');
-                        const context = `Overall Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\nOutline: ${outlineDoc ? outlineDoc.content : ''}\n\n`;
+                        const charDevDoc = await getSection(userId, projectId, 'character_development');
+                        const worldDoc = await getSection(userId, projectId, 'world_building');
+                        const projectData = await getProject(userId, projectId);
+
+                        const context = `Overall Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\n` +
+                                       `Book Title: ${projectData ? projectData.title : ''}\n` +
+                                       `Outline: ${outlineDoc ? outlineDoc.content : ''}\n` +
+                                       `Character Development: ${charDevDoc ? charDevDoc.content : ''}\n` +
+                                       `World-building: ${worldDoc ? worldDoc.content : ''}\n\n`;
 
                         const suggestion = await generateNext(currentText, context);
                         // Changed to open in modal
@@ -1685,7 +1787,13 @@ Generate 5 character profiles:`;
                         const chapterText = editor.getText();
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const charDevDoc = await getSection(userId, projectId, 'character_development');
-                        const context = `Synopsis: ${synopsisDoc.content}\n\nCharacter Development: ${charDevDoc.content}`;
+                        const outlineDoc = await getSection(userId, projectId, 'outline');
+                        const projectData = await getProject(userId, projectId);
+
+                        const context = `Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\n` +
+                                        `Book Title: ${projectData ? projectData.title : ''}\n` +
+                                        `Character Development: ${charDevDoc ? charDevDoc.content : ''}\n` +
+                                        `Outline: ${outlineDoc ? outlineDoc.content : ''}`;
                         const analysis = await analyzeChapter(chapterText, context);
                         outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${analysis}</div>`;
                     });
@@ -1729,7 +1837,7 @@ Generate 5 character profiles:`;
                         const metadataDoc = await getSection(userId, projectId, 'metadata');
                         const metadata = metadataDoc ? JSON.parse(metadataDoc.content) : {};
                         const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate a dedication for a book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Make it heartfelt and concise.`;
+                        const prompt = `Generate a dedication for a Christian book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Make it heartfelt and concise, reflecting Christian values.`;
                         const dedicationText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
                         // Changed to open in modal
                         showContentInModal('Generated Dedication', dedicationText, (content) => {
@@ -1746,7 +1854,7 @@ Generate 5 character profiles:`;
                         const metadataDoc = await getSection(userId, projectId, 'metadata');
                         const metadata = metadataDoc ? JSON.parse(metadataDoc.content) : {};
                         const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate an acknowledgments section for a book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Include thanks to family, friends, and inspiration.`;
+                        const prompt = `Generate an acknowledgments section for a Christian book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Include thanks to family, friends, and inspiration, with a focus on gratitude and faith.`;
                         const acknowledgmentsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
                         // Changed to open in modal
                         showContentInModal('Generated Acknowledgments', acknowledgmentsText, (content) => {
@@ -1764,7 +1872,7 @@ Generate 5 character profiles:`;
                         const metadataDoc = await getSection(userId, projectId, 'metadata');
                         const metadata = metadataDoc ? JSON.parse(metadataDoc.content) : {};
                         const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate a preface for a book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Briefly introduce the book's purpose or inspiration. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                        const prompt = `Generate a preface for a Christian book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Briefly introduce the book's purpose or inspiration from a Christian perspective. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
                         const prefaceText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
                         // Changed to open in modal
                         showContentInModal('Generated Preface', prefaceText, (content) => {
@@ -1782,7 +1890,7 @@ Generate 5 character profiles:`;
                         const metadataDoc = await getSection(userId, projectId, 'metadata');
                         const metadata = metadataDoc ? JSON.parse(metadataDoc.content) : {};
                         const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate a compelling back cover blurb (2-3 paragraphs) for a book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}" targeting "${projectData.targetAudience}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Focus on hooks and intrigue. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                        const prompt = `Generate a compelling back cover blurb (2-3 paragraphs) for a Christian book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}" targeting "${projectData.targetAudience}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Focus on hooks and intrigue, incorporating Christian themes. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
                         const blurbText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
                         // Changed to open in modal
                         showContentInModal('Generated Blurb', blurbText, (content) => {
@@ -1799,7 +1907,7 @@ Generate 5 character profiles:`;
                         const metadataDoc = await getSection(userId, projectId, 'metadata');
                         const metadata = metadataDoc ? JSON.parse(metadataDoc.content) : {};
                         const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate a concise (1-2 paragraph) author biography for ${metadata.authorName || 'Rene\' Stanley'}, author of a book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}". Highlight key experiences like being born in Washington D.C., teenage years in Maryland, finding solace in thoughts and observations, interest in older adults' wisdom, and military service in Desert Storm.`;
+                        const prompt = `Generate a concise (1-2 paragraph) author biography for ${metadata.authorName || 'Rene\' Stanley'}, author of a Christian book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}". Highlight key experiences like being born in Washington D.C., teenage years in Maryland, finding solace in thoughts and observations, interest in older adults' wisdom, and military service in Desert Storm. Emphasize their Christian faith journey and how it influences their writing.`;
                         const authorBioText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
                         // Changed to open in modal
                         showContentInModal('Generated Author Biography', authorBioText, (content) => {
@@ -1815,7 +1923,7 @@ Generate 5 character profiles:`;
                     generateDiscussionQuestionsBtn.addEventListener('click', async () => {
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate 5 thought-provoking discussion questions for a book club based on a book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}". Focus on themes and characters. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                        const prompt = `Generate 5 thought-provoking discussion questions for a book club based on a Christian book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}". Focus on themes, characters, and spiritual insights. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
                         const questionsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
                         // Changed to open in modal
                         showContentInModal('Generated Discussion Questions', questionsText, (content) => {
