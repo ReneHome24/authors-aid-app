@@ -578,7 +578,7 @@ Generate 5 character profiles:`;
         async function generateWorldPrompts(context) { const prompt = `You are an AI world-builder. Based on the provided project details (synopsis, characters), generate a numbered list of 5 distinct world-building element ideas. These could include magic systems, futuristic technologies, societal structures, or key historical events relevant to the story.\n\nProject Details:\n---\n${context}\n---\n\nGenerate 5 world-building prompts:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function suggestAlternatives(selectedText, context) { const prompt = `You are an AI thesaurus and editor. Given the following selected word/phrase and its surrounding context, provide a numbered list of 5 alternative words or short phrases that would fit well.\n\nContext:\n---\n${context}\n---\n\nSelected Text: "${selectedText}"\n\nProvide 5 alternatives:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function suggestScripture(selectedText, context) { const prompt = `You are a theological assistant specializing in the NIV Bible. Based on the following selected text, suggest a numbered list of 3 relevant NIV Bible scriptures. For each, provide the reference and the full verse text.\n\nSelected Text for Context:\n---\n${context}\n---\n\nSuggest 3 relevant NIV scriptures:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
-        async function suggestPOVs(context) { const prompt = `You are an AI writing coach. Based on the story's synopsis, suggest a numbered list of 3 potential Point of View (POV) & Voice choices (e.g., First Person, Third Person Limited). For each, briefly explain how that choice would shape the narration and affect the reader's experience.\n\nSynopsis:\n---\n${context}\n---\n\nGenerate 3 POV & Voice options:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
+        async function suggestPOVs(context) { const prompt = `You are an AI writing coach. Based on the story's synopsis, generate a numbered list of 3 potential Point of View (POV) & Voice choices (e.g., First Person, Third Person Limited). For each, briefly explain how that choice would shape the narration and affect the reader's experience.\n\nSynopsis:\n---\n${context}\n---\n\nGenerate 3 POV & Voice options:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function suggestStructures(context) { const prompt = `You are an AI writing coach. Based on the story's synopsis, suggest a numbered list of 3 potential structural templates (e.g., Three-Act Structure, Hero's Journey, Fichtean Curve). For each, briefly explain why that structure would be a good fit for the story.\n\nSynopsis:\n---\n${context}\n---\n\nSuggest 3 structural templates:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function analyzeChapter(chapterText, context) { const prompt = `You are an AI developmental editor. Review the following book chapter in the context of the provided project details. Provide high-level feedback on Pacing, Plot Progression, and Character Consistency. The feedback should be constructive and encouraging.\n\nProject Details:\n---\n${context}\n---\n\nChapter Text to Analyze:\n---\n${chapterText}\n---\n\nProvide your analysis:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function proofreadChapter(chapterText) { const prompt = `You are an AI proofreader. Review the following text and provide a numbered list of suggested corrections for any grammatical errors, spelling mistakes, or punctuation issues. For each suggestion, clearly state the original text and the proposed change.\n\nText to Proofread:\n---\n${chapterText}\n---\n\nSuggestions:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
@@ -978,15 +978,16 @@ Generate 5 character profiles:`;
                 <div class="flex flex-grow overflow-hidden"> <!-- Changed to overflow-hidden to contain internal scrolling -->
                     <div id="left-sidebar" class="w-2/12 bg-gray-800 p-4 border-r border-gray-700 flex flex-col overflow-y-auto"></div>
                     <div id="center-panel" class="w-7/12 p-8 flex flex-col overflow-y-auto bg-[#111827]">
-                        <h3 id="project-main-title" class="text-3xl font-lora font-bold mb-4 text-white">${stripMarkdownAndHtml(project.title || 'Untitled Page')}</h3> <!-- Updated to display project title, stripped markdown -->
-                        <div id="editor-container" class="flex-grow relative flex flex-col"> <!-- Added flex flex-col -->
+                        <!-- Project title moved outside editor-container but within center-panel -->
+                        <h3 id="project-main-title" class="text-3xl font-lora font-bold mb-4 text-white">${stripMarkdownAndHtml(project.title || 'Untitled Page')}</h3>
+                        <div id="editor-container" class="flex-grow relative flex flex-col">
                            <div id="editor-toolbar"></div>
-                           <div id="editor" class="flex-grow"></div> <!-- Removed h-full, added flex-grow -->
+                           <div id="editor" class="flex-grow"></div>
                         </div>
                          <div id="cover-display-container" class="hidden flex-grow relative items-center justify-center"></div>
                          <div id="metadata-form-container" class="hidden flex-grow relative items-center justify-center p-4"></div>
                     </div>
-                    <div id="right-sidebar" class="w-3/12 bg-gray-800 p-4 border-l border-gray-700 flex flex-col overflow-y-auto"></div> <!-- Added flex flex-col -->
+                    <div id="right-sidebar" class="w-3/12 bg-gray-800 p-4 border-l border-gray-700 flex flex-col overflow-y-auto"></div>
                 </div>
             `;
 
@@ -1007,29 +1008,27 @@ Generate 5 character profiles:`;
         }
 
         async function setupEditorFunctionality(userId, projectId, project) {
-            const projectMainTitle = document.getElementById('project-main-title'); // Renamed from sectionTitle
+            const projectMainTitle = document.getElementById('project-main-title');
             const leftSidebar = document.getElementById('left-sidebar');
             const rightSidebar = document.getElementById('right-sidebar');
             const editorContainer = document.getElementById('editor-container');
             const coverDisplayContainer = document.getElementById('cover-display-container');
-            const metadataFormContainer = document.getElementById('metadata-form-container'); // Get metadata container
+            const metadataFormContainer = document.getElementById('metadata-form-container');
 
             let activeSectionId = 'brainstorming';
             let editor;
             let sections = [];
 
             const renderSidebar = () => {
-                // Update the project object to ensure the latest cover URL is used
                 getProject(userId, projectId).then(updatedProject => {
                     if (updatedProject) {
                         project.bookCoverUrl = updatedProject.bookCoverUrl;
-                        project.title = updatedProject.title; // Also update title in case it was changed
+                        project.title = updatedProject.title;
                     }
 
                     leftSidebar.innerHTML = `
                         <div class="flex flex-col items-center mb-4">
                             ${project.bookCoverUrl ? `<img src="${project.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/90x135/1F2937/D1D5DB?text=Cover';" class="w-[90px] h-[135px] object-cover rounded-md shadow-md mb-2" alt="Book Cover Thumbnail"/>` : `<img src="https://placehold.co/90x135/1F2937/D1D5DB?text=No+Cover" class="w-[90px] h-[135px] object-cover rounded-md shadow-md mb-2" alt="Placeholder Cover"/>`}
-                            <!-- Removed h2 for project title from here -->
                         </div>
                         <nav id="project-sections" class="flex flex-col space-y-2 flex-grow overflow-y-auto">
                             ${sections.map(s => `<a href="#" data-section-id="${s.id}" class="section-link p-2 rounded-md hover:bg-gray-700 transition-colors ${s.id === activeSectionId ? 'bg-blue-600 text-white' : ''}">${s.title}</a>`).join('')}
@@ -1068,11 +1067,9 @@ Generate 5 character profiles:`;
                     for (const section of allSections) {
                         // Skip book_cover and metadata as they are not text content for export
                         if (section.id === 'book_cover' || section.id === 'metadata') continue;
-                        // Skip front_matter and back_matter as they will be handled separately for export
+                        // Handle front_matter and back_matter with page breaks
                         if (section.id === 'front_matter' || section.id === 'back_matter') {
-                             // Add section title as a heading
                             fullHtmlContent += `<h2>${section.title}</h2>\n`;
-                            // Convert Quill Delta to HTML
                             const tempDiv = document.createElement('div');
                             const tempQuill = new Quill(tempDiv, { readOnly: true });
                             try {
@@ -1081,16 +1078,12 @@ Generate 5 character profiles:`;
                                 tempQuill.setText(section.content || '');
                             }
                             fullHtmlContent += tempDiv.querySelector('.ql-editor').innerHTML + '\n\n';
-                            fullHtmlContent += '<div style="page-break-after: always;"></div>\n\n'; // Add page break
-                            continue; // Skip remaining logic for these sections
+                            fullHtmlContent += '<div style="page-break-after: always;">--- PAGE BREAK ---</div>\n\n'; // Add page break
+                            continue;
                         }
 
-
-                        // Add section title as a heading
+                        // For other sections (chapters, etc.)
                         fullHtmlContent += `<h2>${section.title}</h2>\n`;
-
-                        // Convert Quill Delta to HTML
-                        // Temporarily create a Quill instance to convert content
                         const tempDiv = document.createElement('div');
                         const tempQuill = new Quill(tempDiv, { readOnly: true });
                         try {
@@ -1264,7 +1257,7 @@ Generate 5 character profiles:`;
                         const povsText = await suggestPOVs(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         // Remove introductory sentence if present and strip markdown
-                        const cleanPovsText = stripMarkdownAndHtml(povsText.replace(/^(Option \d+: )?Here are \d+ potential Point of View \(POV\) & Voice choices for.*?\n\n/i, '').trim());
+                        const cleanPovsText = povsText.replace(/^(Option \d+: )?Here are \d+ potential Point of View \(POV\) & Voice choices for.*?\n\n/i, '').trim();
                         const povs = cleanPovsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                         // Changed to open in modal
                         outputDiv.innerHTML = povs.map((pov, index) => `<button data-content="${escapeHtml(stripMarkdownAndHtml(pov.trim()))}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(pov.trim().substring(0, 80)))}...</button>`).join('');
@@ -1449,12 +1442,23 @@ Generate 5 character profiles:`;
                             const context = editor.getText(Math.max(0, range.index - 100), 200 + range.length); // Broader context
                             const scriptureText = await suggestScripture(selectedText, context);
                             outputDiv.innerHTML = ''; // Clear loading after response
-                            // Changed to open in modal
-                            showContentInModal('Suggested Scripture', scriptureText, (content) => {
-                                editor.insertText(editor.getLength(), '\n\n' + content);
-                                showNotification("Scripture added to editor!", "success");
-                                outputDiv.innerHTML = '';
-                            });
+                            // Parse suggestions to extract individual scriptures and remove introductory text
+                            const cleanScriptureText = scriptureText.replace(/^(Here are \d+ relevant NIV Bible scriptures:)?\s*\n\n/i, '').trim();
+                            const scriptures = cleanScriptureText.split(/\d+\.\s+/).filter(s => s.trim().length > 0);
+
+                            if (scriptures.length > 0) {
+                                outputDiv.innerHTML = `
+                                    <p class="mb-2">Click a scripture to add it to your editor:</p>
+                                    ${scriptures.map((scripture, index) => `
+                                        <button data-content="${escapeHtml(stripMarkdownAndHtml(scripture.trim()))}"
+                                                class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm">
+                                            <strong>Scripture ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(scripture.trim().substring(0, 100)))}...
+                                        </button>
+                                    `).join('')}
+                                `;
+                            } else {
+                                outputDiv.innerHTML = `<p>No scripture suggestions found.</p>`;
+                            }
                         });
                     }
 
