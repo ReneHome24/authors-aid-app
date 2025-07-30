@@ -363,7 +363,7 @@
         function showModal(title, contentHtml, onConfirm, confirmText = 'Confirm', showCancel = true) {
             const modalContainer = document.getElementById('modal-container');
             if (!modalContainer) return;
-            modalContainer.innerHTML = `<div class="bg-gray-800 text-gray-200 rounded-lg shadow-2xl w-full max-w-lg p-6 border border-gray-700"><div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-lora font-bold">${title}</h2><button id="modal-close-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button></div><div id="modal-content">${contentHtml}</div><div class="mt-6 flex justify-end space-x-4">${showCancel ? '<button id="modal-cancel-btn" class="py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-500 transition-colors">Cancel</button>' : ''}<button id="modal-confirm-btn" type="submit" class="py-2 px-4 rounded-lg accent-bg accent-bg-hover transition-colors font-semibold">${confirmText}</button></div></div>`;
+            modalContainer.innerHTML = `<div class="bg-gray-800 text-gray-200 rounded-lg shadow-2xl w-full max-w-lg p-6 border border-gray-700"><div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-lora font-bold">${title}</h2><button id="modal-close-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button></div><div id="modal-content" class="max-h-[70vh] overflow-y-auto">${contentHtml}</div><div class="mt-6 flex justify-end space-x-4">${showCancel ? '<button id="modal-cancel-btn" class="py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-500 transition-colors">Cancel</button>' : ''}<button id="modal-confirm-btn" type="submit" class="py-2 px-4 rounded-lg accent-bg accent-bg-hover transition-colors font-semibold">${confirmText}</button></div></div>`;
             modalContainer.classList.remove('hidden');
             modalContainer.classList.add('flex');
             const closeModal = () => { modalContainer.classList.add('hidden'); modalContainer.classList.remove('flex'); modalContainer.innerHTML = ''; };
@@ -806,10 +806,10 @@
                 <div class="project-card bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col justify-between">
                     <div>
                         <div class="flex items-center mb-2">
-                            ${p.bookCoverUrl ? `<img src="${p.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/100x150/1F2937/D1D5DB?text=Image+Load+Error';" class="w-20 h-30 object-cover rounded-md mr-4 shadow-md" alt="Book Cover Thumbnail"/>` : `<img src="https://placehold.co/100x150/1F2937/D1D5DB?text=No+Cover" class="w-20 h-30 object-cover rounded-md mr-4 shadow-md" alt="Placeholder Cover"/>`}
-                            <h3 class="text-lg font-lora font-semibold text-white">${p.title || 'Untitled Project'}</h3>
+                            ${p.bookCoverUrl ? `<img src="${p.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/60x90/1F2937/D1D5DB?text=Image+Load+Error';" class="w-12 h-18 object-cover rounded-md mr-3 shadow-md" alt="Book Cover Thumbnail"/>` : `<img src="https://placehold.co/60x90/1F2937/D1D5DB?text=No+Cover" class="w-12 h-18 object-cover rounded-md mr-3 shadow-md" alt="Placeholder Cover"/>`}
+                            <h3 class="text-xl font-lora font-semibold text-white">${p.title || 'Untitled Project'}</h3>
                         </div>
-                        <p class="text-xs text-gray-500 mt-1">Created: ${p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</p>
+                        <p class="text-sm text-gray-500 mt-1">Created: ${p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</p>
                     </div>
                     <div class="flex mt-4 space-x-2">
                         <button data-route="editor" data-id="${p.id}" class="nav-button flex-grow accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Open</button>
@@ -925,7 +925,7 @@
                 <div class="flex flex-grow overflow-hidden"> <!-- Changed to overflow-hidden to contain internal scrolling -->
                     <div id="left-sidebar" class="w-2/12 bg-gray-800 p-4 border-r border-gray-700 flex flex-col overflow-y-auto"></div>
                     <div id="center-panel" class="w-7/12 p-8 flex flex-col overflow-y-auto bg-[#111827]">
-                        <h3 id="section-title" class="text-3xl font-lora font-bold mb-4 text-white">${project.title || 'Untitled Page'}</h3> <!-- Updated to display project title -->
+                        <h3 id="project-main-title" class="text-3xl font-lora font-bold mb-4 text-white">${project.title || 'Untitled Page'}</h3> <!-- Updated to display project title -->
                         <div id="editor-container" class="flex-grow relative flex flex-col"> <!-- Added flex flex-col -->
                            <div id="editor-toolbar"></div>
                            <div id="editor" class="flex-grow"></div> <!-- Removed h-full, added flex-grow -->
@@ -954,7 +954,7 @@
         }
 
         async function setupEditorFunctionality(userId, projectId, project) {
-            const sectionTitle = document.getElementById('section-title');
+            const projectMainTitle = document.getElementById('project-main-title'); // Renamed from sectionTitle
             const leftSidebar = document.getElementById('left-sidebar');
             const rightSidebar = document.getElementById('right-sidebar');
             const editorContainer = document.getElementById('editor-container');
@@ -975,8 +975,8 @@
 
                     leftSidebar.innerHTML = `
                         <div class="flex items-center mb-4">
-                            ${project.bookCoverUrl ? `<img src="${project.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/45x68/1F2937/D1D5DB?text=Cover';" class="w-10 h-16 object-cover rounded-md mr-2 shadow-md" alt="Book Cover Thumbnail"/>` : ''}
-                            <h2 class="text-sm font-bold font-lora">${project.title || 'Untitled Project'}</h2>
+                            ${project.bookCoverUrl ? `<img src="${project.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/45x68/1F2937/D1D5DB?text=Cover';" class="w-9 h-14 object-cover rounded-md mr-2 shadow-md" alt="Book Cover Thumbnail"/>` : ''}
+                            <h2 class="text-base font-bold font-lora">${project.title || 'Untitled Project'}</h2>
                         </div>
                         <nav id="project-sections" class="flex flex-col space-y-2 flex-grow overflow-y-auto">
                             ${sections.map(s => `<a href="#" data-section-id="${s.id}" class="section-link p-2 rounded-md hover:bg-gray-700 transition-colors ${s.id === activeSectionId ? 'bg-blue-600 text-white' : ''}">${s.title}</a>`).join('')}
@@ -1164,6 +1164,13 @@
             const setupAiPanelListeners = (sectionId) => {
                 const outputDiv = document.getElementById('ai-output');
 
+                // Helper function to show content in a modal and allow insertion
+                const showContentInModal = (title, content, onAcceptCallback) => {
+                    showModal(title, `<div class="whitespace-pre-wrap text-gray-300 text-sm">${escapeHtml(content)}</div>`, async () => {
+                        await onAcceptCallback(content);
+                    }, 'Accept & Add to Editor');
+                };
+
                 // Initialize AI Style Preference input and listener
                 const aiStyleInput = document.getElementById('ai-style-preference-input');
                 if (aiStyleInput) {
@@ -1184,8 +1191,8 @@
                         const conceptsText = await generateConcepts(idea);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         const concepts = conceptsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHtml(concept.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Suggestion ${index + 1}:</strong> ${escapeHtml(concept.trim().substring(0, 80))}...</button>`).join('');
-                        // The event listener for this button is handled by delegation on outputDiv.
+                        // Changed to open in modal
+                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHtml(concept.trim())}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Suggestion ${index + 1}:</strong> ${escapeHtml(concept.trim().substring(0, 80))}...</button>`).join('');
                     });
 
                     document.getElementById('generate-pov-btn').addEventListener('click', async () => {
@@ -1194,8 +1201,8 @@
                         const povsText = await suggestPOVs(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         const povs = povsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                        outputDiv.innerHTML = povs.map((pov, index) => `<button data-content="${escapeHtml(pov.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(pov.trim().substring(0, 80))}...</button>`).join('');
-                        // The event listener for this button is handled by delegation on outputDiv.
+                        // Changed to open in modal
+                        outputDiv.innerHTML = povs.map((pov, index) => `<button data-content="${escapeHtml(pov.trim())}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(pov.trim().substring(0, 80))}...</button>`).join('');
                     });
 
                      document.getElementById('generate-structure-btn').addEventListener('click', async () => {
@@ -1204,8 +1211,8 @@
                         const structuresText = await suggestStructures(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         const structures = structuresText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                        outputDiv.innerHTML = structures.map((structure, index) => `<button data-content="${escapeHtml(structure.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(structure.trim().substring(0, 80))}...</button>`).join('');
-                        // The event listener for this button is handled by delegation on outputDiv.
+                        // Changed to open in modal
+                        outputDiv.innerHTML = structures.map((structure, index) => `<button data-content="${escapeHtml(structure.trim())}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(structure.trim().substring(0, 80))}...</button>`).join('');
                     });
 
                     // New: Generate Titles listener
@@ -1215,7 +1222,8 @@
                         const titlesText = await generateTitles(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         const titles = titlesText.split(/\d+\.\s+/).filter(t => t.trim().length > 0);
-                        outputDiv.innerHTML = titles.map((title, index) => `<button data-title="${escapeHtml(title.trim())}" class="ai-title-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Title ${index + 1}:</strong> ${escapeHtml(title.trim())}</button>`).join('');
+                        // Changed to open in modal
+                        outputDiv.innerHTML = titles.map((title, index) => `<button data-content="${escapeHtml(title.trim())}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Title ${index + 1}:</strong> ${escapeHtml(title.trim())}</button>`).join('');
                     });
 
                 } else if (sectionId === 'character_development') {
@@ -1226,7 +1234,12 @@
                         const charactersText = await generateCharacterProfiles(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         // Problem 1 Fix: Display all characters in one go and add an "Accept" button
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${charactersText}</div><button data-content="${escapeHtml(charactersText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                        // Changed to open in modal
+                        showContentInModal('Generated Character Profiles', charactersText, (content) => {
+                            editor.insertText(editor.getLength(), '\n\n' + content);
+                            showNotification("Character profiles added to editor!", "success");
+                            outputDiv.innerHTML = '';
+                        });
                     });
                 } else if (sectionId === 'world_building') {
                     const generateBtn = document.getElementById('generate-world-btn');
@@ -1237,8 +1250,8 @@
                         const worldText = await generateWorldPrompts(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         const prompts = worldText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                        outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHtml(prompt.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHtml(prompt.trim().substring(0, 80))}...</button>`).join('');
-                        // The event listener for this button is handled by delegation on outputDiv.
+                        // Changed to open in modal
+                        outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHtml(prompt.trim())}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHtml(prompt.trim().substring(0, 80))}...</button>`).join('');
                     });
                 }
                 else if (sectionId === 'outline') {
@@ -1251,8 +1264,12 @@
                         const context = `Synopsis: ${synopsisDoc.content}\n\nCharacter Development: ${charDevDoc.content}\n\nWorld-building: ${worldDoc.content}`;
                         const outline = await generateOutlineBeats(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${outline}</div><button data-content="${escapeHtml(outline)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg" id="accept-outline-btn">Accept & Add to Editor</button>`;
-                        // The event listener for this button is handled by delegation on outputDiv.
+                        // Changed to open in modal
+                        showContentInModal('Generated Outline', outline, (content) => {
+                            editor.setText(content);
+                            showNotification("Outline added to editor!", "success");
+                            outputDiv.innerHTML = '';
+                        });
                     });
                 } else if (sectionId.startsWith('chapter_')) {
                     const generateNextBtn = document.getElementById('generate-next-btn');
@@ -1269,7 +1286,12 @@
 
                         const suggestion = await generateNext(currentText, context); // Pass context to generateNext
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${suggestion}</div><button data-content="${escapeHtml(suggestion)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Chapter</button>`;
+                        // Changed to open in modal
+                        showContentInModal('Generated Next Section', suggestion, (content) => {
+                            editor.insertText(editor.getLength(), ' ' + content);
+                            showNotification("Text added!", "success");
+                            outputDiv.innerHTML = '';
+                        });
                     });
                     analyzeChapterBtn.addEventListener('click', async () => {
                         const chapterText = editor.getText();
@@ -1300,7 +1322,7 @@
                                 <p class="mb-2">Click a suggestion to apply it:</p>
                                 ${suggestions.map((suggestion, index) => `
                                     <button data-original="${escapeHtml(suggestion.original)}" data-proposed="${escapeHtml(suggestion.proposed)}"
-                                            class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm">
+                                            class="ai-proofread-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm">
                                         <strong>Suggestion ${index + 1}:</strong> <span class="line-through text-red-300">${escapeHtml(suggestion.original)}</span> → <span class="text-green-300">${escapeHtml(suggestion.proposed)}</span>
                                     </button>
                                 `).join('')}
@@ -1323,7 +1345,8 @@
                             const alternativesText = await suggestAlternatives(selectedText, context);
                             outputDiv.innerHTML = '';
                             const alternatives = alternativesText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                            outputDiv.innerHTML = alternatives.map(alt => `<button data-content="${escapeHtml(alt.trim())}" class="ai-suggestion-btn ai-alternative-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(alt.trim())}</button>`).join('');
+                            // Changed to open in modal
+                            outputDiv.innerHTML = alternatives.map(alt => `<button data-content="${escapeHtml(alt.trim())}" class="ai-suggestion-modal-btn ai-alternative-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(alt.trim())}</button>`).join('');
                         });
                     }
 
@@ -1346,8 +1369,26 @@
                             const phrasesText = await suggestYouthPhrases(selectedText, context);
                             outputDiv.innerHTML = ''; // Clear loading after response
                             const phrases = phrasesText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                            // Add a specific class to differentiate these buttons for replacement logic
-                            outputDiv.innerHTML = phrases.map(phrase => `<button data-content="${escapeHtml(phrase.trim())}" class="ai-suggestion-btn ai-youth-phrase-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(phrase.trim())}</button>`).join('');
+                            // Changed to open in modal
+                            outputDiv.innerHTML = phrases.map(phrase => `<button data-content="${escapeHtml(phrase.trim())}" class="ai-suggestion-modal-btn ai-youth-phrase-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(phrase.trim())}</button>`).join('');
+                        });
+                    }
+                    const suggestScriptureBtn = document.getElementById('suggest-scripture-btn');
+                    if (suggestScriptureBtn) {
+                        suggestScriptureBtn.addEventListener('click', async () => {
+                            const range = editor.getSelection();
+                            if (!range || range.length === 0) { showNotification("Please select text in the editor to get scripture suggestions.", "info"); return; }
+
+                            const selectedText = editor.getText(range.index, range.length);
+                            const context = editor.getText(Math.max(0, range.index - 100), 200 + range.length); // Broader context
+                            const scriptureText = await suggestScripture(selectedText, context);
+                            outputDiv.innerHTML = ''; // Clear loading after response
+                            // Changed to open in modal
+                            showContentInModal('Suggested Scripture', scriptureText, (content) => {
+                                editor.insertText(editor.getLength(), '\n\n' + content);
+                                showNotification("Scripture added to editor!", "success");
+                                outputDiv.innerHTML = '';
+                            });
                         });
                     }
 
@@ -1371,15 +1412,41 @@
                 // This single listener handles clicks on all buttons with class 'ai-suggestion-btn'
                 // that are children of outputDiv, even if they are added to the DOM later.
                 outputDiv.addEventListener('click', async (e) => {
-                    const target = e.target.closest('.ai-suggestion-btn, .ai-title-suggestion-btn, .ai-cover-concept-btn'); // Exclude .cover-image-wrapper here
+                    const target = e.target.closest('.ai-suggestion-modal-btn, .ai-title-suggestion-btn, .ai-cover-concept-btn, .ai-proofread-suggestion-btn');
                     if (target) {
+                        // Handle generic suggestion buttons that open a modal
+                        if (target.classList.contains('ai-suggestion-modal-btn')) {
+                            const contentToDisplay = target.dataset.content;
+                            const isAlternativeOrYouth = target.classList.contains('ai-alternative-btn') || target.classList.contains('ai-youth-phrase-btn');
+
+                            showModal('AI Suggestion', `<div class="whitespace-pre-wrap text-gray-300 text-sm">${escapeHtml(contentToDisplay)}</div>`, async () => {
+                                let contentToInsert = contentToDisplay;
+                                if (isAlternativeOrYouth) {
+                                    contentToInsert = stripMarkdownAndHtml(contentToInsert);
+                                    if (currentSelectionRange && currentSelectionRange.length > 0) {
+                                        editor.setSelection(currentSelectionRange.index, currentSelectionRange.length);
+                                        editor.deleteText(currentSelectionRange.index, currentSelectionRange.length);
+                                        editor.insertText(currentSelectionRange.index, contentToInsert);
+                                        showNotification("Text replaced!", "success");
+                                        currentSelectionRange = null; // Clear the stored range after use
+                                    } else {
+                                        editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
+                                        showNotification("Content added to editor (selected text could not be replaced).", "info");
+                                    }
+                                } else {
+                                    editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
+                                    showNotification("Content added to editor!", "success");
+                                }
+                                outputDiv.innerHTML = ''; // Clear suggestions after applying
+                            }, 'Accept & Add to Editor');
+                        }
                         // Title suggestion button handling
-                        if (target.classList.contains('ai-title-suggestion-btn')) {
+                        else if (target.classList.contains('ai-title-suggestion-btn')) {
                             const newTitle = target.dataset.title;
                             if (newTitle) {
                                 await updateProjectTitle(userId, projectId, newTitle);
                                 project.title = newTitle; // Update local project object
-                                sectionTitle.textContent = newTitle; // Update editor header
+                                projectMainTitle.textContent = newTitle; // Update editor header
                                 renderSidebar(); // Re-render sidebar to update project title there
                                 outputDiv.innerHTML = ''; // Clear suggestions after applying
                             }
@@ -1417,58 +1484,21 @@
                                 outputDiv.innerHTML = ''; // Clear concepts after generating images
                             }, 'Generate Images');
                         }
-                        // Outline section's "Accept & Add to Editor" button
-                        else if (sectionId === 'outline' && target.hasAttribute('data-content')) { // Check for data-content attribute
-                            const outlineContent = target.dataset.content;
-                            editor.setText(outlineContent);
-                            showNotification("Outline added to editor!", "success");
-                            outputDiv.innerHTML = ''; // Clear suggestions after applying
-                        }
-                        // Chapter section's buttons (Generate Next, Proofread, Youth Phrases)
-                        else if (sectionId.startsWith('chapter_')) {
-                            if (target.hasAttribute('data-content') && !(target.classList.contains('ai-alternative-btn') || target.classList.contains('ai-youth-phrase-btn'))) {
-                                // For generateNext and other appending content
-                                editor.insertText(editor.getLength(), ' ' + target.dataset.content);
-                                showNotification("Text added!", "success");
+                        // Proofread suggestion button handling
+                        else if (target.classList.contains('ai-proofread-suggestion-btn')) {
+                            const originalText = target.dataset.original;
+                            const proposedText = target.dataset.proposed;
+                            const editorContent = editor.getText();
+                            const index = editorContent.indexOf(originalText);
+                            if (index !== -1) {
+                                editor.setSelection(index, originalText.length);
+                                editor.deleteText(index, originalText.length);
+                                editor.insertText(index, proposedText);
+                                showNotification("Fix applied!", "success");
                                 outputDiv.innerHTML = '';
-                            } else if (target.hasAttribute('data-original') && target.hasAttribute('data-proposed')) { // For proofread
-                                const originalText = target.dataset.original;
-                                const proposedText = target.dataset.proposed;
-                                const editorContent = editor.getText();
-                                const index = editorContent.indexOf(originalText);
-                                if (index !== -1) {
-                                    editor.setSelection(index, originalText.length);
-                                    editor.deleteText(index, originalText.length);
-                                    editor.insertText(index, proposedText);
-                                    showNotification("Fix applied!", "success");
-                                    outputDiv.innerHTML = '';
-                                } else {
-                                    showNotification("Could not find original text in editor.", "error");
-                                }
-                            } else if ((target.classList.contains('ai-alternative-btn') || target.classList.contains('ai-youth-phrase-btn')) && target.hasAttribute('data-content')) {
-                                // Problem 1 Fix: Alternative Words / Suggested Youth Phrases - Use the stored selection range for replacement
-                                let contentToInsert = target.dataset.content;
-                                contentToInsert = stripMarkdownAndHtml(contentToInsert); // Strip formatting here
-                                if (currentSelectionRange && currentSelectionRange.length > 0) {
-                                    editor.setSelection(currentSelectionRange.index, currentSelectionRange.length);
-                                    editor.deleteText(currentSelectionRange.index, currentSelectionRange.length);
-                                    editor.insertText(currentSelectionRange.index, contentToInsert);
-                                    showNotification("Text replaced!", "success");
-                                    outputDiv.innerHTML = ''; // Clear suggestions after applying
-                                    currentSelectionRange = null; // Clear the stored range after use
-                                } else {
-                                    // Fallback to appending if no valid selection was stored (shouldn't happen if logic is correct)
-                                    editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
-                                    showNotification("Content added to editor (selected text could not be replaced).", "info");
-                                }
+                            } else {
+                                showNotification("Could not find original text in editor.", "error");
                             }
-                        }
-                        // General handling for other AI suggestions (concepts, characters, world-building, front/back matter, scripture)
-                        else if (target.classList.contains('ai-suggestion-btn') && target.hasAttribute('data-content')) {
-                            const contentToInsert = target.dataset.content;
-                            editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
-                            showNotification("Content added to editor!", "success");
-                            outputDiv.innerHTML = ''; // Clear suggestions after applying
                         }
                     }
                 });
@@ -1518,7 +1548,12 @@
                         const context = `Overall Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\nOutline: ${outlineDoc ? outlineDoc.content : ''}\n\n`;
 
                         const suggestion = await generateNext(currentText, context);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${suggestion}</div><button data-content="${escapeHtml(suggestion)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Chapter</button>`;
+                        // Changed to open in modal
+                        showContentInModal('Generated Next Section', suggestion, (content) => {
+                            editor.insertText(editor.getLength(), ' ' + content);
+                            showNotification("Text added!", "success");
+                            outputDiv.innerHTML = '';
+                        });
                     });
                 }
                 const analyzeChapterBtn = document.getElementById('analyze-chapter-btn');
@@ -1550,7 +1585,7 @@
                                 <p class="mb-2">Click a suggestion to apply it:</p>
                                 ${suggestions.map((suggestion, index) => `
                                     <button data-original="${escapeHtml(suggestion.original)}" data-proposed="${escapeHtml(suggestion.proposed)}"
-                                            class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm">
+                                            class="ai-proofread-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm">
                                         <strong>Suggestion ${index + 1}:</strong> <span class="line-through text-red-300">${escapeHtml(suggestion.original)}</span> → <span class="text-green-300">${escapeHtml(suggestion.proposed)}</span>
                                     </button>
                                 `).join('')}
@@ -1570,7 +1605,12 @@
                         const projectData = await getProject(userId, projectId);
                         const prompt = `Generate a dedication for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Make it heartfelt and concise.`;
                         const dedicationText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${dedicationText}</div><button data-content="${escapeHtml(dedicationText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                        // Changed to open in modal
+                        showContentInModal('Generated Dedication', dedicationText, (content) => {
+                            editor.insertText(editor.getLength(), '\n\n' + content);
+                            showNotification("Dedication added to editor!", "success");
+                            outputDiv.innerHTML = '';
+                        });
                     });
                 }
 
@@ -1582,7 +1622,12 @@
                         const projectData = await getProject(userId, projectId);
                         const prompt = `Generate an acknowledgments section for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Include thanks to family, friends, and inspiration.`;
                         const acknowledgmentsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${acknowledgmentsText}</div><button data-content="${escapeHtml(acknowledgmentsText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                        // Changed to open in modal
+                        showContentInModal('Generated Acknowledgments', acknowledgmentsText, (content) => {
+                            editor.insertText(editor.getLength(), '\n\n' + content);
+                            showNotification("Acknowledgments added to editor!", "success");
+                            outputDiv.innerHTML = '';
+                        });
                     });
                 }
 
@@ -1595,7 +1640,12 @@
                         const projectData = await getProject(userId, projectId);
                         const prompt = `Generate a preface for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Briefly introduce the book's purpose or inspiration. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
                         const prefaceText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${prefaceText}</div><button data-content="${escapeHtml(prefaceText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                        // Changed to open in modal
+                        showContentInModal('Generated Preface', prefaceText, (content) => {
+                            editor.insertText(editor.getLength(), '\n\n' + content);
+                            showNotification("Preface added to editor!", "success");
+                            outputDiv.innerHTML = '';
+                        });
                     });
                 }
 
@@ -1608,7 +1658,12 @@
                         const projectData = await getProject(userId, projectId);
                         const prompt = `Generate a compelling back cover blurb (2-3 paragraphs) for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}" targeting "${projectData.targetAudience}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Focus on hooks and intrigue. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
                         const blurbText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${blurbText}</div><button data-content="${escapeHtml(blurbText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                        // Changed to open in modal
+                        showContentInModal('Generated Blurb', blurbText, (content) => {
+                            editor.insertText(editor.getLength(), '\n\n' + content);
+                            showNotification("Blurb added to editor!", "success");
+                            outputDiv.innerHTML = '';
+                        });
                     });
                 }
 
@@ -1620,7 +1675,12 @@
                         const projectData = await getProject(userId, projectId);
                         const prompt = `Generate a concise (1-2 paragraph) author biography for ${metadata.authorName || 'Rene\' Stanley'}, author of a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Highlight key experiences like being born in Washington D.C., teenage years in Maryland, finding solace in thoughts and observations, interest in older adults' wisdom, and military service in Desert Storm.`;
                         const authorBioText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${authorBioText}</div><button data-content="${escapeHtml(authorBioText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                        // Changed to open in modal
+                        showContentInModal('Generated Author Biography', authorBioText, (content) => {
+                            editor.insertText(editor.getLength(), '\n\n' + content);
+                            showNotification("Author biography added to editor!", "success");
+                            outputDiv.innerHTML = '';
+                        });
                     });
                 }
 
@@ -1631,19 +1691,22 @@
                         const projectData = await getProject(userId, projectId);
                         const prompt = `Generate 5 thought-provoking discussion questions for a book club based on a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Focus on themes and characters. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
                         const questionsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${questionsText}</div><button data-content="${escapeHtml(questionsText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
+                        // Changed to open in modal
+                        showContentInModal('Generated Discussion Questions', questionsText, (content) => {
+                            editor.insertText(editor.getLength(), '\n\n' + content);
+                            showNotification("Discussion questions added to editor!", "success");
+                            outputDiv.innerHTML = '';
+                        });
                     });
                 }
             };
 
             const loadSection = async (sectionId) => {
                 const sectionData = await getSection(userId, projectId, sectionId);
-                const currentSectionTitleElement = document.getElementById('section-title'); // Get element inside this function
-                if (currentSectionTitleElement) { // Check if it exists
-                    currentSectionTitleElement.textContent = sectionData.title;
-                } else {
-                    console.warn("Section title element not found, cannot update textContent.");
-                }
+                // Removed: const currentSectionTitleElement = document.getElementById('section-title');
+                // Removed: if (currentSectionTitleElement) { currentSectionTitleElement.textContent = sectionData.title; }
+                // The project's main title will now always be displayed by projectMainTitle element.
+
                 activeSectionId = sectionId;
 
                 // Hide all content containers initially
