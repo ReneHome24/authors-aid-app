@@ -1683,7 +1683,7 @@ Generate 5 character profiles:`;
                             showModal('Edit Image Prompt', `
                                 <div class="space-y-4">
                                     <p class="text-gray-400">Review and edit the prompt before generating images:</p>
-                                    <textarea id="image-prompt-editor" class="w-full h-40 p-2 bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring">${escapeHtml(fullConcept)}</textarea>
+                                    <textarea id="image-prompt-editor" class="w-full h-40 p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 accent-ring">${escapeHtml(fullConcept)}</textarea>
                                 </div>
                             `, async () => {
                                 const editedPrompt = document.getElementById('image-prompt-editor').value;
@@ -1944,15 +1944,14 @@ Generate 5 character profiles:`;
                         const questions = parseNumberedAiList(questionsText, true).map(q => stripMarkdownAndHtml(q.trim())); // Keep numbers for display
 
                         if (questions.length > 0) {
-                            outputDiv.innerHTML = `
-                                <p class="mb-2">Here are some discussion questions for your book club:</p>
-                                ${questions.map((question, index) => `
-                                    <button data-content="${escapeHtml(question)}"
-                                            class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm">
-                                        ${escapeHtml(question)}
-                                    </button>
-                                `).join('')}
-                            `;
+                            // Join questions into a single block with a relevant intro
+                            const fullContent = `Here are some discussion questions for your book club, based on "${stripMarkdownAndHtml(projectData.title || 'Your Book')}":\n\n` + questions.join('\n\n');
+
+                            showContentInModal('Generated Discussion Questions', fullContent, (content) => {
+                                editor.insertText(editor.getLength(), '\n\n' + content);
+                                showNotification("Discussion questions added to editor!", "success");
+                                outputDiv.innerHTML = '';
+                            });
                         } else {
                             outputDiv.innerHTML = `<p>No discussion questions found.</p>`;
                         }
