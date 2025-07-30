@@ -528,7 +528,7 @@
         // --- views.js content ---
         const appContainer = document.getElementById('app-container');
         let currentUserId = null;
-        // This variable will store the current selection range for 'Alternative Words'
+        // This variable will store the current selection range for 'Alternative Words' and 'Suggested Youth Phrases'
         let currentSelectionRange = null;
 
         // Function to render the Help modal
@@ -1105,7 +1105,7 @@
                         <div class="grid grid-cols-2 gap-2"> <!-- Two columns for editing buttons -->
                             <button id="suggest-alternatives-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Alternative Words</button> <!-- Renamed button -->
                             <button id="suggest-scripture-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest Scripture</button>
-                            <button id="suggest-youth-phrases-btn" class="w-full bg-gray-600 text-gray-400 font-semibold py-2 px-4 rounded-lg cursor-not-allowed" disabled>Suggest Youth Phrases</button>
+                            <button id="suggest-youth-phrases-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest Youth Phrases</button> <!-- Enabled and ready for logic -->
                         </div>
                     </div>
                     <div id="ai-output" class="mt-4 text-sm text-gray-300 space-y-2 flex-grow overflow-y-auto"></div>
@@ -1264,7 +1264,7 @@
                         }
                     });
 
-                    // New: Suggest Youth Phrases listener
+                    // Problem: Suggested Youth Phrases - Now functions like Alternative Words
                     if (suggestYouthPhrasesBtn) {
                         suggestYouthPhrasesBtn.disabled = false;
                         suggestYouthPhrasesBtn.classList.remove('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
@@ -1273,12 +1273,17 @@
                         suggestYouthPhrasesBtn.addEventListener('click', async () => {
                             const range = editor.getSelection();
                             if (!range || range.length === 0) { showNotification("Please select text (e.g., dialogue) in the editor to get youth phrase suggestions.", "info"); return; }
+
+                            // Store the current selection range globally for youth phrases
+                            currentSelectionRange = range;
+
                             const selectedText = editor.getText(range.index, range.length);
                             const context = editor.getText(Math.max(0, range.index - 100), 200 + range.length); // Broader context
                             const phrasesText = await suggestYouthPhrases(selectedText, context);
                             outputDiv.innerHTML = ''; // Clear loading after response
                             const phrases = phrasesText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                            outputDiv.innerHTML = phrases.map(phrase => `<button data-content="${escapeHtml(phrase.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(phrase.trim())}</button>`).join('');
+                            // Add a specific class to differentiate these buttons for replacement logic
+                            outputDiv.innerHTML = phrases.map(phrase => `<button data-content="${escapeHtml(phrase.trim())}" class="ai-suggestion-btn ai-youth-phrase-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(phrase.trim())}</button>`).join('');
                         });
                     }
 
@@ -1404,16 +1409,16 @@
                                 }
                             }
                         }
-                        // General handling for other AI suggestions (concepts, characters, world-building, front/back matter, scripture, alternatives)
+                        // General handling for other AI suggestions (concepts, characters, world-building, front/back matter, scripture, alternatives, youth phrases)
                         else if (target.classList.contains('ai-suggestion-btn') && target.hasAttribute('data-content')) {
                             const contentToInsert = target.dataset.content;
-                            // Problem: Alternative Words - Use the stored selection range for replacement
-                            if (target.classList.contains('ai-alternative-btn')) {
+                            // Problem: Alternative Words / Suggested Youth Phrases - Use the stored selection range for replacement
+                            if (target.classList.contains('ai-alternative-btn') || target.classList.contains('ai-youth-phrase-btn')) {
                                 if (currentSelectionRange && currentSelectionRange.length > 0) {
                                     editor.setSelection(currentSelectionRange.index, currentSelectionRange.length);
                                     editor.deleteText(currentSelectionRange.index, currentSelectionRange.length);
                                     editor.insertText(currentSelectionRange.index, contentToInsert);
-                                    showNotification("Alternative applied!", "success");
+                                    showNotification("Text replaced!", "success");
                                     outputDiv.innerHTML = ''; // Clear suggestions after applying
                                     currentSelectionRange = null; // Clear the stored range after use
                                 } else {
@@ -1433,7 +1438,7 @@
 
 
                 // Re-attach specific listeners for buttons that are NOT dynamically replaced within outputDiv
-                // (e.g., Generate Next, Analyze Chapter, Proofread Chapter, Suggest Youth Phrases)
+                // (e.g., Generate Next, Analyze Chapter, Proofread Chapter)
                 // These buttons are always present in the AI panel once the section is loaded.
                 const generateNextBtn = document.getElementById('generate-next-btn');
                 if (generateNextBtn) {
@@ -1484,23 +1489,6 @@
                         } else {
                             outputDiv.innerHTML = `<p>No proofreading suggestions found or text is already perfect!</p>`;
                         }
-                    });
-                }
-                const suggestYouthPhrasesBtn = document.getElementById('suggest-youth-phrases-btn');
-                if (suggestYouthPhrasesBtn) {
-                    suggestYouthPhrasesBtn.disabled = false;
-                    suggestYouthPhrasesBtn.classList.remove('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
-                    suggestYouthPhrasesBtn.classList.add('accent-bg', 'accent-bg-hover');
-
-                    suggestYouthPhrasesBtn.addEventListener('click', async () => {
-                        const range = editor.getSelection();
-                        if (!range || range.length === 0) { showNotification("Please select text (e.g., dialogue) in the editor to get youth phrase suggestions.", "info"); return; }
-                        const selectedText = editor.getText(range.index, range.length);
-                        const context = editor.getText(Math.max(0, range.index - 100), 200 + range.length); // Broader context
-                        const phrasesText = await suggestYouthPhrases(selectedText, context);
-                        outputDiv.innerHTML = ''; // Clear loading after response
-                        const phrases = phrasesText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                        outputDiv.innerHTML = phrases.map(phrase => `<button data-content="${escapeHtml(phrase.trim())}" class="ai-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(phrase.trim())}</button>`).join('');
                     });
                 }
 
