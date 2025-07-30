@@ -1562,7 +1562,7 @@ Generate 5 character profiles:`;
                             outputDiv.innerHTML = '';
                             const alternatives = parseNumberedAiList(alternativesText, false).map(alt => stripMarkdownAndHtml(alt.trim()));
 
-                            outputDiv.innerHTML = alternatives.map(alt => `<button data-content="${escapeHtml(alt)}" class="ai-suggestion-modal-btn ai-alternative-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(alt)}</button>`).join('');
+                            outputDiv.innerHTML = alternatives.map(alt => `<button data-content="${escapeHtml(alt)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>${escapeHtml(alt)}</strong></button>`).join('');
                         });
                     }
 
@@ -1585,7 +1585,7 @@ Generate 5 character profiles:`;
                             const phrasesText = await suggestYouthPhrases(selectedText, context);
                             outputDiv.innerHTML = ''; // Clear loading after response
                             const phrases = parseNumberedAiList(phrasesText, false).map(phrase => stripMarkdownAndHtml(phrase.trim()));
-                            outputDiv.innerHTML = phrases.map(phrase => `<button data-content="${escapeHtml(phrase)}" class="ai-suggestion-modal-btn ai-youth-phrase-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(phrase)}</button>`).join('');
+                            outputDiv.innerHTML = phrases.map(phrase => `<button data-content="${escapeHtml(phrase)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>${escapeHtml(phrase)}</strong></button>`).join('');
                         });
                     }
                     if (suggestScriptureBtn) {
@@ -1683,7 +1683,7 @@ Generate 5 character profiles:`;
                             showModal('Edit Image Prompt', `
                                 <div class="space-y-4">
                                     <p class="text-gray-400">Review and edit the prompt before generating images:</p>
-                                    <textarea id="image-prompt-editor" class="w-full h-40 p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 accent-ring">${escapeHtml(fullConcept)}</textarea>
+                                    <textarea id="image-prompt-editor" class="w-full h-40 p-2 bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring">${escapeHtml(fullConcept)}</textarea>
                                 </div>
                             `, async () => {
                                 const editedPrompt = document.getElementById('image-prompt-editor').value;
@@ -1938,14 +1938,24 @@ Generate 5 character profiles:`;
                     generateDiscussionQuestionsBtn.addEventListener('click', async () => {
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate 5 thought-provoking discussion questions for a book club based on a Christian book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}". Focus on themes, characters, and spiritual insights. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                        const prompt = `Generate 5 thought-provoking discussion questions for a book club based on the Christian book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}". The questions should directly relate to the book's themes, characters, and spiritual insights. Provide ONLY the numbered questions, without any introductory sentence or bolding for individual questions.`;
                         const questionsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-                        // Changed to open in modal
-                        showContentInModal('Generated Discussion Questions', questionsText, (content) => {
-                            editor.insertText(editor.getLength(), '\n\n' + content);
-                            showNotification("Discussion questions added to editor!", "success");
-                            outputDiv.innerHTML = '';
-                        });
+                        outputDiv.innerHTML = ''; // Clear loading after response
+                        const questions = parseNumberedAiList(questionsText, true).map(q => stripMarkdownAndHtml(q.trim())); // Keep numbers for display
+
+                        if (questions.length > 0) {
+                            outputDiv.innerHTML = `
+                                <p class="mb-2">Here are some discussion questions for your book club:</p>
+                                ${questions.map((question, index) => `
+                                    <button data-content="${escapeHtml(question)}"
+                                            class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm">
+                                        ${escapeHtml(question)}
+                                    </button>
+                                `).join('')}
+                            `;
+                        } else {
+                            outputDiv.innerHTML = `<p>No discussion questions found.</p>`;
+                        }
                     });
                 }
             };
