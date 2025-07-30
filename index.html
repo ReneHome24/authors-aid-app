@@ -1278,7 +1278,7 @@ Generate 5 character profiles:`;
                         if (!idea) { showNotification("Please enter a basic idea in the editor or the text box.", "error"); return; }
                         const conceptsText = await generateConcepts(idea);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Use parseNumberedAiList to get clean suggestions, removing numbers
+                        // Use parseNumberedAiList to get clean suggestions, removing numbers for display
                         const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
 
                         outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHtml(concept)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHtml(concept.substring(0, 80))}...</button>`).join('');
@@ -1289,7 +1289,7 @@ Generate 5 character profiles:`;
                         if (!context) { showNotification("Please write a synopsis in the editor first.", "error"); return; }
                         const povsText = await suggestPOVs(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Use parseNumberedAiList to get clean suggestions, removing numbers
+                        // Use parseNumberedAiList to get clean suggestions, removing numbers for display
                         const povs = parseNumberedAiList(povsText, false).map(p => stripMarkdownAndHtml(p.trim()));
 
                         outputDiv.innerHTML = povs.map((pov, index) => `<button data-content="${escapeHtml(pov)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(pov.substring(0, 80))}...</button>`).join('');
@@ -1300,7 +1300,7 @@ Generate 5 character profiles:`;
                         if (!context) { showNotification("Please write a synopsis in the editor first.", "error"); return; }
                         const structuresText = await suggestStructures(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Use parseNumberedAiList to get clean suggestions, removing numbers
+                        // Use parseNumberedAiList to get clean suggestions, removing numbers for display
                         const structures = parseNumberedAiList(structuresText, false).map(s => stripMarkdownAndHtml(s.trim()));
 
                         outputDiv.innerHTML = structures.map((structure, index) => `<button data-content="${escapeHtml(structure)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(structure.substring(0, 80))}...</button>`).join('');
@@ -1312,10 +1312,14 @@ Generate 5 character profiles:`;
                         if (!context) { showNotification("Please write a synopsis or brainstorming content in the editor first.", "error"); return; }
                         const titlesText = await generateTitles(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Use parseNumberedAiList and keep numbers for titles
+                        // Use parseNumberedAiList to get clean titles, removing the leading "Title X: " but keeping the number for display on the button
                         const titles = parseNumberedAiList(titlesText, true).map(t => stripMarkdownAndHtml(t.trim()));
 
-                        outputDiv.innerHTML = titles.map((title, index) => `<button data-content="${escapeHtml(title)}" class="ai-title-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Title ${index + 1}:</strong> ${escapeHtml(title)}</button>`).join('');
+                        outputDiv.innerHTML = titles.map((fullTitleWithNumber, index) => {
+                            // Extract the clean title without "Title X: " for the data-content
+                            const cleanTitle = fullTitleWithNumber.replace(/^Title \d+:\s*/, '');
+                            return `<button data-content="${escapeHtml(cleanTitle)}" class="ai-title-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Title ${index + 1}:</strong> ${escapeHtml(cleanTitle)}</button>`;
+                        }).join('');
                     });
 
                 } else if (sectionId === 'character_development') {
@@ -1325,7 +1329,7 @@ Generate 5 character profiles:`;
                         const context = `Synopsis: ${synopsisDoc.content}`;
                         const charactersText = await generateCharacterProfiles(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Use parseNumberedAiList to get clean suggestions, removing numbers
+                        // Use parseNumberedAiList to get clean suggestions, removing numbers for display
                         const characters = parseNumberedAiList(charactersText, false).map(c => stripMarkdownAndHtml(c.trim()));
                         const fullCharactersText = characters.join('\n\n'); // Re-join for full display
 
@@ -1343,7 +1347,7 @@ Generate 5 character profiles:`;
                         const context = `Synopsis: ${charDevDoc.content}\n\nCharacter Development: ${charDevDoc.content}`;
                         const worldText = await generateWorldPrompts(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Use parseNumberedAiList to get clean suggestions, removing numbers
+                        // Use parseNumberedAiList to get clean suggestions, removing numbers for display
                         const prompts = parseNumberedAiList(worldText, false).map(p => stripMarkdownAndHtml(p.trim()));
 
                         outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHtml(prompt)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHtml(prompt.substring(0, 80))}...</button>`).join('');
@@ -1545,13 +1549,13 @@ Generate 5 character profiles:`;
                         // Title suggestion button handling
                         else if (target.classList.contains('ai-title-suggestion-btn')) {
                             const newTitle = target.dataset.content; // This content is already stripped and formatted by parseNumberedAiList(..., true)
-                            // Remove the "Title X: " prefix when setting the project title
-                            const cleanTitleForProject = newTitle.replace(/^Title \d+:\s*/, '');
+                            // The data-content already contains the clean title text from the previous fix.
+                            // No need to remove "Title X: " here again.
 
-                            if (cleanTitleForProject) {
-                                await updateProjectTitle(userId, projectId, cleanTitleForProject);
-                                project.title = cleanTitleForProject; // Update local project object
-                                projectMainTitle.textContent = cleanTitleForProject; // Update editor header
+                            if (newTitle) {
+                                await updateProjectTitle(userId, projectId, newTitle); // Use newTitle directly
+                                project.title = newTitle; // Update local project object
+                                projectMainTitle.textContent = newTitle; // Update editor header
                                 renderSidebar(); // Re-render sidebar to update project title there
                                 outputDiv.innerHTML = ''; // Clear suggestions after applying
                             }
