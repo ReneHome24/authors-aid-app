@@ -1556,9 +1556,8 @@ Generate 5 character profiles:`;
                                        `Character Development: ${charDevDoc ? charDevDoc.content : ''}\n` +
                                        `World-building: ${worldDoc ? worldDoc.content : ''}\n\n`;
                         console.log("Generating next section for current text:", currentText, "with context:", context);
-                        const suggestion = await generateNext(currentText, context); // Pass comprehensive context
-                        outputDiv.innerHTML = ''; // Clear loading after response
-                        console.log("Generated next section:", suggestion);
+                        const suggestion = await generateNext(currentText, context);
+                        // Changed to open in modal
                         showContentInModal('Generated Next Section', suggestion, (content) => {
                             editor.insertText(editor.getLength(), ' ' + content);
                             showNotification("Text added!", "success");
@@ -2111,7 +2110,7 @@ Generate 5 character profiles:`;
                 // Hide all content containers initially
                 editorContainer.classList.add('hidden');
                 coverDisplayContainer.classList.add('hidden');
-                metadataFormContainer.classList.add('hidden');
+                    metadataFormContainer.classList.add('hidden');
 
                 if (sectionId === 'book_cover') {
                     console.log("loadSection: Displaying book_cover section.");
