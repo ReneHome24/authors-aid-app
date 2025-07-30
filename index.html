@@ -623,6 +623,7 @@ Understanding these different types of characters can help authors create a dive
                 if (!response.ok) {
                     const errorData = await response.json();
                     console.error("AI API Error Response:", errorData);
+                    // Provide a more user-friendly message based on common API errors
                     let errorMessage = `API request failed with status ${response.status}.`;
                     if (response.status === 403) {
                         errorMessage += " This usually means the API is not enabled for your Google Cloud project or your API key has insufficient permissions.";
@@ -719,18 +720,22 @@ Generate 5 character profiles:`;
             const prompt = `You are an AI art director for Christian book covers. Based on the provided book synopsis, generate 3 distinct and compelling visual concepts for a book cover. Each concept should be a short, descriptive paragraph that could be used as a prompt for an AI image generator. Focus on imagery that reflects Christian themes, symbolism, or the spiritual journey of the characters. Provide ONLY the descriptive image prompt text. Do NOT include any "Concept X:" prefixes or introductory sentences like "Here are 3 distinct and compelling visual concepts...".\n\nSynopsis:\n---\n${context}\n---\n\nGenerate 3 book cover concepts:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        async function generateNext(currentText, context) { // Changed 'style' to 'context' for clarity
-            // Ensure 'Continue Writing' uses full project context
-            const prompt = `You are a Christian ghostwriter. Continue the following text, providing the next paragraph or section to logically follow the existing content. Keep in mind the following project context, ensuring the tone, style, and Christian themes are consistent with the overall manuscript.
-            Project Context:
+        async function generateNext(currentText, projectTitle, outlineContent) { // Simplified context parameters
+            const prompt = `You are a Christian ghostwriter. Your task is to continue the narrative for a book titled "${projectTitle}".
+            Based on the following outline and the current text, write the next logical section of the story, focusing on advancing the plot according to the next relevant beat in the outline.
+            Ensure the tone, style, and Christian themes are consistent with the overall manuscript.
+
+            Overall Outline:
             ---
-            ${context}
+            ${outlineContent}
             ---
-            Current Text:
+
+            Current Chapter Content:
             ---
             ${currentText}
             ---
-            Continue:`;
+
+            Continue the story, adhering to the outline's progression:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         // New AI function to generate titles
@@ -1543,20 +1548,16 @@ Generate 5 character profiles:`;
                     continueWritingBtn.addEventListener('click', async () => { // Event listener for renamed button
                         console.log("Continue Writing button clicked.");
                         const currentText = editor.getText();
-                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const outlineDoc = await getSection(userId, projectId, 'outline');
-                        const charDevDoc = await getSection(userId, projectId, 'character_development');
-                        const worldDoc = await getSection(userId, projectId, 'world_building');
                         const projectData = await getProject(userId, projectId); // Fetch project data for title
+                        const outlineDoc = await getSection(userId, projectId, 'outline'); // Fetch the outline
 
-                        const context = `Overall Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\n` +
-                                       `Book Title: ${projectData ? projectData.title : ''}\n` +
-                                       `Outline: ${outlineDoc ? outlineDoc.content : ''}\n` +
-                                       `Character Development: ${charDevDoc ? charDevDoc.content : ''}\n` +
-                                       `World-building: ${worldDoc ? worldDoc.content : ''}\n\n`;
-                        console.log("Generating next section for current text:", currentText, "with context:", context);
-                        const suggestion = await generateNext(currentText, context);
-                        // Changed to open in modal
+                        const projectTitle = projectData ? projectData.title : 'Untitled Book';
+                        const outlineContent = outlineDoc ? outlineDoc.content : 'No outline provided.';
+
+                        console.log("Generating next section for current text:", currentText, "with project title:", projectTitle, "and outline:", outlineContent);
+                        const suggestion = await generateNext(currentText, projectTitle, outlineContent); // Pass simplified context
+                        outputDiv.innerHTML = ''; // Clear loading after response
+                        console.log("Generated next section:", suggestion);
                         showContentInModal('Generated Next Section', suggestion, (content) => {
                             editor.insertText(editor.getLength(), ' ' + content);
                             showNotification("Text added!", "success");
@@ -1885,20 +1886,16 @@ Generate 5 character profiles:`;
                     continueWritingBtn.addEventListener('click', async () => {
                         console.log("Continue Writing button clicked (direct listener).");
                         const currentText = editor.getText();
-                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const outlineDoc = await getSection(userId, projectId, 'outline');
-                        const charDevDoc = await getSection(userId, projectId, 'character_development');
-                        const worldDoc = await getSection(userId, projectId, 'world_building');
-                        const projectData = await getProject(userId, projectId);
+                        const projectData = await getProject(userId, projectId); // Fetch project data for title
+                        const outlineDoc = await getSection(userId, projectId, 'outline'); // Fetch the outline
 
-                        const context = `Overall Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\n` +
-                                       `Book Title: ${projectData ? projectData.title : ''}\n` +
-                                       `Outline: ${outlineDoc ? outlineDoc.content : ''}\n` +
-                                       `Character Development: ${charDevDoc ? charDevDoc.content : ''}\n` +
-                                       `World-building: ${worldDoc ? worldDoc.content : ''}\n\n`;
-                        console.log("Generating next section for current text:", currentText, "with context:", context);
-                        const suggestion = await generateNext(currentText, context);
-                        // Changed to open in modal
+                        const projectTitle = projectData ? projectData.title : 'Untitled Book';
+                        const outlineContent = outlineDoc ? outlineDoc.content : 'No outline provided.';
+
+                        console.log("Generating next section for current text:", currentText, "with project title:", projectTitle, "and outline:", outlineContent);
+                        const suggestion = await generateNext(currentText, projectTitle, outlineContent); // Pass simplified context
+                        outputDiv.innerHTML = ''; // Clear loading after response
+                        console.log("Generated next section:", suggestion);
                         showContentInModal('Generated Next Section', suggestion, (content) => {
                             editor.insertText(editor.getLength(), ' ' + content);
                             showNotification("Text added!", "success");
