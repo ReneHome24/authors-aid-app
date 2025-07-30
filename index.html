@@ -660,8 +660,8 @@ Generate 5 character profiles:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateWorldPrompts(context) {
-            // Ensure world-building generation uses synopsis, title, and character context
-            const prompt = `You are an AI world-builder for Christian narratives. Based on the provided project details (synopsis, book title, characters), generate a numbered list of 5 distinct world-building element ideas. These could include unique faith-based societal structures, spiritual challenges, miraculous phenomena, or historical events relevant to a Christian story.
+            // FIX: Updated prompt to explicitly exclude titles and focus only on world-building elements.
+            const prompt = `You are an AI world-builder for Christian narratives. Based on the provided project details (synopsis, book title, characters), generate a numbered list of 5 distinct world-building element ideas. These could include unique faith-based societal structures, spiritual challenges, miraculous phenomena, or historical events relevant to a Christian story. Provide ONLY the descriptive world-building idea, without suggesting a title for the idea itself.
             \n\nProject Details:\n---\n${context}\n---\n\nGenerate 5 world-building prompts:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
@@ -1492,7 +1492,7 @@ Generate 5 character profiles:`;
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const charDevDoc = await getSection(userId, projectId, 'character_development');
                         const outlineDoc = await getSection(userId, projectId, 'outline');
-                        const projectData = await getProject(userId, projectId); // Fetch project data for title
+                        const projectData = await getProject(userId, projectId);
 
                         const context = `Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\n` +
                                         `Book Title: ${projectData ? projectData.title : ''}\n` +
