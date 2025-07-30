@@ -640,10 +640,14 @@ Understanding these different types of characters can help authors create a dive
             const prompt = `You are an AI story consultant for Christian literature. Based on the user's basic idea, generate a numbered list of 5 distinct core concept ideas for a new Christian book. Each concept should be a single, concise paragraph describing the core idea, without suggesting a title. The tone should be encouraging and creative.\n\nBasic Idea: "${idea}"`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        async function generateOutlineBeats(context) {
+        async function generateOutlineBeats(context, bookTitle) { // Added bookTitle parameter
             // Ensure outline generation uses all relevant context
             const prompt = `You are an AI outliner for a Christian author. Based on the provided project details (synopsis, characters, world-building, and desired book title), generate a detailed chapter-by-chapter outline with key beats for each chapter. Ensure the outline aligns with Christian themes and values established in the context.
-            For each chapter, list the chapter title, and then provide a numbered list of key beats for that chapter. For example:
+
+            Start the outline with the book title:
+            Book Title: ${bookTitle}
+
+            For each chapter, list the chapter title (without asterisks), and then provide a numbered list of key beats for that chapter. For example:
             Chapter 1: The Beginning
             1. Beat 1 of Chapter 1: Introduce protagonist and their core conflict.
             2. Beat 2 of Chapter 1: Character meets mentor.
@@ -1460,7 +1464,7 @@ Generate 5 character profiles:`;
                         const worldDoc = await getSection(userId, projectId, 'world_building');
                         const projectData = await getProject(userId, projectId); // Fetch project data for title
                         const context = `Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\nBook Title: ${projectData ? projectData.title : ''}\nCharacter Development: ${charDevDoc ? charDevDoc.content : ''}\nWorld-building: ${worldDoc ? worldDoc.content : ''}`;
-                        const outline = await generateOutlineBeats(context);
+                        const outline = await generateOutlineBeats(context, projectData.title); // Pass bookTitle
                         outputDiv.innerHTML = ''; // Clear loading after response
                         showContentInModal('Generated Outline', outline, (content) => {
                             editor.setText(content);
@@ -1679,7 +1683,7 @@ Generate 5 character profiles:`;
                             showModal('Edit Image Prompt', `
                                 <div class="space-y-4">
                                     <p class="text-gray-400">Review and edit the prompt before generating images:</p>
-                                    <textarea id="image-prompt-editor" class="w-full h-40 p-2 bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring">${escapeHtml(fullConcept)}</textarea>
+                                    <textarea id="image-prompt-editor" class="w-full h-40 p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 accent-ring">${escapeHtml(fullConcept)}</textarea>
                                 </div>
                             `, async () => {
                                 const editedPrompt = document.getElementById('image-prompt-editor').value;
