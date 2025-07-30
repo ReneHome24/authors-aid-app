@@ -539,11 +539,13 @@ Understanding these different types of characters can help authors create a dive
 `;
         // Function to call Imagen API for image generation
         async function generateImage(prompt) {
+            console.log("generateImage: Starting image generation for prompt:", prompt);
             try {
                 // Show loading spinner for image generation
                 document.getElementById('ai-output').innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading-spinner"></div><span class="ml-2">Generating images...</span></div>`;
 
                 const payload = { instances: { prompt: prompt }, parameters: { "sampleCount": 3 } }; // Request 3 images
+                console.log("generateImage: Sending payload to Imagen API:", payload);
                 const response = await fetch(IMAGEN_API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -561,10 +563,13 @@ Understanding these different types of characters can help authors create a dive
                 }
 
                 const result = await response.json();
+                console.log("generateImage: Received Imagen API response:", result);
                 if (result.predictions && result.predictions.length > 0) {
-                    return result.predictions.map(p => `data:image/png;base64,${p.bytesBase64Encoded}`);
+                    const imageUrls = result.predictions.map(p => `data:image/png;base64,${p.bytesBase64Encoded}`);
+                    console.log("generateImage: Generated image URLs:", imageUrls);
+                    return imageUrls;
                 } else {
-                    console.error("Imagen Error: Unexpected response structure:", result);
+                    console.error("Imagen Error: Unexpected response structure or no predictions:", result);
                     return [];
                 }
             } catch (e) {
@@ -572,13 +577,13 @@ Understanding these different types of characters can help authors create a dive
                 showNotification(`Image generation failed: ${e.message}`, 'error');
                 return [];
             } finally {
-                // Removed the unconditional clearing of outputDiv here.
-                // Specific AI functions will now manage the outputDiv content after results.
+                // The outputDiv will be managed by the calling function (ai-cover-concept-btn handler)
             }
         }
 
 
         async function callGemini(contents) {
+            console.log("callGemini: Starting Gemini call with contents:", contents);
             try {
                 // Show loading spinner for Gemini calls
                 document.getElementById('ai-output').innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading-spinner"></div><span class="ml-2">Generating...</span></div>`;
@@ -593,6 +598,7 @@ Understanding these different types of characters can help authors create a dive
                     }
                     return item;
                 });
+                console.log("callGemini: Final contents sent to Gemini:", finalContents);
 
                 const response = await fetch(GEMINI_API_URL, {
                     method: 'POST',
@@ -618,10 +624,13 @@ Understanding these different types of characters can help authors create a dive
                 }
 
                 const result = await response.json();
+                console.log("callGemini: Received Gemini API response:", result);
                 if (result.candidates?.[0]?.content?.parts?.[0]) {
-                    return result.candidates[0].content.parts[0].text;
+                    const textResult = result.candidates[0].content.parts[0].text;
+                    console.log("callGemini: Extracted text result:", textResult);
+                    return textResult;
                 } else {
-                    console.error("AI Error: Unexpected response structure:", result);
+                    console.error("AI Error: Unexpected response structure or no content in Gemini response:", result);
                     return "Error: Could not generate content (unexpected AI response).";
                 }
             } catch (e) {
@@ -629,8 +638,7 @@ Understanding these different types of characters can help authors create a dive
                 showNotification(`AI call failed: ${e.message}`, 'error');
                 return `Error: API call failed: ${e.message}`;
             } finally {
-                // Removed the unconditional clearing of outputDiv here.
-                // Specific AI functions will now manage the outputDiv content after results.
+                // The outputDiv will be managed by the calling function (e.g., generate-synopsis-concepts-btn handler)
             }
         }
 
@@ -1079,6 +1087,7 @@ Generate 5 character profiles:`;
         }
 
         async function renderEditor(userId, projectId) {
+            console.log("renderEditor: Rendering editor for projectId:", projectId);
             currentUserId = userId;
             document.body.style.overflow = 'hidden'; // Prevent global scrollbar on editor page
             document.getElementById('theme-switcher').style.display = 'none'; // Hide global switcher
@@ -1091,9 +1100,11 @@ Generate 5 character profiles:`;
 
             const project = await getProject(userId, projectId);
             if (!project) {
+                console.error("renderEditor: Project not found for projectId:", projectId);
                 mainContent.innerHTML = `<div class="text-center text-red-400 p-8">Error: Project not found.</div>`;
                 return;
             }
+            console.log("renderEditor: Project data loaded:", project);
 
             mainContent.innerHTML = `
                 <div class="flex flex-grow overflow-hidden"> <!-- Changed to overflow-hidden to contain internal scrolling -->
@@ -1129,6 +1140,7 @@ Generate 5 character profiles:`;
         }
 
         async function setupEditorFunctionality(userId, projectId, project) {
+            console.log("setupEditorFunctionality: Setting up editor for project:", projectId);
             const projectMainTitle = document.getElementById('project-main-title');
             const leftSidebar = document.getElementById('left-sidebar');
             const rightSidebar = document.getElementById('right-sidebar');
@@ -1141,10 +1153,12 @@ Generate 5 character profiles:`;
             let sections = [];
 
             const renderSidebar = () => {
+                console.log("renderSidebar: Updating sidebar with project data.");
                 getProject(userId, projectId).then(updatedProject => {
                     if (updatedProject) {
                         project.bookCoverUrl = updatedProject.bookCoverUrl;
                         project.title = updatedProject.title;
+                        console.log("renderSidebar: Updated project data for sidebar:", project);
                     }
 
                     leftSidebar.innerHTML = `
@@ -1166,6 +1180,7 @@ Generate 5 character profiles:`;
             };
 
             document.getElementById('add-chapter-btn').addEventListener('click', async () => {
+                console.log("Add Chapter button clicked.");
                 const chapterCount = sections.filter(s => s.id.startsWith('chapter_')).length;
                 const success = await addChapter(userId, projectId, chapterCount + 1);
                 if(success) {
@@ -1177,6 +1192,7 @@ Generate 5 character profiles:`;
 
             // Export Project Functionality
             document.getElementById('export-project-btn').addEventListener('click', async () => {
+                console.log("Export Project button clicked.");
                 showNotification('Preparing manuscript for export...', 'info');
                 try {
                     const allSections = await getProjectSections(userId, projectId);
@@ -1188,7 +1204,7 @@ Generate 5 character profiles:`;
                     for (const section of allSections) {
                         // Skip book_cover and metadata as they are not text content for export
                         if (section.id === 'book_cover' || section.id === 'metadata' || section.id === 'book_titles') continue; // Skip book_titles as it's for suggestions
-
+                        console.log("Exporting section:", section.title);
                         // Handle front_matter and back_matter with page breaks
                         if (section.id === 'front_matter' || section.id === 'back_matter') {
                             fullHtmlContent += `<h2>${section.title}</h2>\n`;
@@ -1233,6 +1249,7 @@ Generate 5 character profiles:`;
 
 
             const renderAiPanel = (sectionId) => {
+                console.log("renderAiPanel: Rendering AI panel for section:", sectionId);
                 let aiPanelHtml = `
                     <h3 class="text-lg font-bold mb-4">AI Co-Author</h3>
                     <div class="space-y-4 flex-grow flex flex-col">
@@ -1347,11 +1364,14 @@ Generate 5 character profiles:`;
             };
 
             const setupAiPanelListeners = (sectionId) => {
+                console.log("setupAiPanelListeners: Setting up listeners for section:", sectionId);
                 const outputDiv = document.getElementById('ai-output');
 
                 // Helper function to show content in a modal and allow insertion
                 const showContentInModal = (title, content, onAcceptCallback) => {
+                    console.log("showContentInModal: Displaying modal for:", title);
                     showModal(title, `<div class="whitespace-pre-wrap text-gray-300 text-sm">${escapeHtml(content)}</div>`, async () => {
+                        console.log("showContentInModal: 'Accept & Add to Editor' clicked.");
                         await onAcceptCallback(content);
                     }, 'Accept & Add to Editor');
                 };
@@ -1363,6 +1383,7 @@ Generate 5 character profiles:`;
                     aiStyleInput.addEventListener('input', debounce(() => {
                         aiStylePreference = aiStyleInput.value; // Save preference on input
                         showNotification('AI style preference updated!', 'info', 1000);
+                        console.log("AI style preference updated to:", aiStylePreference);
                     }, 500));
                 }
 
@@ -1371,49 +1392,61 @@ Generate 5 character profiles:`;
                     const ideaInput = document.getElementById('ai-idea-input');
 
                     document.getElementById('generate-synopsis-concepts-btn').addEventListener('click', async () => {
+                        console.log("Generate Synopsis Ideas button clicked.");
                         const idea = editor.getText().trim() || ideaInput.value;
                         if (!idea) { showNotification("Please enter a basic idea in the editor or the text box.", "error"); return; }
+                        console.log("Generating synopsis concepts for idea:", idea);
                         const conceptsText = await generateSynopsisIdeas(idea); // Renamed function call
                         outputDiv.innerHTML = ''; // Clear loading after response
                         // Use parseNumberedAiList to get clean suggestions, removing numbers
                         const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
+                        console.log("Generated synopsis concepts:", concepts);
 
                         outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHtml(concept)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHtml(concept.substring(0, 80))}...</button>`).join('');
                     });
 
                     document.getElementById('generate-pov-btn').addEventListener('click', async () => {
+                        console.log("Generate POV & Voice button clicked.");
                         const context = editor.getText().trim();
                         if (!context) { showNotification("Please write a synopsis in the editor first.", "error"); return; }
+                        console.log("Generating POV suggestions for context:", context);
                         const povsText = await suggestPOVs(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         // Use parseNumberedAiList to get clean suggestions, removing numbers
                         const povs = parseNumberedAiList(povsText, false).map(p => stripMarkdownAndHtml(p.trim()));
+                        console.log("Generated POV suggestions:", povs);
 
                         outputDiv.innerHTML = povs.map((pov, index) => `<button data-content="${escapeHtml(pov)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(pov.substring(0, 80))}...</button>`).join('');
                     });
 
                      document.getElementById('generate-structure-btn').addEventListener('click', async () => {
+                        console.log("Generate Structural Template button clicked.");
                         const context = editor.getText().trim();
                         if (!context) { showNotification("Please write a synopsis in the editor first.", "error"); return; }
+                        console.log("Generating structural templates for context:", context);
                         const structuresText = await suggestStructures(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         // Use parseNumberedAiList to get clean suggestions, removing numbers
                         const structures = parseNumberedAiList(structuresText, false).map(s => stripMarkdownAndHtml(s.trim()));
+                        console.log("Generated structural templates:", structures);
 
                         outputDiv.innerHTML = structures.map((structure, index) => `<button data-content="${escapeHtml(structure)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(structure.substring(0, 80))}...</button>`).join('');
                     });
 
                 } else if (sectionId === 'book_titles') { // NEW: Title generation logic
                     document.getElementById('generate-titles-btn').addEventListener('click', async () => {
+                        console.log("Generate Titles button clicked.");
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const context = synopsisDoc ? synopsisDoc.content.trim() : '';
                         if (!context) { showNotification("Please write your book's synopsis in the 'Synopsis & Brainstorming' section first to generate titles.", "error"); return; }
+                        console.log("Generating titles for context:", context);
 
                         const titlesText = await generateTitles(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
 
                         // Use parseNumberedAiList to get clean titles (without leading numbers in the content itself)
                         const titles = parseNumberedAiList(titlesText, false).map(t => stripMarkdownAndHtml(t.trim()));
+                        console.log("Generated titles:", titles);
 
                         outputDiv.innerHTML = titles.map((cleanTitle, index) => {
                             // The `data-content` attribute will store the clean title text
@@ -1425,14 +1458,17 @@ Generate 5 character profiles:`;
                 else if (sectionId === 'character_development') {
                     const generateBtn = document.getElementById('generate-characters-btn');
                     generateBtn.addEventListener('click', async () => {
+                        console.log("Generate Character Profiles button clicked.");
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const projectData = await getProject(userId, projectId); // Fetch project data for title
                         const context = `Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\nBook Title: ${projectData ? projectData.title : ''}`;
+                        console.log("Generating characters for context:", context);
                         const charactersText = await generateCharacterProfiles(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         // Use parseNumberedAiList to get clean suggestions, removing numbers
                         const characters = parseNumberedAiList(charactersText, false).map(c => stripMarkdownAndHtml(c.trim()));
                         const fullCharactersText = characters.join('\n\n'); // Re-join for full display
+                        console.log("Generated character profiles:", fullCharactersText);
 
                         showContentInModal('Generated Character Profiles', fullCharactersText, (content) => {
                             editor.insertText(editor.getLength(), '\n\n' + content);
@@ -1443,14 +1479,17 @@ Generate 5 character profiles:`;
                 } else if (sectionId === 'world_building') {
                     const generateBtn = document.getElementById('generate-world-btn');
                     generateBtn.addEventListener('click', async () => {
+                        console.log("Generate World Ideas button clicked.");
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const charDevDoc = await getSection(userId, projectId, 'character_development');
                         const projectData = await getProject(userId, projectId); // Fetch project data for title
                         const context = `Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\nBook Title: ${projectData ? projectData.title : ''}\nCharacter Development: ${charDevDoc ? charDevDoc.content : ''}`;
+                        console.log("Generating world prompts for context:", context);
                         const worldText = await generateWorldPrompts(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         // Use parseNumberedAiList to get clean suggestions, removing numbers
                         const prompts = parseNumberedAiList(worldText, false).map(p => stripMarkdownAndHtml(p.trim()));
+                        console.log("Generated world prompts:", prompts);
 
                         outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHtml(prompt)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHtml(prompt.substring(0, 80))}...</button>`).join('');
                     });
@@ -1458,14 +1497,17 @@ Generate 5 character profiles:`;
                 else if (sectionId === 'outline') {
                     const generateBtn = document.getElementById('generate-outline-btn');
                      generateBtn.addEventListener('click', async () => {
+                        console.log("Generate Outline button clicked.");
                         outputDiv.innerHTML = `<p>Gathering context and generating outline...</p>`; // Show loading
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const charDevDoc = await getSection(userId, projectId, 'character_development');
                         const worldDoc = await getSection(userId, projectId, 'world_building');
                         const projectData = await getProject(userId, projectId); // Fetch project data for title
                         const context = `Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\nBook Title: ${projectData ? projectData.title : ''}\nCharacter Development: ${charDevDoc ? charDevDoc.content : ''}\nWorld-building: ${worldDoc ? worldDoc.content : ''}`;
+                        console.log("Generating outline for context:", context);
                         const outline = await generateOutlineBeats(context, projectData.title); // Pass bookTitle
                         outputDiv.innerHTML = ''; // Clear loading after response
+                        console.log("Generated outline:", outline);
                         showContentInModal('Generated Outline', outline, (content) => {
                             editor.setText(content);
                             showNotification("Outline added to editor!", "success");
@@ -1481,6 +1523,7 @@ Generate 5 character profiles:`;
                     const suggestScriptureBtn = document.getElementById('suggest-scripture-btn'); // Get the scripture button
 
                     continueWritingBtn.addEventListener('click', async () => { // Event listener for renamed button
+                        console.log("Continue Writing button clicked.");
                         const currentText = editor.getText();
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const outlineDoc = await getSection(userId, projectId, 'outline');
@@ -1494,9 +1537,10 @@ Generate 5 character profiles:`;
                                        `Outline: ${outlineDoc ? outlineDoc.content : ''}\n` +
                                        `Character Development: ${charDevDoc ? charDevDoc.content : ''}\n` +
                                        `World-building: ${worldDoc ? worldDoc.content : ''}\n\n`;
-
+                        console.log("Generating next section for current text:", currentText, "with context:", context);
                         const suggestion = await generateNext(currentText, context); // Pass comprehensive context
                         outputDiv.innerHTML = ''; // Clear loading after response
+                        console.log("Generated next section:", suggestion);
                         showContentInModal('Generated Next Section', suggestion, (content) => {
                             editor.insertText(editor.getLength(), ' ' + content);
                             showNotification("Text added!", "success");
@@ -1504,6 +1548,7 @@ Generate 5 character profiles:`;
                         });
                     });
                     analyzeChapterBtn.addEventListener('click', async () => {
+                        console.log("Analyze Chapter button clicked.");
                         const chapterText = editor.getText();
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const charDevDoc = await getSection(userId, projectId, 'character_development');
@@ -1514,15 +1559,20 @@ Generate 5 character profiles:`;
                                         `Book Title: ${projectData ? projectData.title : ''}\n` +
                                         `Character Development: ${charDevDoc ? charDevDoc.content : ''}\n` +
                                         `Outline: ${outlineDoc ? outlineDoc.content : ''}`;
+                        console.log("Analyzing chapter with context:", context);
                         const analysis = await analyzeChapter(chapterText, context);
+                        console.log("Chapter analysis:", analysis);
                         outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${analysis}</div>`;
                     });
                      proofreadBtn.addEventListener('click', async () => {
+                        console.log("Proofread Chapter button clicked.");
                         const chapterText = editor.getText();
+                        console.log("Proofreading text:", chapterText);
                         const suggestionsText = await proofreadChapter(chapterText);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         // Parse suggestions to extract original and replacement parts
                         const suggestions = parseNumberedAiList(suggestionsText, true).map(s => stripMarkdownAndHtml(s.trim())); // Keep numbers for proofread
+                        console.log("Proofreading suggestions:", suggestions);
 
                         if (suggestions.length > 0) {
                             outputDiv.innerHTML = `
@@ -1551,16 +1601,19 @@ Generate 5 character profiles:`;
                     // Problem 1 Fix: Alternative Words - Capture selection and provide suggestions
                     if (suggestAlternativesBtn) {
                         suggestAlternativesBtn.addEventListener('click', async () => {
+                            console.log("Alternative Words button clicked.");
                             const range = editor.getSelection();
                             if (!range || range.length === 0) { showNotification("Please select text in the editor to get alternative words.", "info"); return; }
 
                             currentSelectionRange = range; // Store the selection range
                             const selectedText = editor.getText(range.index, range.length);
                             const context = editor.getText(Math.max(0, range.index - 100), 200 + range.length); // Broader context
+                            console.log("Suggesting alternatives for selected text:", selectedText, "with context:", context);
 
                             const alternativesText = await suggestAlternatives(selectedText, context);
                             outputDiv.innerHTML = '';
                             const alternatives = parseNumberedAiList(alternativesText, false).map(alt => stripMarkdownAndHtml(alt.trim()));
+                            console.log("Generated alternatives:", alternatives);
 
                             outputDiv.innerHTML = alternatives.map(alt => `<button data-content="${escapeHtml(alt)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>${escapeHtml(alt)}</strong></button>`).join('');
                         });
@@ -1574,6 +1627,7 @@ Generate 5 character profiles:`;
                         suggestYouthPhrasesBtn.classList.add('accent-bg', 'accent-bg-hover');
 
                         suggestYouthPhrasesBtn.addEventListener('click', async () => {
+                            console.log("Suggest Youth Phrases button clicked.");
                             const range = editor.getSelection();
                             if (!range || range.length === 0) { showNotification("Please select text (e.g., dialogue) in the editor to get youth phrase suggestions.", "info"); return; }
 
@@ -1582,23 +1636,28 @@ Generate 5 character profiles:`;
 
                             const selectedText = editor.getText(range.index, range.length);
                             const context = editor.getText(Math.max(0, range.index - 100), 200 + range.length); // Broader context
+                            console.log("Suggesting youth phrases for selected text:", selectedText, "with context:", context);
                             const phrasesText = await suggestYouthPhrases(selectedText, context);
                             outputDiv.innerHTML = ''; // Clear loading after response
                             const phrases = parseNumberedAiList(phrasesText, false).map(phrase => stripMarkdownAndHtml(phrase.trim()));
+                            console.log("Generated youth phrases:", phrases);
                             outputDiv.innerHTML = phrases.map(phrase => `<button data-content="${escapeHtml(phrase)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>${escapeHtml(phrase)}</strong></button>`).join('');
                         });
                     }
                     if (suggestScriptureBtn) {
                         suggestScriptureBtn.addEventListener('click', async () => {
+                            console.log("Suggest Scripture button clicked.");
                             const range = editor.getSelection();
                             if (!range || range.length === 0) { showNotification("Please select text in the editor to get scripture suggestions.", "info"); return; }
 
                             const selectedText = editor.getText(range.index, range.length);
                             const context = editor.getText(Math.max(0, range.index - 100), 200 + range.length); // Broader context
+                            console.log("Suggesting scripture for selected text:", selectedText, "with context:", context);
                             const scriptureText = await suggestScripture(selectedText, context);
                             outputDiv.innerHTML = ''; // Clear loading after response
                             // Parse suggestions to extract individual scriptures and remove introductory text
                             const scriptures = parseNumberedAiList(scriptureText, false).map(s => stripMarkdownAndHtml(s.trim()));
+                            console.log("Generated scriptures:", scriptures);
 
                             if (scriptures.length > 0) {
                                 outputDiv.innerHTML = `
@@ -1619,13 +1678,16 @@ Generate 5 character profiles:`;
                 } else if (sectionId === 'book_cover') {
                     const generateBtn = document.getElementById('generate-image-prompts-btn'); // Renamed button
                     generateBtn.addEventListener('click', async () => {
+                        console.log("Generate Image Prompts button clicked.");
                         outputDiv.innerHTML = `<p>Generating image prompts...</p>`;
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const context = `Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                        console.log("Generating cover concepts for context:", context);
                         const conceptsText = await generateCoverConcepts(context); // Call AI to get concepts
                         outputDiv.innerHTML = ''; // Clear loading after response
                         // Use parseNumberedAiList to get clean suggestions, removing numbers
                         const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
+                        console.log("Generated image prompts (concepts):", concepts);
                         // Changed data attribute to data-full-concept and added class for specific handling
                         outputDiv.innerHTML = concepts.map((concept, index) => `<button data-full-concept="${escapeHtml(concept)}" class="ai-cover-concept-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Prompt ${index + 1}:</strong> ${escapeHtml(concept)}</button>`).join('');
 
@@ -1639,10 +1701,12 @@ Generate 5 character profiles:`;
                 outputDiv.addEventListener('click', async (e) => {
                     const target = e.target.closest('.ai-suggestion-modal-btn, .ai-title-suggestion-btn, .ai-cover-concept-btn, .ai-proofread-suggestion-btn, .ai-scripture-suggestion-btn');
                     if (target) {
+                        console.log("AI suggestion button clicked. ClassList:", target.classList);
                         // Handle generic suggestion buttons that open a modal
                         if (target.classList.contains('ai-suggestion-modal-btn')) {
                             const contentToDisplay = target.dataset.content;
                             const isAlternativeOrYouth = target.classList.contains('ai-alternative-btn') || target.classList.contains('ai-youth-phrase-btn');
+                            console.log("Generic AI suggestion clicked. Content:", contentToDisplay);
 
                             showModal('AI Suggestion', `<div class="whitespace-pre-wrap text-gray-300 text-sm">${escapeHtml(contentToDisplay)}</div>`, async () => {
                                 let contentToInsert = contentToDisplay;
@@ -1654,13 +1718,16 @@ Generate 5 character profiles:`;
                                         editor.insertText(currentSelectionRange.index, contentToInsert);
                                         showNotification("Text replaced!", "success");
                                         currentSelectionRange = null; // Clear the stored range after use
+                                        console.log("Text replaced in editor:", contentToInsert);
                                     } else {
                                         editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
                                         showNotification("Content added to editor (selected text could not be replaced).", "info");
+                                        console.log("Content added to editor:", contentToInsert);
                                     }
                                 } else {
                                     editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
                                     showNotification("Content added to editor!", "success");
+                                    console.log("Content added to editor:", contentToInsert);
                                 }
                                 outputDiv.innerHTML = ''; // Clear suggestions after applying
                             }, 'Accept & Add to Editor');
@@ -1668,6 +1735,7 @@ Generate 5 character profiles:`;
                         // Title suggestion button handling
                         else if (target.classList.contains('ai-title-suggestion-btn')) {
                             const newTitle = target.dataset.content; // This now correctly gets the clean title text (e.g., "My Awesome Book Title")
+                            console.log("Title suggestion clicked. New title:", newTitle);
 
                             if (newTitle) {
                                 await updateProjectTitle(userId, projectId, newTitle); // Use newTitle directly
@@ -1675,11 +1743,13 @@ Generate 5 character profiles:`;
                                 projectMainTitle.textContent = newTitle; // Update editor header
                                 renderSidebar(); // Re-render sidebar to update project title there
                                 outputDiv.innerHTML = ''; // Clear suggestions after applying
+                                console.log("Project title updated to:", newTitle);
                             }
                         }
                         // Book Cover Concept button handling (now opens an editable modal)
                         else if (target.classList.contains('ai-cover-concept-btn')) {
                             const fullConcept = target.dataset.fullConcept;
+                            console.log("Image prompt concept clicked. Full concept:", fullConcept);
                             showModal('Edit Image Prompt', `
                                 <div class="space-y-4">
                                     <p class="text-gray-400">Review and edit the prompt before generating images:</p>
@@ -1687,9 +1757,11 @@ Generate 5 character profiles:`;
                                 </div>
                             `, async () => {
                                 const editedPrompt = document.getElementById('image-prompt-editor').value;
+                                console.log("Generate Images button clicked in modal. Edited prompt:", editedPrompt);
                                 if (editedPrompt) {
                                     const imageUrls = await generateImage(editedPrompt);
                                     if (imageUrls && imageUrls.length > 0) {
+                                        console.log("Images generated successfully. Displaying thumbnails.");
                                         coverDisplayContainer.innerHTML = `
                                             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
                                                 ${imageUrls.map(url => `
@@ -1702,10 +1774,12 @@ Generate 5 character profiles:`;
                                         `;
                                         showNotification('Images generated! Click to select your favorite.', 'success');
                                     } else {
+                                        console.warn("No images generated or images array is empty.");
                                         showNotification('Failed to generate images.', 'error');
                                     }
                                 } else {
                                     showNotification('Image prompt cannot be empty.', 'error');
+                                    console.warn("Image prompt was empty.");
                                 }
                                 outputDiv.innerHTML = ''; // Clear concepts after generating images
                             }, 'Generate Images');
@@ -1714,6 +1788,7 @@ Generate 5 character profiles:`;
                         else if (target.classList.contains('ai-proofread-suggestion-btn')) {
                             const originalText = target.dataset.original;
                             const proposedText = target.dataset.proposed;
+                            console.log("Proofread suggestion clicked. Original:", originalText, "Proposed:", proposedText);
                             const editorContent = editor.getText();
                             const index = editorContent.indexOf(originalText);
                             if (index !== -1) {
@@ -1722,16 +1797,20 @@ Generate 5 character profiles:`;
                                 editor.insertText(index, proposedText);
                                 showNotification("Fix applied!", "success");
                                 outputDiv.innerHTML = '';
+                                console.log("Proofread fix applied.");
                             } else {
                                 showNotification("Could not find original text in editor.", "error");
+                                console.warn("Could not find original text for proofread suggestion.");
                             }
                         }
                         // Scripture suggestion button handling
                         else if (target.classList.contains('ai-scripture-suggestion-btn')) {
                             const contentToInsert = target.dataset.content;
+                            console.log("Scripture suggestion clicked. Content:", contentToInsert);
                             editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
                             showNotification("Scripture added to editor!", "success");
                             outputDiv.innerHTML = '';
+                            console.log("Scripture added to editor.");
                         }
                     }
                 });
@@ -1741,6 +1820,7 @@ Generate 5 character profiles:`;
                     const target = e.target.closest('.cover-image-wrapper');
                     if (target && sectionId === 'book_cover') { // Ensure we are in the book_cover section
                         const imageUrl = target.dataset.imageUrl;
+                        console.log("Cover image selected. Image URL:", imageUrl);
                         if (imageUrl) {
                             // Remove 'selected' class from all other images
                             coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(el => el.classList.remove('selected'));
@@ -1748,12 +1828,15 @@ Generate 5 character profiles:`;
                             target.classList.add('selected');
                             // Save the selected image URL to Firestore
                             try {
+                                console.log("Attempting to upload image to Firebase Storage.");
                                 // Generate a unique file name for the image in storage
                                 const storageRef = ref(storageInstance, `artifacts/${appId}/users/${currentUserId}/project_covers/${projectId}_${Date.now()}.png`);
                                 // Upload the base64 string directly
                                 await uploadString(storageRef, imageUrl, 'data_url');
                                 const downloadURL = await getDownloadURL(storageRef);
+                                console.log("Image uploaded. Download URL:", downloadURL);
                                 await updateProjectCover(currentUserId, projectId, downloadURL); // Save URL to project document
+                                console.log("Project cover URL updated in Firestore.");
                                 project.bookCoverUrl = downloadURL; // Update local project object for sidebar display
                                 renderSidebar(); // Re-render sidebar to show the new cover
                                 showNotification('Book cover uploaded and saved!', 'success');
@@ -1774,6 +1857,7 @@ Generate 5 character profiles:`;
                 const continueWritingBtn = document.getElementById('continue-writing-btn'); // Renamed button
                 if (continueWritingBtn) {
                     continueWritingBtn.addEventListener('click', async () => {
+                        console.log("Continue Writing button clicked (direct listener).");
                         const currentText = editor.getText();
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const outlineDoc = await getSection(userId, projectId, 'outline');
@@ -1786,7 +1870,7 @@ Generate 5 character profiles:`;
                                        `Outline: ${outlineDoc ? outlineDoc.content : ''}\n` +
                                        `Character Development: ${charDevDoc ? charDevDoc.content : ''}\n` +
                                        `World-building: ${worldDoc ? worldDoc.content : ''}\n\n`;
-
+                        console.log("Generating next section for current text:", currentText, "with context:", context);
                         const suggestion = await generateNext(currentText, context);
                         // Changed to open in modal
                         showContentInModal('Generated Next Section', suggestion, (content) => {
@@ -1799,6 +1883,7 @@ Generate 5 character profiles:`;
                 const analyzeChapterBtn = document.getElementById('analyze-chapter-btn');
                 if (analyzeChapterBtn) {
                     analyzeChapterBtn.addEventListener('click', async () => {
+                        console.log("Analyze Chapter button clicked (direct listener).");
                         const chapterText = editor.getText();
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const charDevDoc = await getSection(userId, projectId, 'character_development');
@@ -1809,16 +1894,21 @@ Generate 5 character profiles:`;
                                         `Book Title: ${projectData ? projectData.title : ''}\n` +
                                         `Character Development: ${charDevDoc ? charDevDoc.content : ''}\n` +
                                         `Outline: ${outlineDoc ? outlineDoc.content : ''}`;
+                        console.log("Analyzing chapter with context:", context);
                         const analysis = await analyzeChapter(chapterText, context);
+                        console.log("Chapter analysis:", analysis);
                         outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${analysis}</div>`;
                     });
                 }
                 const proofreadBtn = document.getElementById('proofread-chapter-btn');
                 if (proofreadBtn) {
                     proofreadBtn.addEventListener('click', async () => {
+                        console.log("Proofread Chapter button clicked (direct listener).");
                         const chapterText = editor.getText();
+                        console.log("Proofreading text:", chapterText);
                         const suggestionsText = await proofreadChapter(chapterText);
                         const suggestions = parseNumberedAiList(suggestionsText, true).map(s => stripMarkdownAndHtml(s.trim())); // Keep numbers for proofread
+                        console.log("Proofreading suggestions:", suggestions);
 
                         if (suggestions.length > 0) {
                             outputDiv.innerHTML = `
@@ -1849,11 +1939,14 @@ Generate 5 character profiles:`;
                 const generateDedicationBtn = document.getElementById('generate-dedication-btn');
                 if (generateDedicationBtn) {
                     generateDedicationBtn.addEventListener('click', async () => {
+                        console.log("Generate Dedication button clicked.");
                         const metadataDoc = await getSection(userId, projectId, 'metadata');
                         const metadata = metadataDoc ? JSON.parse(metadataDoc.content) : {};
                         const projectData = await getProject(userId, projectId);
                         const prompt = `Generate a dedication for a Christian book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Make it heartfelt and concise, reflecting Christian values.`;
+                        console.log("Generating dedication with prompt:", prompt);
                         const dedicationText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                        console.log("Generated dedication:", dedicationText);
                         // Changed to open in modal
                         showContentInModal('Generated Dedication', dedicationText, (content) => {
                             editor.insertText(editor.getLength(), '\n\n' + content);
@@ -1866,11 +1959,14 @@ Generate 5 character profiles:`;
                 const generateAcknowledgmentsBtn = document.getElementById('generate-acknowledgments-btn');
                 if (generateAcknowledgmentsBtn) {
                     generateAcknowledgmentsBtn.addEventListener('click', async () => {
+                        console.log("Generate Acknowledgments button clicked.");
                         const metadataDoc = await getSection(userId, projectId, 'metadata');
                         const metadata = metadataDoc ? JSON.parse(metadataDoc.content) : {};
                         const projectData = await getProject(userId, projectId);
                         const prompt = `Generate an acknowledgments section for a Christian book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Include thanks to family, friends, and inspiration, with a focus on gratitude and faith.`;
+                        console.log("Generating acknowledgments with prompt:", prompt);
                         const acknowledgmentsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                        console.log("Generated acknowledgments:", acknowledgmentsText);
                         // Changed to open in modal
                         showContentInModal('Generated Acknowledgments', acknowledgmentsText, (content) => {
                             editor.insertText(editor.getLength(), '\n\n' + content);
@@ -1883,12 +1979,15 @@ Generate 5 character profiles:`;
                 const generatePrefaceBtn = document.getElementById('generate-preface-btn');
                 if (generatePrefaceBtn) {
                     generatePrefaceBtn.addEventListener('click', async () => {
+                        console.log("Generate Preface button clicked.");
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const metadataDoc = await getSection(userId, projectId, 'metadata');
                         const metadata = metadataDoc ? JSON.parse(metadataDoc.content) : {};
                         const projectData = await getProject(userId, projectId);
                         const prompt = `Generate a preface for a Christian book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Briefly introduce the book's purpose or inspiration from a Christian perspective. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                        console.log("Generating preface with prompt:", prompt);
                         const prefaceText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                        console.log("Generated preface:", prefaceText);
                         // Changed to open in modal
                         showContentInModal('Generated Preface', prefaceText, (content) => {
                             editor.insertText(editor.getLength(), '\n\n' + content);
@@ -1901,12 +2000,15 @@ Generate 5 character profiles:`;
                 const generateBlurbBtn = document.getElementById('generate-blurb-btn');
                 if (generateBlurbBtn) {
                     generateBlurbBtn.addEventListener('click', async () => {
+                        console.log("Generate Blurb button clicked.");
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const metadataDoc = await getSection(userId, projectId, 'metadata');
                         const metadata = metadataDoc ? JSON.parse(metadataDoc.content) : {};
                         const projectData = await getProject(userId, projectId);
                         const prompt = `Generate a compelling back cover blurb (2-3 paragraphs) for a Christian book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}" targeting "${projectData.targetAudience}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Focus on hooks and intrigue, incorporating Christian themes. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                        console.log("Generating blurb with prompt:", prompt);
                         const blurbText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                        console.log("Generated blurb:", blurbText);
                         // Changed to open in modal
                         showContentInModal('Generated Blurb', blurbText, (content) => {
                             editor.insertText(editor.getLength(), '\n\n' + content);
@@ -1919,11 +2021,14 @@ Generate 5 character profiles:`;
                 const generateAuthorBioBtn = document.getElementById('generate-author-bio-btn');
                 if (generateAuthorBioBtn) {
                     generateAuthorBioBtn.addEventListener('click', async () => {
+                        console.log("Generate Author Bio button clicked.");
                         const metadataDoc = await getSection(userId, projectId, 'metadata');
                         const metadata = metadataDoc ? JSON.parse(metadataDoc.content) : {};
                         const projectData = await getProject(userId, projectId);
                         const prompt = `Generate a concise (1-2 paragraph) author biography for ${metadata.authorName || 'Rene\' Stanley'}, author of a Christian book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}". Highlight key experiences like being born in Washington D.C., teenage years in Maryland, finding solace in thoughts and observations, interest in older adults' wisdom, and military service in Desert Storm. Emphasize their Christian faith journey and how it influences their writing.`;
+                        console.log("Generating author bio with prompt:", prompt);
                         const authorBioText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+                        console.log("Generated author bio:", authorBioText);
                         // Changed to open in modal
                         showContentInModal('Generated Author Biography', authorBioText, (content) => {
                             editor.insertText(editor.getLength(), '\n\n' + content);
@@ -1936,30 +2041,37 @@ Generate 5 character profiles:`;
                 const generateDiscussionQuestionsBtn = document.getElementById('generate-discussion-questions-btn');
                 if (generateDiscussionQuestionsBtn) {
                     generateDiscussionQuestionsBtn.addEventListener('click', async () => {
+                        console.log("Generate Discussion Questions button clicked.");
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const projectData = await getProject(userId, projectId);
                         const prompt = `Generate 5 thought-provoking discussion questions for a book club based on the Christian book titled "${stripMarkdownAndHtml(projectData.title || 'Untitled Book')}" of genre "${projectData.genre}". The questions should directly relate to the book's themes, characters, and spiritual insights. Provide ONLY the numbered questions, without any introductory sentence or bolding for individual questions.`;
+                        console.log("Generating discussion questions with prompt:", prompt);
                         const questionsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         const questions = parseNumberedAiList(questionsText, true).map(q => stripMarkdownAndHtml(q.trim())); // Keep numbers for display
+                        console.log("Generated discussion questions (parsed):", questions);
 
                         if (questions.length > 0) {
                             // Join questions into a single block with a relevant intro
                             const fullContent = `Here are some discussion questions for your book club, based on "${stripMarkdownAndHtml(projectData.title || 'Your Book')}":\n\n` + questions.join('\n\n');
+                            console.log("Full discussion questions content for modal:", fullContent);
 
                             showContentInModal('Generated Discussion Questions', fullContent, (content) => {
                                 editor.insertText(editor.getLength(), '\n\n' + content);
                                 showNotification("Discussion questions added to editor!", "success");
                                 outputDiv.innerHTML = '';
+                                console.log("Discussion questions added to editor.");
                             });
                         } else {
                             outputDiv.innerHTML = `<p>No discussion questions found.</p>`;
+                            console.log("No discussion questions found.");
                         }
                     });
                 }
             };
 
             const loadSection = async (sectionId) => {
+                console.log("loadSection: Loading section:", sectionId);
                 const sectionData = await getSection(userId, projectId, sectionId);
                 // The project's main title will now always be displayed by projectMainTitle element.
                 if (projectMainTitle) {
@@ -1974,10 +2086,12 @@ Generate 5 character profiles:`;
                 metadataFormContainer.classList.add('hidden');
 
                 if (sectionId === 'book_cover') {
+                    console.log("loadSection: Displaying book_cover section.");
                     coverDisplayContainer.classList.remove('hidden');
                     // Display previously saved cover if available
                     const projectData = await getProject(userId, projectId);
                     if (projectData && projectData.bookCoverUrl) {
+                        console.log("loadSection: Existing book cover found:", projectData.bookCoverUrl);
                         coverDisplayContainer.innerHTML = `
                             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
                                 <div class="cover-image-wrapper selected" data-image-url="${escapeHtml(projectData.bookCoverUrl)}">
@@ -1995,9 +2109,11 @@ Generate 5 character profiles:`;
                             </div>
                         `;
                     } else {
+                        console.log("loadSection: No existing book cover found.");
                         coverDisplayContainer.innerHTML = `<div class="text-center text-gray-400">Your generated book cover will appear here.</div>`;
                     }
                 } else if (sectionId === 'metadata') {
+                    console.log("loadSection: Displaying metadata section.");
                     metadataFormContainer.classList.remove('hidden');
                     let metadata = {};
                     try {
@@ -2007,6 +2123,7 @@ Generate 5 character profiles:`;
                         // Fallback to empty object if content is not valid JSON
                         metadata = {};
                     }
+                    console.log("loadSection: Metadata loaded:", metadata);
 
                     metadataFormContainer.innerHTML = `
                         <div class="bg-gray-900 p-6 rounded-lg shadow-xl border border-gray-700 w-full max-w-md">
@@ -2046,6 +2163,7 @@ Generate 5 character profiles:`;
                     `;
 
                     document.getElementById('save-metadata-btn').addEventListener('click', async () => {
+                        console.log("Save Metadata button clicked.");
                         const newMetadata = {
                             authorName: document.getElementById('meta-author-name').value,
                             copyrightYear: parseInt(document.getElementById('meta-copyright-year').value) || null,
@@ -2055,12 +2173,15 @@ Generate 5 character profiles:`;
                             seriesNumber: parseInt(document.getElementById('meta-series-number').value) || null,
                             lccn: document.getElementById('meta-lccn').value, // Save LCCN
                         };
+                        console.log("Updating project metadata with:", newMetadata);
                         await updateProjectMetadata(userId, projectId, newMetadata);
                     });
 
                 } else {
+                    console.log("loadSection: Displaying Quill editor for section:", sectionId);
                     editorContainer.classList.remove('hidden');
                     if (!editor) {
+                        console.log("loadSection: Initializing new Quill editor.");
                         const toolbarOptions = [['bold', 'italic', 'underline'], [{ 'header': 1 }, { 'header': 2 }], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['clean']];
                         // Initialize Quill with the toolbar and editor container
                         editor = new Quill('#editor', {
@@ -2069,13 +2190,16 @@ Generate 5 character profiles:`;
                         });
                         editor.on('text-change', debounce(async () => {
                             const content = JSON.stringify(editor.getContents());
+                            console.log("Quill text change detected. Saving content for section:", activeSectionId);
                             await updateSectionContent(userId, projectId, activeSectionId, content);
                             showNotification('Progress Saved', 'success', 1500);
                         }, 1500));
                     }
                     try {
+                        console.log("Setting Quill editor content for section:", sectionId, "Content:", sectionData.content);
                         editor.setContents(JSON.parse(sectionData.content));
                     } catch(e) {
+                        console.warn("Failed to parse JSON content for section", sectionId, ". Setting as plain text.", e);
                         editor.setText(sectionData.content || '');
                     }
                 }
@@ -2095,6 +2219,7 @@ Generate 5 character profiles:`;
             }
 
             sections = await getProjectSections(userId, projectId);
+            console.log("setupEditorFunctionality: Fetched project sections:", sections);
             await loadSection(activeSectionId);
         }
 
@@ -2105,6 +2230,7 @@ Generate 5 character profiles:`;
         let mainCurrentUserId = null;
 
         function navigateTo(viewName, data = {}) {
+            console.log("navigateTo: Navigating to view:", viewName, "with data:", data);
             appContainer.innerHTML = '';
             // Ensure body overflow is managed correctly based on view
             document.body.style.overflow = (viewName === 'landing' || viewName === 'dashboard') ? 'auto' : 'hidden';
@@ -2113,6 +2239,7 @@ Generate 5 character profiles:`;
             const themeSwitcher = document.getElementById('theme-switcher');
             if (themeSwitcher) {
                 themeSwitcher.style.display = (viewName === 'landing' || viewName === 'dashboard') ? 'block' : 'none';
+                console.log("Theme switcher display set to:", themeSwitcher.style.display);
             }
 
 
@@ -2123,6 +2250,7 @@ Generate 5 character profiles:`;
             } else {
                 document.location.hash = '';
             }
+            console.log("Current hash set to:", document.location.hash);
 
             switch (viewName) {
                 case 'landing': renderLandingPage(); break;
@@ -2134,11 +2262,14 @@ Generate 5 character profiles:`;
 
         // --- App Startup ---
         document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOMContentLoaded: Application starting up.");
             const auth = initializeAuth(firebaseConfig);
             initializeDb(firebaseConfig);
+            console.log("Firebase Auth and Firestore initialized.");
 
             function handleThemeSwitching() {
                 function applyTheme(themeName) {
+                    console.log("Applying theme:", themeName);
                     document.documentElement.className = '';
                     document.documentElement.classList.add(themeName);
                     document.querySelectorAll('.theme-button').forEach(btn => {
@@ -2148,6 +2279,7 @@ Generate 5 character profiles:`;
                     currentTheme = themeName; // Update global theme tracker
                     // Re-render dashboard to apply new border colors
                     if (document.location.hash === '#dashboard' && mainCurrentUserId) {
+                        console.log("Re-rendering dashboard due to theme change.");
                         renderDashboard(mainCurrentUserId);
                     }
                 }
@@ -2160,13 +2292,16 @@ Generate 5 character profiles:`;
             handleThemeSwitching();
 
             onAuth(async (user) => {
+                console.log("onAuth: Auth state changed. User:", user);
                 if (user) {
                     mainCurrentUserId = user.uid;
                     currentUserId = user.uid;
+                    console.log("User is logged in. UID:", mainCurrentUserId);
 
                     // Check if the user is anonymous and display a prompt to link account
                     if (user.isAnonymous) {
                         showNotification('You are signed in as a guest. Your data may be lost if you clear browser data. Consider signing up to save your work permanently!', 'info', 7000);
+                        console.log("User is anonymous. Showing notification.");
                     }
 
                     const hash = document.location.hash;
@@ -2179,6 +2314,7 @@ Generate 5 character profiles:`;
                 } else {
                     mainCurrentUserId = null;
                     currentUserId = null;
+                    console.log("User is logged out. Navigating to landing page.");
                     navigateTo('landing');
                 }
             });
@@ -2189,6 +2325,7 @@ Generate 5 character profiles:`;
                     event.preventDefault();
                     const view = target.dataset.route;
                     const projectId = target.dataset.id;
+                    console.log("Navigation button clicked. View:", view, "ProjectId:", projectId);
                     navigateTo(view, { projectId });
                 }
             });
