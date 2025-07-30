@@ -412,20 +412,52 @@
             });
         }
 
-        // Helper function to strip common Markdown bold/italic markers and HTML tags
+        // Helper function to strip common Markdown bold/italic markers, HTML tags, and leading numbers/hashes
         function stripMarkdownAndHtml(text) {
+            if (!text) return '';
+            let cleanedText = text;
+
             // Remove Markdown bold (**) and italic (* or _)
-            let cleanedText = text.replace(/\*\*(.*?)\*\*/g, '$1'); // bold
+            cleanedText = cleanedText.replace(/\*\*(.*?)\*\*/g, '$1'); // bold
             cleanedText = cleanedText.replace(/\*(.*?)\*/g, '$1');   // italic (single asterisk)
             cleanedText = cleanedText.replace(/_(.*?)_/g, '$1');   // italic (underscore)
 
             // Remove Markdown headings (# at start of line)
-            cleanedText = cleanedText.replace(/^#+\s*(.*)/gm, '$1'); // Remove # and leading space at start of line
+            cleanedText = cleanedText.replace(/^#+\s*/gm, ''); // Remove # and leading space at start of line
 
             // Remove common HTML tags (basic approach, not for complex HTML)
             cleanedText = cleanedText.replace(/<[^>]*>/g, '');
 
             return cleanedText.trim();
+        }
+
+        // New helper to parse numbered lists from AI, removing intros and numbers
+        function parseNumberedAiList(aiText, keepNumbers = false) {
+            if (!aiText) return [];
+            const lines = aiText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            const results = [];
+            let isFirstNumberedItemFound = false;
+
+            for (const line of lines) {
+                const match = line.match(/^(\d+)\.\s*(.*)/); // Matches "1. Text"
+                if (match) {
+                    isFirstNumberedItemFound = true;
+                    const number = match[1];
+                    const content = match[2];
+                    if (keepNumbers) {
+                        results.push(`${number}. ${content}`);
+                    } else {
+                        results.push(content);
+                    }
+                } else if (isFirstNumberedItemFound) {
+                    // If we've already found numbered items, and this line is not numbered, it's part of the previous item
+                    if (results.length > 0) {
+                        results[results.length - 1] += `\n${line}`;
+                    }
+                }
+                // Discard lines before the first numbered item if they don't match the pattern
+            }
+            return results;
         }
 
 
@@ -978,7 +1010,7 @@ Generate 5 character profiles:`;
                 <div class="flex flex-grow overflow-hidden"> <!-- Changed to overflow-hidden to contain internal scrolling -->
                     <div id="left-sidebar" class="w-2/12 bg-gray-800 p-4 border-r border-gray-700 flex flex-col overflow-y-auto"></div>
                     <div id="center-panel" class="w-7/12 p-8 flex flex-col overflow-y-auto bg-[#111827]">
-                        <!-- Project title moved outside editor-container but within center-panel -->
+                        <!-- Project title is outside editor-container and above the toolbar -->
                         <h3 id="project-main-title" class="text-3xl font-lora font-bold mb-4 text-white">${stripMarkdownAndHtml(project.title || 'Untitled Page')}</h3>
                         <div id="editor-container" class="flex-grow relative flex flex-col">
                            <div id="editor-toolbar"></div>
@@ -1246,11 +1278,10 @@ Generate 5 character profiles:`;
                         if (!idea) { showNotification("Please enter a basic idea in the editor or the text box.", "error"); return; }
                         const conceptsText = await generateConcepts(idea);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Remove introductory sentence and strip markdown
-                        const cleanConceptsText = conceptsText.replace(/^(Concept \d+: )?Here are \d+ distinct core concept ideas.*?\n\n/i, '').trim();
-                        const concepts = cleanConceptsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                        // Changed to open in modal
-                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHtml(stripMarkdownAndHtml(concept.trim()))}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(concept.trim().substring(0, 80)))}...</button>`).join('');
+                        // Use parseNumberedAiList to get clean suggestions
+                        const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
+
+                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHtml(concept)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHtml(concept.substring(0, 80))}...</button>`).join('');
                     });
 
                     document.getElementById('generate-pov-btn').addEventListener('click', async () => {
@@ -1258,11 +1289,10 @@ Generate 5 character profiles:`;
                         if (!context) { showNotification("Please write a synopsis in the editor first.", "error"); return; }
                         const povsText = await suggestPOVs(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Remove introductory sentence if present and strip markdown
-                        const cleanPovsText = povsText.replace(/^(Option \d+: )?Here are \d+ potential Point of View \(POV\) & Voice choices for.*?\n\n/i, '').trim();
-                        const povs = cleanPovsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                        // Changed to open in modal
-                        outputDiv.innerHTML = povs.map((pov, index) => `<button data-content="${escapeHtml(stripMarkdownAndHtml(pov.trim()))}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(pov.trim().substring(0, 80)))}...</button>`).join('');
+                        // Use parseNumberedAiList to get clean suggestions
+                        const povs = parseNumberedAiList(povsText, false).map(p => stripMarkdownAndHtml(p.trim()));
+
+                        outputDiv.innerHTML = povs.map((pov, index) => `<button data-content="${escapeHtml(pov)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(pov.substring(0, 80))}...</button>`).join('');
                     });
 
                      document.getElementById('generate-structure-btn').addEventListener('click', async () => {
@@ -1270,11 +1300,10 @@ Generate 5 character profiles:`;
                         if (!context) { showNotification("Please write a synopsis in the editor first.", "error"); return; }
                         const structuresText = await suggestStructures(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Remove introductory sentence if present and strip markdown
-                        const cleanStructuresText = structuresText.text.replace(/^(Option \d+: )?Here are \d+ potential structural templates.*?\n\n/i, '').trim();
-                        const structures = cleanStructuresText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                        // Changed to open in modal
-                        outputDiv.innerHTML = structures.map((structure, index) => `<button data-content="${escapeHtml(stripMarkdownAndHtml(structure.trim()))}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(structure.trim().substring(0, 80)))}...</button>`).join('');
+                        // Use parseNumberedAiList to get clean suggestions
+                        const structures = parseNumberedAiList(structuresText, false).map(s => stripMarkdownAndHtml(s.trim()));
+
+                        outputDiv.innerHTML = structures.map((structure, index) => `<button data-content="${escapeHtml(structure)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(structure.substring(0, 80))}...</button>`).join('');
                     });
 
                     // New: Generate Titles listener
@@ -1283,11 +1312,10 @@ Generate 5 character profiles:`;
                         if (!context) { showNotification("Please write a synopsis or brainstorming content in the editor first.", "error"); return; }
                         const titlesText = await generateTitles(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Remove introductory sentence if present and strip markdown
-                        const cleanTitlesText = titlesText.replace(/^(Title \d+: )?Here are \d+ distinct and compelling title suggestions for.*?\n\n/i, '').trim();
-                        const titles = cleanTitlesText.split(/\d+\.\s+/).filter(t => t.trim().length > 0);
-                        // Changed to open in modal
-                        outputDiv.innerHTML = titles.map((title, index) => `<button data-content="${escapeHtml(stripMarkdownAndHtml(title.trim()))}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Title ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(title.trim()))}</button>`).join('');
+                        // Use parseNumberedAiList and keep numbers for titles
+                        const titles = parseNumberedAiList(titlesText, true).map(t => stripMarkdownAndHtml(t.trim()));
+
+                        outputDiv.innerHTML = titles.map((title, index) => `<button data-content="${escapeHtml(title)}" class="ai-title-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Title ${index + 1}:</strong> ${escapeHtml(title)}</button>`).join('');
                     });
 
                 } else if (sectionId === 'character_development') {
@@ -1297,9 +1325,11 @@ Generate 5 character profiles:`;
                         const context = `Synopsis: ${synopsisDoc.content}`;
                         const charactersText = await generateCharacterProfiles(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Problem 1 Fix: Display all characters in one go and add an "Accept" button
-                        // Changed to open in modal
-                        showContentInModal('Generated Character Profiles', charactersText, (content) => {
+                        // Use parseNumberedAiList to get clean suggestions
+                        const characters = parseNumberedAiList(charactersText, false).map(c => stripMarkdownAndHtml(c.trim()));
+                        const fullCharactersText = characters.join('\n\n'); // Re-join for full display
+
+                        showContentInModal('Generated Character Profiles', fullCharactersText, (content) => {
                             editor.insertText(editor.getLength(), '\n\n' + content);
                             showNotification("Character profiles added to editor!", "success");
                             outputDiv.innerHTML = '';
@@ -1313,11 +1343,10 @@ Generate 5 character profiles:`;
                         const context = `Synopsis: ${charDevDoc.content}\n\nCharacter Development: ${charDevDoc.content}`;
                         const worldText = await generateWorldPrompts(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Remove introductory sentence if present and strip markdown
-                        const cleanWorldText = worldText.replace(/^(Idea \d+: )?Here are \d+ distinct world-building element ideas.*?\n\n/i, '').trim();
-                        const prompts = cleanWorldText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                        // Changed to open in modal
-                        outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHtml(stripMarkdownAndHtml(prompt.trim()))}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(prompt.trim().substring(0, 80)))}...</button>`).join('');
+                        // Use parseNumberedAiList to get clean suggestions
+                        const prompts = parseNumberedAiList(worldText, false).map(p => stripMarkdownAndHtml(p.trim()));
+
+                        outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHtml(prompt)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHtml(prompt.substring(0, 80))}...</button>`).join('');
                     });
                 }
                 else if (sectionId === 'outline') {
@@ -1330,7 +1359,6 @@ Generate 5 character profiles:`;
                         const context = `Synopsis: ${synopsisDoc.content}\n\nCharacter Development: ${charDevDoc.content}\n\nWorld-building: ${worldDoc.content}`;
                         const outline = await generateOutlineBeats(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Changed to open in modal
                         showContentInModal('Generated Outline', outline, (content) => {
                             editor.setText(content);
                             showNotification("Outline added to editor!", "success");
@@ -1353,7 +1381,6 @@ Generate 5 character profiles:`;
 
                         const suggestion = await generateNext(currentText, context); // Pass context to generateNext
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Changed to open in modal
                         showContentInModal('Generated Next Section', suggestion, (content) => {
                             editor.insertText(editor.getLength(), ' ' + content);
                             showNotification("Text added!", "success");
@@ -1410,9 +1437,9 @@ Generate 5 character profiles:`;
 
                             const alternativesText = await suggestAlternatives(selectedText, context);
                             outputDiv.innerHTML = '';
-                            const alternatives = alternativesText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                            // Changed to open in modal
-                            outputDiv.innerHTML = alternatives.map(alt => `<button data-content="${escapeHtml(stripMarkdownAndHtml(alt.trim()))}" class="ai-suggestion-modal-btn ai-alternative-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(stripMarkdownAndHtml(alt.trim()))}</button>`).join('');
+                            const alternatives = parseNumberedAiList(alternativesText, false).map(alt => stripMarkdownAndHtml(alt.trim()));
+
+                            outputDiv.innerHTML = alternatives.map(alt => `<button data-content="${escapeHtml(alt)}" class="ai-suggestion-modal-btn ai-alternative-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(alt)}</button>`).join('');
                         });
                     }
 
@@ -1434,9 +1461,8 @@ Generate 5 character profiles:`;
                             const context = editor.getText(Math.max(0, range.index - 100), 200 + range.length); // Broader context
                             const phrasesText = await suggestYouthPhrases(selectedText, context);
                             outputDiv.innerHTML = ''; // Clear loading after response
-                            const phrases = phrasesText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
-                            // Changed to open in modal
-                            outputDiv.innerHTML = phrases.map(phrase => `<button data-content="${escapeHtml(stripMarkdownAndHtml(phrase.trim()))}" class="ai-suggestion-modal-btn ai-youth-phrase-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(stripMarkdownAndHtml(phrase.trim()))}</button>`).join('');
+                            const phrases = parseNumberedAiList(phrasesText, false).map(phrase => stripMarkdownAndHtml(phrase.trim()));
+                            outputDiv.innerHTML = phrases.map(phrase => `<button data-content="${escapeHtml(phrase)}" class="ai-suggestion-modal-btn ai-youth-phrase-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(phrase)}</button>`).join('');
                         });
                     }
                     if (suggestScriptureBtn) {
@@ -1449,16 +1475,15 @@ Generate 5 character profiles:`;
                             const scriptureText = await suggestScripture(selectedText, context);
                             outputDiv.innerHTML = ''; // Clear loading after response
                             // Parse suggestions to extract individual scriptures and remove introductory text
-                            const cleanScriptureText = scriptureText.replace(/^(Here are \d+ relevant NIV Bible scriptures:)?\s*\n\n/i, '').trim();
-                            const scriptures = cleanScriptureText.split(/\d+\.\s+/).filter(s => s.trim().length > 0);
+                            const scriptures = parseNumberedAiList(scriptureText, false).map(s => stripMarkdownAndHtml(s.trim()));
 
                             if (scriptures.length > 0) {
                                 outputDiv.innerHTML = `
                                     <p class="mb-2">Click a scripture to add it to your editor:</p>
                                     ${scriptures.map((scripture, index) => `
-                                        <button data-content="${escapeHtml(stripMarkdownAndHtml(scripture.trim()))}"
+                                        <button data-content="${escapeHtml(scripture)}"
                                                 class="ai-scripture-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm">
-                                            <strong>Scripture ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(scripture.trim().substring(0, 100)))}...
+                                            <strong>Scripture ${index + 1}:</strong> ${escapeHtml(scripture.substring(0, 100))}...
                                         </button>
                                     `).join('')}
                                 `;
@@ -1476,9 +1501,9 @@ Generate 5 character profiles:`;
                         const context = `Synopsis: ${synopsisDoc.content}`;
                         const conceptsText = await generateCoverConcepts(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        const concepts = conceptsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
+                        const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
                         // Changed data attribute to data-full-concept and added class for specific handling
-                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-full-concept="${escapeHtml(concept.trim())}" class="ai-cover-concept-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHtml(concept.trim())}</button>`).join('');
+                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-full-concept="${escapeHtml(concept)}" class="ai-cover-concept-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHtml(concept)}</button>`).join('');
 
                         // The event listener is now attached via delegation below, no need to re-attach here.
                     });
