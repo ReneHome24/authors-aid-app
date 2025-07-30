@@ -290,6 +290,8 @@
                 const projectRef = await addDoc(getProjectsCollection(userId), { ...data, createdAt: serverTimestamp(), lastModified: serverTimestamp() });
                 const sectionsCollection = collection(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectRef.id}/sections`);
                 const emptyContent = JSON.stringify({ ops: [{ insert: '\n' }] });
+                // Added new 'metadata' section at order 0
+                await setDoc(doc(sectionsCollection, 'metadata'), { title: 'Project Metadata', content: JSON.stringify({ authorName: '', copyrightYear: '', publisher: '', isbn: '', seriesName: '', seriesNumber: '' }), order: 0 });
                 await setDoc(doc(sectionsCollection, 'brainstorming'), { title: 'Brainstorming', content: emptyContent, order: 1 });
                 await setDoc(doc(sectionsCollection, 'character_development'), { title: 'Character Development', content: emptyContent, order: 2 });
                 await setDoc(doc(sectionsCollection, 'world_building'), { title: 'World-building', content: emptyContent, order: 3 });
@@ -307,7 +309,7 @@
                 const sectionsCollection = collection(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`);
                 const newChapterId = `chapter_${chapterNumber}`;
                 const emptyContent = JSON.stringify({ ops: [{ insert: '\n' }] });
-                // Adjust order to be after existing fixed sections (brainstorming, char_dev, world_building, outline, book_cover, front_matter, back_matter)
+                // Adjust order to be after existing fixed sections (metadata, brainstorming, char_dev, world_building, outline, book_cover, front_matter, back_matter)
                 // The order for chapter_1 is 8, so subsequent chapters should follow that.
                 await setDoc(doc(sectionsCollection, newChapterId), { title: `Chapter ${chapterNumber}`, content: emptyContent, order: 7 + chapterNumber });
                 return true;
@@ -339,6 +341,20 @@
                 showNotification(`Error updating project title: ${e.message}`, 'error');
             }
         }
+        // New function to update project metadata
+        async function updateProjectMetadata(userId, projectId, metadata) {
+            try {
+                const sectionRef = doc(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`, 'metadata');
+                await updateDoc(sectionRef, { content: JSON.stringify(metadata) });
+                const projectRef = doc(getProjectsCollection(userId), projectId);
+                await updateDoc(projectRef, { lastModified: serverTimestamp() });
+                showNotification('Project metadata saved!', 'success');
+            } catch (e) {
+                console.error("Error updating project metadata:", e);
+                showNotification(`Error saving metadata: ${e.message}`, 'error');
+            }
+        }
+
         async function deleteProject(userId, projectId) { try { await deleteDoc(doc(getProjectsCollection(userId), projectId)); showNotification('Project deleted.', 'success'); } catch (e) { console.error("Error deleting project:", e); showNotification(`Error deleting project: ${e.message}`, 'error'); } }
 
         // --- utils.js content ---
@@ -902,6 +918,7 @@
                            <div id="editor" class="flex-grow"></div> <!-- Removed h-full, added flex-grow -->
                         </div>
                          <div id="cover-display-container" class="hidden flex-grow relative items-center justify-center"></div>
+                         <div id="metadata-form-container" class="hidden flex-grow relative items-center justify-center p-4"></div>
                     </div>
                     <div id="right-sidebar" class="w-3/12 bg-gray-800 p-4 border-l border-gray-700 flex flex-col overflow-y-auto"></div> <!-- Added flex flex-col -->
                 </div>
@@ -929,23 +946,35 @@
             const rightSidebar = document.getElementById('right-sidebar');
             const editorContainer = document.getElementById('editor-container');
             const coverDisplayContainer = document.getElementById('cover-display-container');
+            const metadataFormContainer = document.getElementById('metadata-form-container'); // Get metadata container
 
             let activeSectionId = 'brainstorming';
             let editor;
             let sections = [];
 
             const renderSidebar = () => {
-                leftSidebar.innerHTML = `
-                    <h2 class="text-lg font-bold font-lora mb-4">${project.title || 'Untitled Project'}</h2> <!-- Display updated project title -->
-                    <nav id="project-sections" class="flex flex-col space-y-2 flex-grow overflow-y-auto">
-                        ${sections.map(s => `<a href="#" data-section-id="${s.id}" class="section-link p-2 rounded-md hover:bg-gray-700 transition-colors ${s.id === activeSectionId ? 'bg-blue-600 text-white' : ''}">${s.title}</a>`).join('')}
-                    </nav>
-                `;
-                leftSidebar.querySelectorAll('.section-link').forEach(link => {
-                    link.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        activeSectionId = e.target.dataset.sectionId;
-                        loadSection(activeSectionId);
+                // Update the project object to ensure the latest cover URL is used
+                getProject(userId, projectId).then(updatedProject => {
+                    if (updatedProject) {
+                        project.bookCoverUrl = updatedProject.bookCoverUrl;
+                        project.title = updatedProject.title; // Also update title in case it was changed
+                    }
+
+                    leftSidebar.innerHTML = `
+                        <div class="flex items-center mb-4">
+                            ${project.bookCoverUrl ? `<img src="${project.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/40x60/1F2937/D1D5DB?text=Cover';" class="w-10 h-15 object-cover rounded-md mr-2 shadow-md" alt="Book Cover Thumbnail"/>` : ''}
+                            <h2 class="text-lg font-bold font-lora">${project.title || 'Untitled Project'}</h2>
+                        </div>
+                        <nav id="project-sections" class="flex flex-col space-y-2 flex-grow overflow-y-auto">
+                            ${sections.map(s => `<a href="#" data-section-id="${s.id}" class="section-link p-2 rounded-md hover:bg-gray-700 transition-colors ${s.id === activeSectionId ? 'bg-blue-600 text-white' : ''}">${s.title}</a>`).join('')}
+                        </nav>
+                    `;
+                    leftSidebar.querySelectorAll('.section-link').forEach(link => {
+                        link.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            activeSectionId = e.target.dataset.sectionId;
+                            loadSection(activeSectionId);
+                        });
                     });
                 });
             };
@@ -971,8 +1000,8 @@
                     fullHtmlContent += `<h1>${project.title || 'Untitled Manuscript'}</h1>\n\n`;
 
                     for (const section of allSections) {
-                        // Skip book_cover as it's not text content
-                        if (section.id === 'book_cover') continue;
+                        // Skip book_cover and metadata as they are not text content for export
+                        if (section.id === 'book_cover' || section.id === 'metadata') continue;
                         // Skip front_matter and back_matter as they will be handled separately for export
                         if (section.id === 'front_matter' || section.id === 'back_matter') continue;
 
@@ -1097,7 +1126,11 @@
                                 <button id="generate-discussion-questions-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Discussion Questions</button>
                             </div>
                         </div>`;
+                } else if (sectionId === 'metadata') {
+                    // No AI generation for metadata section, but still show style preference
+                    aiPanelHtml += `<div class="p-4 text-gray-400 text-sm">No AI generation tools for Project Metadata. This section is for manual input.</div>`;
                 }
+
 
                 aiPanelHtml += `
                     <div class="pt-4 border-t border-gray-700 flex-shrink-0">
@@ -1214,6 +1247,7 @@
                     const analyzeChapterBtn = document.getElementById('analyze-chapter-btn');
                     const proofreadBtn = document.getElementById('proofread-chapter-btn');
                     const suggestYouthPhrasesBtn = document.getElementById('suggest-youth-phrases-btn'); // Get the new button
+                    const suggestAlternativesBtn = document.getElementById('suggest-alternatives-btn'); // Get the alternative words button
 
                     generateNextBtn.addEventListener('click', async () => {
                         const currentText = editor.getText();
@@ -1264,7 +1298,25 @@
                         }
                     });
 
-                    // Problem: Suggested Youth Phrases - Now functions like Alternative Words
+                    // Problem 1 Fix: Alternative Words - Capture selection and provide suggestions
+                    if (suggestAlternativesBtn) {
+                        suggestAlternativesBtn.addEventListener('click', async () => {
+                            const range = editor.getSelection();
+                            if (!range || range.length === 0) { showNotification("Please select text in the editor to get alternative words.", "info"); return; }
+
+                            currentSelectionRange = range; // Store the selection range
+                            const selectedText = editor.getText(range.index, range.length);
+                            const context = editor.getText(Math.max(0, range.index - 100), 200 + range.length); // Broader context
+
+                            const alternativesText = await suggestAlternatives(selectedText, context);
+                            outputDiv.innerHTML = '';
+                            const alternatives = alternativesText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
+                            outputDiv.innerHTML = alternatives.map(alt => `<button data-content="${escapeHtml(alt.trim())}" class="ai-suggestion-btn ai-alternative-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(alt.trim())}</button>`).join('');
+                        });
+                    }
+
+
+                    // Problem 1 Fix: Suggested Youth Phrases - Capture selection and provide suggestions
                     if (suggestYouthPhrasesBtn) {
                         suggestYouthPhrasesBtn.disabled = false;
                         suggestYouthPhrasesBtn.classList.remove('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
@@ -1353,7 +1405,7 @@
                                 outputDiv.innerHTML = ''; // Clear concepts after generating images
                             }, 'Generate Images');
                         }
-                        // Book Cover Image Selection (Problem 2.1 Fix)
+                        // Problem 2.1 Fix: Book Cover Image Selection and Saving
                         else if (sectionId === 'book_cover' && target.classList.contains('cover-image-wrapper')) {
                             const imageUrl = target.dataset.imageUrl;
                             if (imageUrl) {
@@ -1363,13 +1415,14 @@
                                 target.classList.add('selected');
                                 // Save the selected image URL to Firestore
                                 try {
+                                    // Generate a unique file name for the image in storage
                                     const storageRef = ref(storageInstance, `artifacts/${appId}/users/${currentUserId}/project_covers/${projectId}_${Date.now()}.png`);
-                                    // It's better to upload the base64 string directly if it's already in that format
-                                    // or convert it to a Blob if it's a URL. For simplicity with data:image/png;base64,
-                                    // uploadString with 'data_url' format is appropriate.
+                                    // Upload the base64 string directly
                                     await uploadString(storageRef, imageUrl, 'data_url');
                                     const downloadURL = await getDownloadURL(storageRef);
                                     await updateProjectCover(currentUserId, projectId, downloadURL);
+                                    project.bookCoverUrl = downloadURL; // Update local project object
+                                    renderSidebar(); // Re-render sidebar to show the new cover
                                     showNotification('Book cover uploaded and saved!', 'success');
                                     // Re-render dashboard to show updated thumbnail
                                     renderDashboard(currentUserId);
@@ -1389,7 +1442,8 @@
                         }
                         // Chapter section's buttons (Generate Next, Proofread, Youth Phrases)
                         else if (sectionId.startsWith('chapter_')) {
-                            if (target.hasAttribute('data-content')) { // For generateNext and youth phrases
+                            if (target.hasAttribute('data-content') && !(target.classList.contains('ai-alternative-btn') || target.classList.contains('ai-youth-phrase-btn'))) {
+                                // For generateNext and other appending content
                                 editor.insertText(editor.getLength(), ' ' + target.dataset.content);
                                 showNotification("Text added!", "success");
                                 outputDiv.innerHTML = '';
@@ -1407,13 +1461,9 @@
                                 } else {
                                     showNotification("Could not find original text in editor.", "error");
                                 }
-                            }
-                        }
-                        // General handling for other AI suggestions (concepts, characters, world-building, front/back matter, scripture, alternatives, youth phrases)
-                        else if (target.classList.contains('ai-suggestion-btn') && target.hasAttribute('data-content')) {
-                            const contentToInsert = target.dataset.content;
-                            // Problem: Alternative Words / Suggested Youth Phrases - Use the stored selection range for replacement
-                            if (target.classList.contains('ai-alternative-btn') || target.classList.contains('ai-youth-phrase-btn')) {
+                            } else if ((target.classList.contains('ai-alternative-btn') || target.classList.contains('ai-youth-phrase-btn')) && target.hasAttribute('data-content')) {
+                                // Problem 1 Fix: Alternative Words / Suggested Youth Phrases - Use the stored selection range for replacement
+                                const contentToInsert = target.dataset.content;
                                 if (currentSelectionRange && currentSelectionRange.length > 0) {
                                     editor.setSelection(currentSelectionRange.index, currentSelectionRange.length);
                                     editor.deleteText(currentSelectionRange.index, currentSelectionRange.length);
@@ -1426,12 +1476,14 @@
                                     editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
                                     showNotification("Content added to editor (selected text could not be replaced).", "info");
                                 }
-                            } else {
-                                // For sections where content should be appended (e.g., concepts, scripture, etc.)
-                                editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
-                                showNotification("Content added to editor!", "success");
-                                outputDiv.innerHTML = ''; // Clear suggestions after applying
                             }
+                        }
+                        // General handling for other AI suggestions (concepts, characters, world-building, front/back matter, scripture)
+                        else if (target.classList.contains('ai-suggestion-btn') && target.hasAttribute('data-content')) {
+                            const contentToInsert = target.dataset.content;
+                            editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
+                            showNotification("Content added to editor!", "success");
+                            outputDiv.innerHTML = ''; // Clear suggestions after applying
                         }
                     }
                 });
@@ -1496,8 +1548,10 @@
                 const generateDedicationBtn = document.getElementById('generate-dedication-btn');
                 if (generateDedicationBtn) {
                     generateDedicationBtn.addEventListener('click', async () => {
+                        const metadataDoc = await getSection(userId, projectId, 'metadata');
+                        const metadata = metadataDoc ? JSON.parse(metadataDoc.content) : {};
                         const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate a dedication for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Make it heartfelt and concise.`;
+                        const prompt = `Generate a dedication for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Make it heartfelt and concise.`;
                         const dedicationText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
                         outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${dedicationText}</div><button data-content="${escapeHtml(dedicationText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
                     });
@@ -1506,8 +1560,10 @@
                 const generateAcknowledgmentsBtn = document.getElementById('generate-acknowledgments-btn');
                 if (generateAcknowledgmentsBtn) {
                     generateAcknowledgmentsBtn.addEventListener('click', async () => {
+                        const metadataDoc = await getSection(userId, projectId, 'metadata');
+                        const metadata = metadataDoc ? JSON.parse(metadataDoc.content) : {};
                         const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate an acknowledgments section for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Include thanks to family, friends, and inspiration.`;
+                        const prompt = `Generate an acknowledgments section for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Include thanks to family, friends, and inspiration.`;
                         const acknowledgmentsText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
                         outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${acknowledgmentsText}</div><button data-content="${escapeHtml(acknowledgmentsText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
                     });
@@ -1517,8 +1573,10 @@
                 if (generatePrefaceBtn) {
                     generatePrefaceBtn.addEventListener('click', async () => {
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
+                        const metadataDoc = await getSection(userId, projectId, 'metadata');
+                        const metadata = metadataDoc ? JSON.parse(metadataDoc.content) : {};
                         const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate a preface for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Briefly introduce the book's purpose or inspiration. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                        const prompt = `Generate a preface for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Briefly introduce the book's purpose or inspiration. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
                         const prefaceText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
                         outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${prefaceText}</div><button data-content="${escapeHtml(prefaceText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
                     });
@@ -1528,8 +1586,10 @@
                 if (generateBlurbBtn) {
                     generateBlurbBtn.addEventListener('click', async () => {
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
+                        const metadataDoc = await getSection(userId, projectId, 'metadata');
+                        const metadata = metadataDoc ? JSON.parse(metadataDoc.content) : {};
                         const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate a compelling back cover blurb (2-3 paragraphs) for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}" targeting "${projectData.targetAudience}". Focus on hooks and intrigue. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
+                        const prompt = `Generate a compelling back cover blurb (2-3 paragraphs) for a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}" targeting "${projectData.targetAudience}". Author: ${metadata.authorName || 'Rene\' Stanley'}. Focus on hooks and intrigue. Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}`;
                         const blurbText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
                         outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${blurbText}</div><button data-content="${escapeHtml(blurbText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
                     });
@@ -1538,8 +1598,10 @@
                 const generateAuthorBioBtn = document.getElementById('generate-author-bio-btn');
                 if (generateAuthorBioBtn) {
                     generateAuthorBioBtn.addEventListener('click', async () => {
+                        const metadataDoc = await getSection(userId, projectId, 'metadata');
+                        const metadata = metadataDoc ? JSON.parse(metadataDoc.content) : {};
                         const projectData = await getProject(userId, projectId);
-                        const prompt = `Generate a concise (1-2 paragraph) author biography for Rene' Stanley, author of a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Highlight key experiences like being born in Washington D.C., teenage years in Maryland, finding solace in thoughts and observations, interest in older adults' wisdom, and military service in Desert Storm.`;
+                        const prompt = `Generate a concise (1-2 paragraph) author biography for ${metadata.authorName || 'Rene\' Stanley'}, author of a book titled "${projectData.title || 'Untitled Book'}" of genre "${projectData.genre}". Highlight key experiences like being born in Washington D.C., teenage years in Maryland, finding solace in thoughts and observations, interest in older adults' wisdom, and military service in Desert Storm.`;
                         const authorBioText = await callGemini([{ role: "user", parts: [{ text: prompt }] }]);
                         outputDiv.innerHTML = `<div class="whitespace-pre-wrap">${authorBioText}</div><button data-content="${escapeHtml(authorBioText)}" class="ai-suggestion-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Accept & Add to Editor</button>`;
                     });
@@ -1567,8 +1629,12 @@
                 }
                 activeSectionId = sectionId;
 
+                // Hide all content containers initially
+                editorContainer.classList.add('hidden');
+                coverDisplayContainer.classList.add('hidden');
+                metadataFormContainer.classList.add('hidden');
+
                 if (sectionId === 'book_cover') {
-                    editorContainer.classList.add('hidden');
                     coverDisplayContainer.classList.remove('hidden');
                     // Display previously saved cover if available
                     const projectData = await getProject(userId, projectId);
@@ -1592,10 +1658,63 @@
                     } else {
                         coverDisplayContainer.innerHTML = `<div class="text-center text-gray-400">Your generated book cover will appear here.</div>`;
                     }
-                    // Add click listeners for selection to existing images (if any)
-                    // This is now handled by event delegation on coverDisplayContainer
+                } else if (sectionId === 'metadata') {
+                    metadataFormContainer.classList.remove('hidden');
+                    let metadata = {};
+                    try {
+                        metadata = JSON.parse(sectionData.content);
+                    } catch (e) {
+                        console.error("Error parsing metadata content:", e);
+                        // Fallback to empty object if content is not valid JSON
+                        metadata = {};
+                    }
+
+                    metadataFormContainer.innerHTML = `
+                        <div class="bg-gray-900 p-6 rounded-lg shadow-xl border border-gray-700 w-full max-w-md">
+                            <h3 class="text-xl font-lora font-bold mb-4 text-white">Project Metadata</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="meta-author-name" class="block text-sm font-medium text-gray-300 mb-1">Author Name</label>
+                                    <input type="text" id="meta-author-name" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring" value="${escapeHtml(metadata.authorName || '')}">
+                                </div>
+                                <div>
+                                    <label for="meta-copyright-year" class="block text-sm font-medium text-gray-300 mb-1">Copyright Year</label>
+                                    <input type="number" id="meta-copyright-year" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring" value="${metadata.copyrightYear || new Date().getFullYear()}">
+                                </div>
+                                <div>
+                                    <label for="meta-publisher" class="block text-sm font-medium text-gray-300 mb-1">Publisher</label>
+                                    <input type="text" id="meta-publisher" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring" value="${escapeHtml(metadata.publisher || '')}">
+                                </div>
+                                <div>
+                                    <label for="meta-isbn" class="block text-sm font-medium text-gray-300 mb-1">ISBN (Optional)</label>
+                                    <input type="text" id="meta-isbn" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring" value="${escapeHtml(metadata.isbn || '')}">
+                                </div>
+                                <div>
+                                    <label for="meta-series-name" class="block text-sm font-medium text-gray-300 mb-1">Series Name (Optional)</label>
+                                    <input type="text" id="meta-series-name" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring" value="${escapeHtml(metadata.seriesName || '')}">
+                                </div>
+                                <div>
+                                    <label for="meta-series-number" class="block text-sm font-medium text-gray-300 mb-1">Series Number (Optional)</label>
+                                    <input type="number" id="meta-series-number" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring" value="${metadata.seriesNumber || ''}">
+                                </div>
+                                <button id="save-metadata-btn" class="w-full mt-4 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Save Metadata</button>
+                            </div>
+                        </div>
+                    `;
+
+                    document.getElementById('save-metadata-btn').addEventListener('click', async () => {
+                        const newMetadata = {
+                            authorName: document.getElementById('meta-author-name').value,
+                            copyrightYear: parseInt(document.getElementById('meta-copyright-year').value) || null,
+                            publisher: document.getElementById('meta-publisher').value,
+                            isbn: document.getElementById('meta-isbn').value,
+                            seriesName: document.getElementById('meta-series-name').value,
+                            seriesNumber: parseInt(document.getElementById('meta-series-number').value) || null,
+                        };
+                        await updateProjectMetadata(userId, projectId, newMetadata);
+                    });
+
                 } else {
-                    coverDisplayContainer.classList.add('hidden');
                     editorContainer.classList.remove('hidden');
                     if (!editor) {
                         const toolbarOptions = [['bold', 'italic', 'underline'], [{ 'header': 1 }, { 'header': 2 }], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['clean']];
