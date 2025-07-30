@@ -617,7 +617,11 @@ Generate 5 character profiles:`;
         async function analyzeChapter(chapterText, context) { const prompt = `You are an AI developmental editor. Review the following book chapter in the context of the provided project details. Provide high-level feedback on Pacing, Plot Progression, and Character Consistency. The feedback should be constructive and encouraging.\n\nProject Details:\n---\n${context}\n---\n\nChapter Text to Analyze:\n---\n${chapterText}\n---\n\nProvide your analysis:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function proofreadChapter(chapterText) { const prompt = `You are an AI proofreader. Review the following text and provide a numbered list of suggested corrections for any grammatical errors, spelling mistakes, or punctuation issues. For each suggestion, clearly state the original text and the proposed change.\n\nText to Proofread:\n---\n${chapterText}\n---\n\nSuggestions:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function suggestYouthPhrases(selectedText, context) { const prompt = `You are an AI dialogue coach. Given the following selected text (likely dialogue) and its surrounding context, provide a numbered list of 5 alternative phrases that sound more contemporary or like common youth slang. Ensure suggestions are appropriate and fit a Christian context if possible.\n\nContext:\n---\n${context}\n---\n\nSelected Text: "${selectedText}"\n\nProvide 5 youth phrase alternatives:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); } // New AI function
-        async function generateCoverConcepts(context) { const prompt = `You are an AI art director. Based on the provided book synopsis, generate a numbered list of 3 distinct and compelling visual concepts for a book cover. Each concept should be a short, descriptive paragraph that could be used as a prompt for an AI image generator.\n\nSynopsis:\n---\n${context}\n---\n\nGenerate 3 book cover concepts:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
+        async function generateCoverConcepts(context) {
+            // CORRECTED PROMPT: Explicitly tell AI to generate ONLY the descriptive prompt, no "Concept: " prefix.
+            const prompt = `You are an AI art director. Based on the provided book synopsis, generate 3 distinct and compelling visual concepts for a book cover. Each concept should be a short, descriptive paragraph that could be used as a prompt for an AI image generator. Provide ONLY the descriptive image prompt text. Do NOT include any "Concept X:" prefixes or introductory sentences like "Here are 3 distinct and compelling visual concepts...".\n\nSynopsis:\n---\n${context}\n---\n\nGenerate 3 book cover concepts:`;
+            return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+        }
         async function generateNext(currentText, context) { // Changed 'style' to 'context' for clarity
             const prompt = `Continue the following text, keeping in mind the following project context:\n\n${context}\n\nProvide the next paragraph or section to logically follow the existing content. Ensure the tone and style are consistent with the provided context.
             Current Text:
@@ -1318,8 +1322,6 @@ Generate 5 character profiles:`;
                         outputDiv.innerHTML = ''; // Clear loading after response
 
                         // Use parseNumberedAiList to get clean titles (without leading numbers in the content itself)
-                        // This time, the AI prompt is explicitly told NOT to include descriptions,
-                        // so we just strip markdown/HTML.
                         const titles = parseNumberedAiList(titlesText, false).map(t => stripMarkdownAndHtml(t.trim()));
 
                         outputDiv.innerHTML = titles.map((cleanTitle, index) => {
@@ -1511,8 +1513,9 @@ Generate 5 character profiles:`;
                         outputDiv.innerHTML = `<p>Generating cover concepts...</p>`;
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const context = `Synopsis: ${synopsisDoc.content}`;
-                        const conceptsText = await generateCoverConcepts(context);
+                        const conceptsText = await generateCoverConcepts(context); // Call AI to get concepts
                         outputDiv.innerHTML = ''; // Clear loading after response
+                        // Use parseNumberedAiList to get clean suggestions, removing numbers
                         const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
                         // Changed data attribute to data-full-concept and added class for specific handling
                         outputDiv.innerHTML = concepts.map((concept, index) => `<button data-full-concept="${escapeHtml(concept)}" class="ai-cover-concept-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHtml(concept)}</button>`).join('');
