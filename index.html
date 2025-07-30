@@ -447,33 +447,47 @@
             return cleanedText.trim();
         }
 
-        // New helper to parse numbered lists from AI, removing intros and numbers
+        // Modified helper to parse AI responses, now also handles paragraph breaks for image prompts
         function parseNumberedAiList(aiText, keepNumbers = false) {
             if (!aiText) return [];
-            const lines = aiText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
             const results = [];
-            let isFirstNumberedItemFound = false;
 
+            // First, try to split by numbered list format (e.g., "1. Text")
+            let lines = aiText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            let hasNumberedItems = false;
             for (const line of lines) {
-                const match = line.match(/^(\d+)\.\s*(.*)/); // Matches "1. Text"
-                if (match) {
-                    isFirstNumberedItemFound = true;
-                    const number = match[1];
-                    const content = match[2];
-                    if (keepNumbers) {
-                        // If keepNumbers is true, return "1. Actual Title Text"
-                        results.push(`${number}. ${content}`);
-                    } else {
-                        // If keepNumbers is false, return "Actual Title Text"
-                        results.push(content);
-                    }
-                } else if (isFirstNumberedItemFound) {
-                    // If we've already found numbered items, and this line is not numbered, it's part of the previous item
-                    if (results.length > 0) {
-                        results[results.length - 1] += `\n${line}`;
+                if (line.match(/^(\d+)\.\s*(.*)/)) {
+                    hasNumberedItems = true;
+                    break;
+                }
+            }
+
+            if (hasNumberedItems) {
+                let isFirstNumberedItemFound = false;
+                for (const line of lines) {
+                    const match = line.match(/^(\d+)\.\s*(.*)/);
+                    if (match) {
+                        isFirstNumberedItemFound = true;
+                        const number = match[1];
+                        const content = match[2];
+                        if (keepNumbers) {
+                            results.push(`${number}. ${content}`);
+                        } else {
+                            results.push(content);
+                        }
+                    } else if (isFirstNumberedItemFound) {
+                        // If we've already found numbered items, and this line is not numbered, it's part of the previous item
+                        if (results.length > 0) {
+                            results[results.length - 1] += `\n${line}`;
+                        }
                     }
                 }
-                // Discard lines before the first numbered item if they don't match the pattern
+            } else {
+                // If no numbered list is found, assume it's paragraphs separated by double newlines
+                const paragraphs = aiText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
+                for (const paragraph of paragraphs) {
+                    results.push(paragraph);
+                }
             }
             return results;
         }
@@ -1689,6 +1703,7 @@ Generate 5 character profiles:`;
                         const conceptsText = await generateCoverConcepts(context); // Call AI to get concepts
                         console.log("Raw concepts text from AI:", conceptsText);
 
+                        // FIX: Use the modified parseNumberedAiList to handle paragraph breaks
                         const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
                         console.log("Parsed and stripped image prompts (concepts):", concepts);
 
