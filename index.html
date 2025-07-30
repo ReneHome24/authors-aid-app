@@ -556,7 +556,8 @@ Understanding these different types of characters can help authors create a dive
             console.log("generateImage: Starting image generation for prompt:", prompt);
             try {
                 // Show loading spinner for image generation
-                document.getElementById('ai-output').innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading-spinner"></div><span class="ml-2">Generating images...</span></div>`;
+                // Moved loading spinner to coverDisplayContainer
+                document.getElementById('cover-display-container').innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading-spinner"></div><span class="ml-2">Generating images...</span></div>`;
 
                 const payload = { instances: { prompt: prompt }, parameters: { "sampleCount": 3 } }; // Request 3 images
                 console.log("generateImage: Sending payload to Imagen API:", payload);
@@ -592,6 +593,7 @@ Understanding these different types of characters can help authors create a dive
                 return [];
             } finally {
                 // The outputDiv will be managed by the calling function (ai-cover-concept-btn handler)
+                // coverDisplayContainer will be updated by the calling function
             }
         }
 
@@ -623,7 +625,6 @@ Understanding these different types of characters can help authors create a dive
                 if (!response.ok) {
                     const errorData = await response.json();
                     console.error("AI API Error Response:", errorData);
-                    // Provide a more user-friendly message based on common API errors
                     let errorMessage = `API request failed with status ${response.status}.`;
                     if (response.status === 403) {
                         errorMessage += " This usually means the API is not enabled for your Google Cloud project or your API key has insufficient permissions.";
@@ -1784,10 +1785,11 @@ Generate 5 character profiles:`;
                                 const editedPrompt = document.getElementById('image-prompt-editor').value;
                                 console.log("Generate Images button clicked in modal. Edited prompt:", editedPrompt);
                                 if (editedPrompt) {
-                                    // Clear the outputDiv and show loading for image generation
-                                    outputDiv.innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading-spinner"></div><span class="ml-2">Generating images...</span></div>`;
+                                    // Clear the coverDisplayContainer and show loading for image generation
+                                    coverDisplayContainer.innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading-spinner"></div><span class="ml-2">Generating images...</span></div>`;
+                                    // Do NOT clear outputDiv here, so prompts remain visible
                                     const imageUrls = await generateImage(editedPrompt);
-                                    outputDiv.innerHTML = ''; // Clear loading after image generation
+                                    // Clear loading from coverDisplayContainer and show images
                                     if (imageUrls && imageUrls.length > 0) {
                                         console.log("Images generated successfully. Displaying thumbnails.");
                                         coverDisplayContainer.innerHTML = `
@@ -1804,10 +1806,12 @@ Generate 5 character profiles:`;
                                     } else {
                                         console.warn("No images generated or images array is empty.");
                                         showNotification('Failed to generate images.', 'error');
+                                        coverDisplayContainer.innerHTML = `<div class="text-center text-red-400 p-4">Failed to generate images. Please try a different prompt.</div>`;
                                     }
                                 } else {
                                     showNotification('Image prompt cannot be empty.', 'error');
                                     console.warn("Image prompt was empty.");
+                                    coverDisplayContainer.innerHTML = `<div class="text-center text-gray-400">Your generated book cover will appear here.</div>`; // Clear loading if prompt was empty
                                 }
                             }, 'Generate Images');
                         }
