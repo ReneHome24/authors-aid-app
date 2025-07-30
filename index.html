@@ -975,8 +975,8 @@
 
                     leftSidebar.innerHTML = `
                         <div class="flex items-center mb-4">
-                            ${project.bookCoverUrl ? `<img src="${project.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/60x90/1F2937/D1D5DB?text=Cover';" class="w-12 h-18 object-cover rounded-md mr-2 shadow-md" alt="Book Cover Thumbnail"/>` : ''}
-                            <h2 class="text-base font-bold font-lora">${project.title || 'Untitled Project'}</h2>
+                            ${project.bookCoverUrl ? `<img src="${project.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/45x68/1F2937/D1D5DB?text=Cover';" class="w-10 h-16 object-cover rounded-md mr-2 shadow-md" alt="Book Cover Thumbnail"/>` : ''}
+                            <h2 class="text-sm font-bold font-lora">${project.title || 'Untitled Project'}</h2>
                         </div>
                         <nav id="project-sections" class="flex flex-col space-y-2 flex-grow overflow-y-auto">
                             ${sections.map(s => `<a href="#" data-section-id="${s.id}" class="section-link p-2 rounded-md hover:bg-gray-700 transition-colors ${s.id === activeSectionId ? 'bg-blue-600 text-white' : ''}">${s.title}</a>`).join('')}
