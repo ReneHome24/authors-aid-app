@@ -540,57 +540,6 @@ Understanding these different types of characters can help authors create a dive
             }
         }
 
-        async function generateImage(promptText) {
-            try {
-                // Show loading spinner for Imagen calls
-                document.getElementById('cover-display-container').innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full">
-                        <p class="text-white mb-4">Generating cover for: "${promptText.substring(0, 50)}..."</p>
-                        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                    </div>
-                `;
-
-                // CORRECTED: Set sampleCount to 3 for multiple images
-                const payload = { instances: { prompt: promptText }, parameters: { "sampleCount": 3} };
-                const response = await fetch(IMAGEN_API_URL, { // Call to the corrected Imagen API URL
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error("Image API Error Response:", errorData);
-                    let errorMessage = `Image generation failed with status ${response.status}.`;
-                    if (response.status === 404) { // Specific check for 404
-                         errorMessage += " The image generation model might not be available or the name is incorrect. Please check Google Cloud documentation for available Imagen models.";
-                    } else if (response.status === 403) {
-                        errorMessage += " This usually means the Imagen API is not enabled for your Google Cloud project or your API key has insufficient permissions.";
-                    } else if (response.status === 429) {
-                        errorMessage += " You've exceeded your Imagen API quota. Please try again later.";
-                    } else if (errorData && errorData.error && errorData.error.message) {
-                        errorMessage += ` Details: ${errorData.error.message}`;
-                    } else {
-                        errorMessage += ` Details: ${JSON.stringify(errorData.error || errorData)}`;
-                    }
-                    throw new Error(errorMessage);
-                }
-
-                const result = await response.json();
-                if (result.predictions && result.predictions.length > 0) { // Check for predictions array
-                    const imageUrls = result.predictions.map(pred => `data:image/png;base64,${pred.bytesBase64Encoded}`);
-                    return imageUrls; // Return an array of URLs
-                } else {
-                    console.error("Image API Error: Unexpected response structure or no predictions:", result);
-                    return null;
-                }
-            } catch (e) {
-                console.error("Error calling Imagen API:", e);
-                showNotification(`Image generation failed: ${e.message}`, 'error');
-                return null;
-            }
-        }
-
 
         async function generateConcepts(idea) { const prompt = `You are an AI story consultant. Based on the user's basic idea, generate a numbered list of 5 distinct core concept ideas for a new book. Each concept should be a single, concise paragraph. The tone should be encouraging and creative.\n\nBasic Idea: "${idea}"`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function generateOutlineBeats(context) { const prompt = `You are an AI outliner for an author. Based on the provided project details (synopsis, characters, world-building), generate a detailed chapter-by-chapter outline with key beats for each chapter. The outline should be well-structured and provide a clear roadmap for the story.\n\nProject Details:\n---\n${context}\n---\n\nGenerate the chapter-by-chapter outline:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
@@ -610,7 +559,7 @@ Generate 5 character profiles:`;
         async function generateWorldPrompts(context) { const prompt = `You are an AI world-builder. Based on the provided project details (synopsis, characters), generate a numbered list of 5 distinct world-building element ideas. These could include magic systems, futuristic technologies, societal structures, or key historical events relevant to the story.\n\nProject Details:\n---\n${context}\n---\n\nGenerate 5 world-building prompts:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function suggestAlternatives(selectedText, context) { const prompt = `You are an AI thesaurus and editor. Given the following selected word/phrase and its surrounding context, provide a numbered list of 5 alternative words or short phrases that would fit well.\n\nContext:\n---\n${context}\n---\n\nSelected Text: "${selectedText}"\n\nProvide 5 alternatives:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function suggestScripture(selectedText, context) { const prompt = `You are a theological assistant specializing in the NIV Bible. Based on the following selected text, suggest a numbered list of 3 relevant NIV Bible scriptures. For each, provide the reference and the full verse text.\n\nSelected Text for Context:\n---\n${context}\n---\n\nSuggest 3 relevant NIV scriptures:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
-        async function suggestPOVs(context) { const prompt = `You are an AI writing coach. Based on the story's synopsis, suggest a numbered list of 3 potential Point of View (POV) & Voice choices (e.g., First Person, Third Person Limited). For each, briefly explain how that choice would shape the narration and affect the reader's experience.\n\nSynopsis:\n---\n${context}\n---\n\nSuggest 3 POV & Voice options:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
+        async function suggestPOVs(context) { const prompt = `You are an AI writing coach. Based on the story's synopsis, suggest a numbered list of 3 potential Point of View (POV) & Voice choices (e.g., First Person, Third Person Limited). For each, briefly explain how that choice would shape the narration and affect the reader's experience.\n\nSynopsis:\n---\n${context}\n---\n\nGenerate 3 POV & Voice options:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function suggestStructures(context) { const prompt = `You are an AI writing coach. Based on the story's synopsis, suggest a numbered list of 3 potential structural templates (e.g., Three-Act Structure, Hero's Journey, Fichtean Curve). For each, briefly explain why that structure would be a good fit for the story.\n\nSynopsis:\n---\n${context}\n---\n\nSuggest 3 structural templates:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function analyzeChapter(chapterText, context) { const prompt = `You are an AI developmental editor. Review the following book chapter in the context of the provided project details. Provide high-level feedback on Pacing, Plot Progression, and Character Consistency. The feedback should be constructive and encouraging.\n\nProject Details:\n---\n${context}\n---\n\nChapter Text to Analyze:\n---\n${chapterText}\n---\n\nProvide your analysis:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function proofreadChapter(chapterText) { const prompt = `You are an AI proofreader. Review the following text and provide a numbered list of suggested corrections for any grammatical errors, spelling mistakes, or punctuation issues. For each suggestion, clearly state the original text and the proposed change.\n\nText to Proofread:\n---\n${chapterText}\n---\n\nSuggestions:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
@@ -1281,7 +1230,9 @@ Generate 5 character profiles:`;
                         if (!context) { showNotification("Please write a synopsis in the editor first.", "error"); return; }
                         const povsText = await suggestPOVs(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        const povs = povsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
+                        // Remove introductory sentence if present
+                        const cleanPovsText = povsText.replace(/^(Option \d+: )?Here are \d+ potential Point of View \(POV\) & Voice choices for.*?\n\n/i, '').trim();
+                        const povs = cleanPovsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                         // Changed to open in modal
                         outputDiv.innerHTML = povs.map((pov, index) => `<button data-content="${escapeHtml(pov.trim())}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(pov.trim().substring(0, 80))}...</button>`).join('');
                     });
@@ -1291,7 +1242,9 @@ Generate 5 character profiles:`;
                         if (!context) { showNotification("Please write a synopsis in the editor first.", "error"); return; }
                         const structuresText = await suggestStructures(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        const structures = structuresText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
+                        // Remove introductory sentence if present
+                        const cleanStructuresText = structuresText.replace(/^(Option \d+: )?Here are \d+ potential structural templates.*?\n\n/i, '').trim();
+                        const structures = cleanStructuresText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                         // Changed to open in modal
                         outputDiv.innerHTML = structures.map((structure, index) => `<button data-content="${escapeHtml(structure.trim())}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(structure.trim().substring(0, 80))}...</button>`).join('');
                     });
@@ -1327,7 +1280,7 @@ Generate 5 character profiles:`;
                     generateBtn.addEventListener('click', async () => {
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const charDevDoc = await getSection(userId, projectId, 'character_development');
-                        const context = `Synopsis: ${synopsisDoc.content}\n\nCharacter Development: ${charDevDoc.content}`;
+                        const context = `Synopsis: ${charDevDoc.content}\n\nCharacter Development: ${charDevDoc.content}`;
                         const worldText = await generateWorldPrompts(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         const prompts = worldText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
@@ -1340,7 +1293,7 @@ Generate 5 character profiles:`;
                      generateBtn.addEventListener('click', async () => {
                         outputDiv.innerHTML = `<p>Gathering context and generating outline...</p>`; // Show loading
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const charDevDoc = await getSection(userId, projectId, 'character_development');
+                        const charDevDoc = await await getSection(userId, projectId, 'character_development');
                         const worldDoc = await getSection(userId, projectId, 'world_building');
                         const context = `Synopsis: ${synopsisDoc.content}\n\nCharacter Development: ${charDevDoc.content}\n\nWorld-building: ${worldDoc.content}`;
                         const outline = await generateOutlineBeats(context);
@@ -1358,6 +1311,7 @@ Generate 5 character profiles:`;
                     const proofreadBtn = document.getElementById('proofread-chapter-btn');
                     const suggestYouthPhrasesBtn = document.getElementById('suggest-youth-phrases-btn'); // Get the new button
                     const suggestAlternativesBtn = document.getElementById('suggest-alternatives-btn'); // Get the alternative words button
+                    const suggestScriptureBtn = document.getElementById('suggest-scripture-btn'); // Get the scripture button
 
                     generateNextBtn.addEventListener('click', async () => {
                         const currentText = editor.getText();
@@ -1453,7 +1407,6 @@ Generate 5 character profiles:`;
                             outputDiv.innerHTML = phrases.map(phrase => `<button data-content="${escapeHtml(phrase.trim())}" class="ai-suggestion-modal-btn ai-youth-phrase-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(phrase.trim())}</button>`).join('');
                         });
                     }
-                    const suggestScriptureBtn = document.getElementById('suggest-scripture-btn');
                     if (suggestScriptureBtn) {
                         suggestScriptureBtn.addEventListener('click', async () => {
                             const range = editor.getSelection();
