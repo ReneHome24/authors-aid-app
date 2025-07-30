@@ -997,17 +997,19 @@ Generate 5 character profiles:`;
                 const themeBorderClass = `theme-border-${currentTheme.replace('theme-', '')}`;
 
                 return `
-                <div class="project-card bg-gray-800 p-4 rounded-lg border-2 ${themeBorderClass} flex flex-col justify-between">
-                    <div class="flex items-start mb-2">
-                        ${p.bookCoverUrl ? `<img src="${p.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/100x150/1F2937/D1D5DB?text=Image+Load+Error';" class="w-16 h-24 object-cover rounded-md mr-4 shadow-md" alt="Book Cover Thumbnail"/>` : `<img src="https://placehold.co/100x150/1F2937/D1D5DB?text=No+Cover" class="w-16 h-24 object-cover rounded-md mr-4 shadow-md" alt="Placeholder Cover"/>`}
-                        <div class="flex-grow">
-                            <h3 class="text-xl font-lora font-semibold text-white leading-tight">${stripMarkdownAndHtml(p.title || 'Untitled Project')}</h3>
-                            ${p.authorName ? `<p class="text-sm text-gray-400">by ${escapeHtml(p.authorName)}</p>` : ''}
-                            <p class="text-xs text-gray-500 mt-1">Edited: ${p.lastModified ? new Date(p.lastModified.seconds * 1000).toLocaleDateString() : 'N/A'}</p>
-                        </div>
+                <div class="project-card bg-gray-800 p-4 rounded-lg border-2 ${themeBorderClass} flex items-center justify-between">
+                    <div class="flex-shrink-0 mr-4">
+                        ${p.bookCoverUrl ? `<img src="${p.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/100x150/1F2937/D1D5DB?text=Image+Load+Error';" class="w-24 h-36 object-cover rounded-md shadow-md" alt="Book Cover Thumbnail"/>` : `<img src="https://placehold.co/100x150/1F2937/D1D5DB?text=No+Cover" class="w-24 h-36 object-cover rounded-md shadow-md" alt="Placeholder Cover"/>`}
                     </div>
-                    <div class="flex mt-4 space-x-2">
-                        <button data-route="editor" data-id="${p.id}" class="nav-button flex-grow accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Open</button>
+                    <div class="flex-grow flex flex-col justify-between h-36">
+                        <div>
+                            <h3 class="text-xl font-lora font-semibold text-white leading-tight mb-1">${stripMarkdownAndHtml(p.title || 'Untitled Project')}</h3>
+                            ${p.authorName ? `<p class="text-sm text-gray-400">by ${escapeHtml(p.authorName)}</p>` : ''}
+                        </div>
+                        <p class="text-xs text-gray-500 mt-auto">Edited: ${p.lastModified ? new Date(p.lastModified.seconds * 1000).toLocaleDateString() : 'N/A'}</p>
+                    </div>
+                    <div class="flex flex-col space-y-2 ml-4 flex-shrink-0">
+                        <button data-route="editor" data-id="${p.id}" class="nav-button accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Open</button>
                         <button data-action="delete" data-id="${p.id}" class="bg-gray-600 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg">🗑️</button>
                     </div>
                 </div>`;
@@ -1022,7 +1024,7 @@ Generate 5 character profiles:`;
                     <h2 class="text-3xl font-lora font-bold text-white">Your Projects</h2>
                     <button id="new-project-btn" class="accent-bg accent-bg-hover text-white font-bold py-2 px-6 rounded-lg text-lg">+ New Project</button>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     ${listHtml}
                 </div>`;
 
@@ -1177,7 +1179,7 @@ Generate 5 character profiles:`;
 
                     leftSidebar.innerHTML = `
                         <div class="flex flex-col items-center mb-4">
-                            ${project.bookCoverUrl ? `<img src="${project.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/90x135/1F2937/D1D5DB?text=Cover';" class="w-[90px] h-[135px] object-cover rounded-md shadow-md mb-2" alt="Book Cover Thumbnail"/>` : `<img src="https://placehold.co/90x135/1F2937/D1D5DB?text=No+Cover" class="w-[90px] h-[135px] object-cover rounded-md shadow-md mb-2" alt="Placeholder Cover"/>`}
+                            ${project.bookCoverUrl ? `<img src="${project.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/120x180/1F2937/D1D5DB?text=Cover';" class="w-30 h-45 object-cover rounded-md shadow-md mb-2" alt="Book Cover Thumbnail"/>` : `<img src="https://placehold.co/120x180/1F2937/D1D5DB?text=No+Cover" class="w-30 h-45 object-cover rounded-md shadow-md mb-2" alt="Placeholder Cover"/>`}
                         </div>
                         <nav id="project-sections" class="flex flex-col space-y-2 flex-grow overflow-y-auto">
                             ${sections.map(s => `<a href="#" data-section-id="${s.id}" class="section-link p-2 rounded-md hover:bg-gray-700 transition-colors ${s.id === activeSectionId ? 'bg-blue-600 text-white' : ''}">${s.title}</a>`).join('')}
@@ -1548,7 +1550,6 @@ Generate 5 character profiles:`;
                         const worldDoc = await getSection(userId, projectId, 'world_building');
                         const projectData = await getProject(userId, projectId); // Fetch project data for title
 
-                        // Construct comprehensive context for AI
                         const context = `Overall Synopsis: ${synopsisDoc ? synopsisDoc.content : ''}\n` +
                                        `Book Title: ${projectData ? projectData.title : ''}\n` +
                                        `Outline: ${outlineDoc ? outlineDoc.content : ''}\n` +
