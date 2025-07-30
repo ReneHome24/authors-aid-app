@@ -341,8 +341,9 @@
         // New function to update project title
         async function updateProjectTitle(userId, projectId, newTitle) {
             try {
+                const cleanedTitle = stripMarkdownAndHtml(newTitle); // Strip markdown before saving
                 const projectRef = doc(getProjectsCollection(userId), projectId);
-                await updateDoc(projectRef, { title: newTitle, lastModified: serverTimestamp() });
+                await updateDoc(projectRef, { title: cleanedTitle, lastModified: serverTimestamp() });
                 showNotification('Project title updated!', 'success');
             } catch (e) {
                 console.error("Error updating project title:", e);
@@ -418,6 +419,9 @@
             cleanedText = cleanedText.replace(/\*(.*?)\*/g, '$1');   // italic (single asterisk)
             cleanedText = cleanedText.replace(/_(.*?)_/g, '$1');   // italic (underscore)
 
+            // Remove Markdown headings (# at start of line)
+            cleanedText = cleanedText.replace(/^#+\s*(.*)/gm, '$1'); // Remove # and leading space at start of line
+
             // Remove common HTML tags (basic approach, not for complex HTML)
             cleanedText = cleanedText.replace(/<[^>]*>/g, '');
 
@@ -453,7 +457,7 @@ Examples: Obi-Wan Kenobi (Star Wars), Albus Dumbledore (Harry Potter series).
 Foil: A character who highlights the qualities (often contrasting ones) of another character, usually the protagonist, through comparison. They aren't necessarily antagonists.
 Examples: Draco Malfoy to Harry Potter (highlighting Harry's inherent goodness), Effie Trinket to Katniss Everdeen (highlighting Katniss's grounded nature).
 Sidekick: A character who supports the protagonist, often offering comic relief, practical assistance, or a loyal friendship.
-Examples: Ron Weasley (Harry Potter series), Samwise Gamgee (Lord of the Rings).
+Examples: Ron Weasley (Harry Potter series), Samwise Gamgee (Lord of Lord of the Rings).
 Tertiary/Minor Characters (or Extras): Background characters who populate the story's world and add realism. They may have brief appearances and serve specific, often limited, functions.
 II. By Dynamism and Complexity:
 Dynamic Character: A character who undergoes significant internal change, growth, or transformation throughout the story due to the events they experience.
@@ -542,7 +546,22 @@ Understanding these different types of characters can help authors create a dive
 
 
         async function generateConcepts(idea) { const prompt = `You are an AI story consultant. Based on the user's basic idea, generate a numbered list of 5 distinct core concept ideas for a new book. Each concept should be a single, concise paragraph. The tone should be encouraging and creative.\n\nBasic Idea: "${idea}"`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
-        async function generateOutlineBeats(context) { const prompt = `You are an AI outliner for an author. Based on the provided project details (synopsis, characters, world-building), generate a detailed chapter-by-chapter outline with key beats for each chapter. The outline should be well-structured and provide a clear roadmap for the story.\n\nProject Details:\n---\n${context}\n---\n\nGenerate the chapter-by-chapter outline:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
+        async function generateOutlineBeats(context) {
+            const prompt = `You are an AI outliner for an author. Based on the provided project details (synopsis, characters, world-building), generate a detailed chapter-by-chapter outline with key beats for each chapter.
+            For each chapter, list the chapter title, and then provide a numbered list of key beats for that chapter. For example:
+            Chapter 1: The Beginning
+            1. Beat 1 of Chapter 1: Introduce protagonist and their core conflict.
+            2. Beat 2 of Chapter 1: Character meets mentor.
+            3. Beat 3 of Chapter 1: Call to adventure.
+
+            Project Details:
+            ---
+            ${context}
+            ---
+
+            Generate the chapter-by-chapter outline:`;
+            return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+        }
         async function generateCharacterProfiles(context) {
             const prompt = `You are an AI character developer. Based on the provided project details (synopsis), generate a numbered list of 5 distinct character profile ideas. Each profile should include a name, a brief backstory, core motivations, personality quirks, and **explicitly identify what type of character they are based on the following taxonomy (By Role, By Dynamism and Complexity, and By Archetype).**
 
@@ -1050,7 +1069,21 @@ Generate 5 character profiles:`;
                         // Skip book_cover and metadata as they are not text content for export
                         if (section.id === 'book_cover' || section.id === 'metadata') continue;
                         // Skip front_matter and back_matter as they will be handled separately for export
-                        if (section.id === 'front_matter' || section.id === 'back_matter') continue;
+                        if (section.id === 'front_matter' || section.id === 'back_matter') {
+                             // Add section title as a heading
+                            fullHtmlContent += `<h2>${section.title}</h2>\n`;
+                            // Convert Quill Delta to HTML
+                            const tempDiv = document.createElement('div');
+                            const tempQuill = new Quill(tempDiv, { readOnly: true });
+                            try {
+                                tempQuill.setContents(JSON.parse(section.content));
+                            } catch (e) {
+                                tempQuill.setText(section.content || '');
+                            }
+                            fullHtmlContent += tempDiv.querySelector('.ql-editor').innerHTML + '\n\n';
+                            fullHtmlContent += '<div style="page-break-after: always;"></div>\n\n'; // Add page break
+                            continue; // Skip remaining logic for these sections
+                        }
 
 
                         // Add section title as a heading
@@ -1222,7 +1255,7 @@ Generate 5 character profiles:`;
                         outputDiv.innerHTML = ''; // Clear loading after response
                         const concepts = conceptsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                         // Changed to open in modal
-                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHtml(concept.trim())}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHtml(concept.trim().substring(0, 80))}...</button>`).join('');
+                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHtml(stripMarkdownAndHtml(concept.trim()))}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(concept.trim().substring(0, 80)))}...</button>`).join('');
                     });
 
                     document.getElementById('generate-pov-btn').addEventListener('click', async () => {
@@ -1230,11 +1263,11 @@ Generate 5 character profiles:`;
                         if (!context) { showNotification("Please write a synopsis in the editor first.", "error"); return; }
                         const povsText = await suggestPOVs(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Remove introductory sentence if present
-                        const cleanPovsText = povsText.replace(/^(Option \d+: )?Here are \d+ potential Point of View \(POV\) & Voice choices for.*?\n\n/i, '').trim();
+                        // Remove introductory sentence if present and strip markdown
+                        const cleanPovsText = stripMarkdownAndHtml(povsText.replace(/^(Option \d+: )?Here are \d+ potential Point of View \(POV\) & Voice choices for.*?\n\n/i, '').trim());
                         const povs = cleanPovsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                         // Changed to open in modal
-                        outputDiv.innerHTML = povs.map((pov, index) => `<button data-content="${escapeHtml(pov.trim())}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(pov.trim().substring(0, 80))}...</button>`).join('');
+                        outputDiv.innerHTML = povs.map((pov, index) => `<button data-content="${escapeHtml(stripMarkdownAndHtml(pov.trim()))}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(pov.trim().substring(0, 80)))}...</button>`).join('');
                     });
 
                      document.getElementById('generate-structure-btn').addEventListener('click', async () => {
@@ -1242,11 +1275,11 @@ Generate 5 character profiles:`;
                         if (!context) { showNotification("Please write a synopsis in the editor first.", "error"); return; }
                         const structuresText = await suggestStructures(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Remove introductory sentence if present
-                        const cleanStructuresText = structuresText.replace(/^(Option \d+: )?Here are \d+ potential structural templates.*?\n\n/i, '').trim();
+                        // Remove introductory sentence if present and strip markdown
+                        const cleanStructuresText = stripMarkdownAndHtml(structuresText.replace(/^(Option \d+: )?Here are \d+ potential structural templates.*?\n\n/i, '').trim());
                         const structures = cleanStructuresText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                         // Changed to open in modal
-                        outputDiv.innerHTML = structures.map((structure, index) => `<button data-content="${escapeHtml(structure.trim())}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(structure.trim().substring(0, 80))}...</button>`).join('');
+                        outputDiv.innerHTML = structures.map((structure, index) => `<button data-content="${escapeHtml(stripMarkdownAndHtml(structure.trim()))}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(structure.trim().substring(0, 80)))}...</button>`).join('');
                     });
 
                     // New: Generate Titles listener
@@ -1257,7 +1290,7 @@ Generate 5 character profiles:`;
                         outputDiv.innerHTML = ''; // Clear loading after response
                         const titles = titlesText.split(/\d+\.\s+/).filter(t => t.trim().length > 0);
                         // Changed to open in modal
-                        outputDiv.innerHTML = titles.map((title, index) => `<button data-content="${escapeHtml(title.trim())}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Title ${index + 1}:</strong> ${escapeHtml(title.trim())}</button>`).join('');
+                        outputDiv.innerHTML = titles.map((title, index) => `<button data-content="${escapeHtml(stripMarkdownAndHtml(title.trim()))}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Title ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(title.trim()))}</button>`).join('');
                     });
 
                 } else if (sectionId === 'character_development') {
@@ -1285,7 +1318,7 @@ Generate 5 character profiles:`;
                         outputDiv.innerHTML = ''; // Clear loading after response
                         const prompts = worldText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                         // Changed to open in modal
-                        outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHtml(prompt.trim())}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHtml(prompt.trim().substring(0, 80))}...</button>`).join('');
+                        outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHtml(stripMarkdownAndHtml(prompt.trim()))}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(prompt.trim().substring(0, 80)))}...</button>`).join('');
                     });
                 }
                 else if (sectionId === 'outline') {
@@ -1293,7 +1326,7 @@ Generate 5 character profiles:`;
                      generateBtn.addEventListener('click', async () => {
                         outputDiv.innerHTML = `<p>Gathering context and generating outline...</p>`; // Show loading
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const charDevDoc = await await getSection(userId, projectId, 'character_development');
+                        const charDevDoc = await getSection(userId, projectId, 'character_development');
                         const worldDoc = await getSection(userId, projectId, 'world_building');
                         const context = `Synopsis: ${synopsisDoc.content}\n\nCharacter Development: ${charDevDoc.content}\n\nWorld-building: ${worldDoc.content}`;
                         const outline = await generateOutlineBeats(context);
@@ -1380,7 +1413,7 @@ Generate 5 character profiles:`;
                             outputDiv.innerHTML = '';
                             const alternatives = alternativesText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                             // Changed to open in modal
-                            outputDiv.innerHTML = alternatives.map(alt => `<button data-content="${escapeHtml(alt.trim())}" class="ai-suggestion-modal-btn ai-alternative-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(alt.trim())}</button>`).join('');
+                            outputDiv.innerHTML = alternatives.map(alt => `<button data-content="${escapeHtml(stripMarkdownAndHtml(alt.trim()))}" class="ai-suggestion-modal-btn ai-alternative-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(stripMarkdownAndHtml(alt.trim()))}</button>`).join('');
                         });
                     }
 
@@ -1404,7 +1437,7 @@ Generate 5 character profiles:`;
                             outputDiv.innerHTML = ''; // Clear loading after response
                             const phrases = phrasesText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                             // Changed to open in modal
-                            outputDiv.innerHTML = phrases.map(phrase => `<button data-content="${escapeHtml(phrase.trim())}" class="ai-suggestion-modal-btn ai-youth-phrase-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(phrase.trim())}</button>`).join('');
+                            outputDiv.innerHTML = phrases.map(phrase => `<button data-content="${escapeHtml(stripMarkdownAndHtml(phrase.trim()))}" class="ai-suggestion-modal-btn ai-youth-phrase-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHtml(stripMarkdownAndHtml(phrase.trim()))}</button>`).join('');
                         });
                     }
                     if (suggestScriptureBtn) {
