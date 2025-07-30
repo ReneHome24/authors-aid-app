@@ -623,7 +623,6 @@ Understanding these different types of characters can help authors create a dive
                 if (!response.ok) {
                     const errorData = await response.json();
                     console.error("AI API Error Response:", errorData);
-                    // Provide a more user-friendly message based on common API errors
                     let errorMessage = `API request failed with status ${response.status}.`;
                     if (response.status === 403) {
                         errorMessage += " This usually means the API is not enabled for your Google Cloud project or your API key has insufficient permissions.";
@@ -997,19 +996,19 @@ Generate 5 character profiles:`;
                 const themeBorderClass = `theme-border-${currentTheme.replace('theme-', '')}`;
 
                 return `
-                <div class="project-card bg-gray-800 p-4 rounded-lg border-2 ${themeBorderClass} flex items-center justify-between">
-                    <div class="flex-shrink-0 mr-4">
-                        ${p.bookCoverUrl ? `<img src="${p.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/100x150/1F2937/D1D5DB?text=Image+Load+Error';" class="w-24 h-36 object-cover rounded-md shadow-md" alt="Book Cover Thumbnail"/>` : `<img src="https://placehold.co/100x150/1F2937/D1D5DB?text=No+Cover" class="w-24 h-36 object-cover rounded-md shadow-md" alt="Placeholder Cover"/>`}
+                <div class="project-card bg-gray-800 p-4 rounded-lg border-2 ${themeBorderClass} flex flex-col items-center text-center">
+                    <div class="mb-2">
+                        ${p.bookCoverUrl ? `<img src="${p.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/150x225/1F2937/D1D5DB?text=Image+Load+Error';" class="w-[150px] h-[225px] object-cover rounded-md shadow-md" alt="Book Cover Thumbnail"/>` : `<img src="https://placehold.co/150x225/1F2937/D1D5DB?text=No+Cover" class="w-[150px] h-[225px] object-cover rounded-md shadow-md" alt="Placeholder Cover"/>`}
                     </div>
-                    <div class="flex-grow flex flex-col justify-between h-36">
+                    <div class="flex-grow flex flex-col justify-between w-full">
                         <div>
                             <h3 class="text-xl font-lora font-semibold text-white leading-tight mb-1">${stripMarkdownAndHtml(p.title || 'Untitled Project')}</h3>
                             ${p.authorName ? `<p class="text-sm text-gray-400">by ${escapeHtml(p.authorName)}</p>` : ''}
                         </div>
                         <p class="text-xs text-gray-500 mt-auto">Edited: ${p.lastModified ? new Date(p.lastModified.seconds * 1000).toLocaleDateString() : 'N/A'}</p>
                     </div>
-                    <div class="flex flex-col space-y-2 ml-4 flex-shrink-0">
-                        <button data-route="editor" data-id="${p.id}" class="nav-button accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Open</button>
+                    <div class="flex mt-4 space-x-2 w-full">
+                        <button data-route="editor" data-id="${p.id}" class="nav-button flex-grow accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Open</button>
                         <button data-action="delete" data-id="${p.id}" class="bg-gray-600 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg">🗑️</button>
                     </div>
                 </div>`;
@@ -1024,7 +1023,7 @@ Generate 5 character profiles:`;
                     <h2 class="text-3xl font-lora font-bold text-white">Your Projects</h2>
                     <button id="new-project-btn" class="accent-bg accent-bg-hover text-white font-bold py-2 px-6 rounded-lg text-lg">+ New Project</button>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     ${listHtml}
                 </div>`;
 
