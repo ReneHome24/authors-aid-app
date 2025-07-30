@@ -1544,11 +1544,14 @@ Generate 5 character profiles:`;
                         }
                         // Title suggestion button handling
                         else if (target.classList.contains('ai-title-suggestion-btn')) {
-                            const newTitle = target.dataset.content; // Changed from data-title to data-content
-                            if (newTitle) {
-                                await updateProjectTitle(userId, projectId, newTitle);
-                                project.title = newTitle; // Update local project object
-                                projectMainTitle.textContent = stripMarkdownAndHtml(newTitle); // Update editor header, stripped markdown
+                            const newTitle = target.dataset.content; // This content is already stripped and formatted by parseNumberedAiList(..., true)
+                            // Remove the "Title X: " prefix when setting the project title
+                            const cleanTitleForProject = newTitle.replace(/^Title \d+:\s*/, '');
+
+                            if (cleanTitleForProject) {
+                                await updateProjectTitle(userId, projectId, cleanTitleForProject);
+                                project.title = cleanTitleForProject; // Update local project object
+                                projectMainTitle.textContent = cleanTitleForProject; // Update editor header
                                 renderSidebar(); // Re-render sidebar to update project title there
                                 outputDiv.innerHTML = ''; // Clear suggestions after applying
                             }
