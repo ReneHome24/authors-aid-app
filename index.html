@@ -631,7 +631,7 @@ Generate 5 character profiles:`;
         async function generateTitles(context) {
             // CORRECTED PROMPT: Removed "numbered list of 5 distinct and compelling title suggestions for a Christian book."
             // The prompt now focuses only on generating the titles themselves, allowing parseNumberedAiList to handle numbering for display.
-            const prompt = `You are an AI creative assistant for authors. Based on the following synopsis or brainstorming content, generate 5 distinct and compelling title suggestions for a Christian book. Titles should be concise and impactful, reflecting the themes and genre. Provide ONLY the title and optional subtitle. Do NOT include any descriptive sentences or explanations after the title.\n\nContent:\n---\n${context}\n---\n\nGenerate 5 title suggestions:`;
+            const prompt = `You are an AI creative assistant for authors. Based on the following synopsis or brainstorming content, generate 5 distinct and compelling title suggestions for a Christian book. Provide ONLY the title and optional subtitle. Do NOT include any descriptive sentences or explanations after the title.\n\nContent:\n---\n${context}\n---\n\nGenerate 5 title suggestions:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
 
@@ -1318,6 +1318,8 @@ Generate 5 character profiles:`;
                         outputDiv.innerHTML = ''; // Clear loading after response
 
                         // Use parseNumberedAiList to get clean titles (without leading numbers in the content itself)
+                        // This time, the AI prompt is explicitly told NOT to include descriptions,
+                        // so we just strip markdown/HTML.
                         const titles = parseNumberedAiList(titlesText, false).map(t => stripMarkdownAndHtml(t.trim()));
 
                         outputDiv.innerHTML = titles.map((cleanTitle, index) => {
@@ -1639,8 +1641,8 @@ Generate 5 character profiles:`;
                                 // Upload the base64 string directly
                                 await uploadString(storageRef, imageUrl, 'data_url');
                                 const downloadURL = await getDownloadURL(storageRef);
-                                await updateProjectCover(currentUserId, projectId, downloadURL);
-                                project.bookCoverUrl = downloadURL; // Update local project object
+                                await updateProjectCover(currentUserId, projectId, downloadURL); // Save URL to project document
+                                project.bookCoverUrl = downloadURL; // Update local project object for sidebar display
                                 renderSidebar(); // Re-render sidebar to show the new cover
                                 showNotification('Book cover uploaded and saved!', 'success');
                                 // Stay in editor section instead of navigating to dashboard
