@@ -1278,7 +1278,7 @@ Generate 5 character profiles:`;
                         if (!idea) { showNotification("Please enter a basic idea in the editor or the text box.", "error"); return; }
                         const conceptsText = await generateConcepts(idea);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Use parseNumberedAiList to get clean suggestions
+                        // Use parseNumberedAiList to get clean suggestions, removing numbers
                         const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
 
                         outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHtml(concept)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHtml(concept.substring(0, 80))}...</button>`).join('');
@@ -1289,7 +1289,7 @@ Generate 5 character profiles:`;
                         if (!context) { showNotification("Please write a synopsis in the editor first.", "error"); return; }
                         const povsText = await suggestPOVs(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Use parseNumberedAiList to get clean suggestions
+                        // Use parseNumberedAiList to get clean suggestions, removing numbers
                         const povs = parseNumberedAiList(povsText, false).map(p => stripMarkdownAndHtml(p.trim()));
 
                         outputDiv.innerHTML = povs.map((pov, index) => `<button data-content="${escapeHtml(pov)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(pov.substring(0, 80))}...</button>`).join('');
@@ -1300,7 +1300,7 @@ Generate 5 character profiles:`;
                         if (!context) { showNotification("Please write a synopsis in the editor first.", "error"); return; }
                         const structuresText = await suggestStructures(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Use parseNumberedAiList to get clean suggestions
+                        // Use parseNumberedAiList to get clean suggestions, removing numbers
                         const structures = parseNumberedAiList(structuresText, false).map(s => stripMarkdownAndHtml(s.trim()));
 
                         outputDiv.innerHTML = structures.map((structure, index) => `<button data-content="${escapeHtml(structure)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(structure.substring(0, 80))}...</button>`).join('');
@@ -1325,7 +1325,7 @@ Generate 5 character profiles:`;
                         const context = `Synopsis: ${synopsisDoc.content}`;
                         const charactersText = await generateCharacterProfiles(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Use parseNumberedAiList to get clean suggestions
+                        // Use parseNumberedAiList to get clean suggestions, removing numbers
                         const characters = parseNumberedAiList(charactersText, false).map(c => stripMarkdownAndHtml(c.trim()));
                         const fullCharactersText = characters.join('\n\n'); // Re-join for full display
 
@@ -1343,7 +1343,7 @@ Generate 5 character profiles:`;
                         const context = `Synopsis: ${charDevDoc.content}\n\nCharacter Development: ${charDevDoc.content}`;
                         const worldText = await generateWorldPrompts(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        // Use parseNumberedAiList to get clean suggestions
+                        // Use parseNumberedAiList to get clean suggestions, removing numbers
                         const prompts = parseNumberedAiList(worldText, false).map(p => stripMarkdownAndHtml(p.trim()));
 
                         outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHtml(prompt)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHtml(prompt.substring(0, 80))}...</button>`).join('');
@@ -1400,25 +1400,26 @@ Generate 5 character profiles:`;
                         const suggestionsText = await proofreadChapter(chapterText);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         // Parse suggestions to extract original and replacement parts
-                        const suggestions = suggestionsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0).map(s => {
-                            // Attempt to parse "Original: ... Proposed: ..." format
-                            const match = s.match(/Original:\s*(.*?)\s*Proposed:\s*(.*)/is);
-                            if (match && match[1] && match[2]) {
-                                return { original: match[1].trim(), proposed: match[2].trim(), full: s.trim() };
-                            }
-                            // Fallback if the format is different
-                            return { original: s.trim(), proposed: s.trim(), full: s.trim() }; // Use full suggestion as both if format isn't matched
-                        });
+                        const suggestions = parseNumberedAiList(suggestionsText, true).map(s => stripMarkdownAndHtml(s.trim())); // Keep numbers for proofread
 
                         if (suggestions.length > 0) {
                             outputDiv.innerHTML = `
                                 <p class="mb-2">Click a suggestion to apply it:</p>
-                                ${suggestions.map((suggestion, index) => `
-                                    <button data-original="${escapeHtml(suggestion.original)}" data-proposed="${escapeHtml(suggestion.proposed)}"
+                                ${suggestions.map((suggestion, index) => {
+                                    // Re-extract original and proposed from the cleaned string if needed, or adjust AI prompt
+                                    const match = suggestion.match(/Original:\s*(.*?)\s*Proposed:\s*(.*)/is);
+                                    let originalDisplay = suggestion;
+                                    let proposedDisplay = suggestion;
+                                    if (match && match[1] && match[2]) {
+                                        originalDisplay = match[1].trim();
+                                        proposedDisplay = match[2].trim();
+                                    }
+                                    return `
+                                    <button data-original="${escapeHtml(originalDisplay)}" data-proposed="${escapeHtml(proposedDisplay)}"
                                             class="ai-proofread-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm">
-                                        <strong>Suggestion ${index + 1}:</strong> <span class="line-through text-red-300">${escapeHtml(suggestion.original)}</span> → <span class="text-green-300">${escapeHtml(suggestion.proposed)}</span>
+                                        <strong>Suggestion ${index + 1}:</strong> <span class="line-through text-red-300">${escapeHtml(originalDisplay)}</span> → <span class="text-green-300">${escapeHtml(proposedDisplay)}</span>
                                     </button>
-                                `).join('')}
+                                `;}).join('')}
                             `;
                         } else {
                             outputDiv.innerHTML = `<p>No proofreading suggestions found or text is already perfect!</p>`;
@@ -1679,23 +1680,26 @@ Generate 5 character profiles:`;
                     proofreadBtn.addEventListener('click', async () => {
                         const chapterText = editor.getText();
                         const suggestionsText = await proofreadChapter(chapterText);
-                        const suggestions = suggestionsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0).map(s => {
-                            const match = s.match(/Original:\s*(.*?)\s*Proposed:\s*(.*)/is);
-                            if (match && match[1] && match[2]) {
-                                return { original: match[1].trim(), proposed: match[2].trim(), full: s.trim() };
-                            }
-                            return { original: s.trim(), proposed: s.trim(), full: s.trim() };
-                        });
+                        const suggestions = parseNumberedAiList(suggestionsText, true).map(s => stripMarkdownAndHtml(s.trim())); // Keep numbers for proofread
 
                         if (suggestions.length > 0) {
                             outputDiv.innerHTML = `
                                 <p class="mb-2">Click a suggestion to apply it:</p>
-                                ${suggestions.map((suggestion, index) => `
-                                    <button data-original="${escapeHtml(suggestion.original)}" data-proposed="${escapeHtml(suggestion.proposed)}"
+                                ${suggestions.map((suggestion, index) => {
+                                    // Re-extract original and proposed from the cleaned string if needed, or adjust AI prompt
+                                    const match = suggestion.match(/Original:\s*(.*?)\s*Proposed:\s*(.*)/is);
+                                    let originalDisplay = suggestion;
+                                    let proposedDisplay = suggestion;
+                                    if (match && match[1] && match[2]) {
+                                        originalDisplay = match[1].trim();
+                                        proposedDisplay = match[2].trim();
+                                    }
+                                    return `
+                                    <button data-original="${escapeHtml(originalDisplay)}" data-proposed="${escapeHtml(proposedDisplay)}"
                                             class="ai-proofread-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm">
-                                        <strong>Suggestion ${index + 1}:</strong> <span class="line-through text-red-300">${escapeHtml(suggestion.original)}</span> → <span class="text-green-300">${escapeHtml(suggestion.proposed)}</span>
+                                        <strong>Suggestion ${index + 1}:</strong> <span class="line-through text-red-300">${escapeHtml(originalDisplay)}</span> → <span class="text-green-300">${escapeHtml(proposedDisplay)}</span>
                                     </button>
-                                `).join('')}
+                                `;}).join('')}
                             `;
                         } else {
                             outputDiv.innerHTML = `<p>No proofreading suggestions found or text is already perfect!</p>`;
