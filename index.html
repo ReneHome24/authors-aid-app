@@ -163,6 +163,14 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Custom style for dashboard card border based on theme */
+        .project-card.theme-border-default { border-color: #2563eb; }
+        .project-card.theme-border-red { border-color: #dc2626; }
+        .project-card.theme-border-gold { border-color: #f59e0b; }
+        .project-card.theme-border-green { border-color: #059669; }
+        .project-card.theme-border-purple { border-color: #7c3aed; }
+
     </style>
 </head>
 <body class="text-gray-200">
@@ -180,7 +188,7 @@
             <button data-theme="theme-default" class="theme-button w-6 h-6 rounded-full bg-blue-500 ring-2 ring-offset-2 ring-offset-gray-900 ring-white" title="Default Blue"></button>
             <button data-theme="theme-red" class="theme-button w-6 h-6 rounded-full bg-red-500" title="Redeemer's Red"></button>
             <button data-theme="theme-gold" class="theme-button w-6 h-6 rounded-full bg-amber-400" title="Golden Light"></button>
-            <button data-theme="theme-green" class="theme-6 h-6 rounded-full bg-emerald-500" title="Graceful Green"></button>
+            <button data-theme="theme-green" class="theme-button w-6 h-6 rounded-full bg-emerald-500" title="Graceful Green"></button>
             <button data-theme="theme-purple" class="theme-button w-6 h-6 rounded-full bg-violet-500" title="Royal Purple"></button>
         </div>
     </div>
@@ -559,6 +567,7 @@
         let currentUserId = null;
         // This variable will store the current selection range for 'Alternative Words' and 'Suggested Youth Phrases'
         let currentSelectionRange = null;
+        let currentTheme = 'theme-default'; // Track current theme for dynamic borders
 
         // Function to render the Help modal
         function renderHelpModal() {
@@ -586,8 +595,8 @@
                     <ul class="list-disc list-inside space-y-1">
                         <li><strong>AI Style Preference:</strong> Use the text area at the top to describe the writing style or tone you'd like the AI to adopt (e.g., "Write in a formal, encouraging tone," "Use concise, impactful language"). This preference is applied to all AI-generated content.</li>
                         <li><strong>Generate Synopsis Ideas (Brainstorming):</strong> Provide a basic idea in the editor, and the AI will generate core concept ideas for your book.</li>
-                        <li><strong>Suggest POV & Voice (Brainstorming):</strong> Based on your synopsis, the AI can suggest different points of view and narrative voices.</li>
-                        <li><strong>Suggest Structural Template (Brainstorming):</strong> Get AI-generated structural ideas (e.g., Three-Act Structure) for your story.</li>
+                        <li><strong>POV & Voice (Brainstorming):</strong> Based on your synopsis, the AI can suggest different points of view and narrative voices.</li>
+                        <li><strong>Structural Template (Brainstorming):</strong> Get AI-generated structural ideas (e.g., Three-Act Structure) for your story.</li>
                         <li><strong>Generate Character Profiles (Character Development):</strong> The AI helps you create detailed character ideas based on your story's concept.</li>
                         <li><strong>Generate Chapter Beats (Outline):</strong> Get a detailed chapter-by-chapter outline based on your project's synopsis, characters, and world-building.</li>
                         <li><strong>Generate Next (Chapters):</strong> Overcome writer's block! Click this button in any chapter to have the AI generate the next section of text, using your existing content and project context.</li>
@@ -802,20 +811,26 @@
             appContainer.appendChild(mainContent);
 
             const projects = await getProjects(userId);
-            let listHtml = projects.map(p => `
-                <div class="project-card bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col justify-between">
-                    <div>
-                        <div class="flex items-center mb-2">
-                            ${p.bookCoverUrl ? `<img src="${p.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/60x90/1F2937/D1D5DB?text=Image+Load+Error';" class="w-12 h-18 object-cover rounded-md mr-3 shadow-md" alt="Book Cover Thumbnail"/>` : `<img src="https://placehold.co/60x90/1F2937/D1D5DB?text=No+Cover" class="w-12 h-18 object-cover rounded-md mr-3 shadow-md" alt="Placeholder Cover"/>`}
-                            <h3 class="text-xl font-lora font-semibold text-white">${p.title || 'Untitled Project'}</h3>
+            let listHtml = projects.map(p => {
+                // Determine the border color class based on the current theme
+                const themeBorderClass = `theme-border-${currentTheme.replace('theme-', '')}`;
+
+                return `
+                <div class="project-card bg-gray-800 p-4 rounded-lg border-2 ${themeBorderClass} flex flex-col justify-between">
+                    <div class="flex items-start mb-2">
+                        ${p.bookCoverUrl ? `<img src="${p.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/100x150/1F2937/D1D5DB?text=Image+Load+Error';" class="w-16 h-24 object-cover rounded-md mr-4 shadow-md" alt="Book Cover Thumbnail"/>` : `<img src="https://placehold.co/100x150/1F2937/D1D5DB?text=No+Cover" class="w-16 h-24 object-cover rounded-md mr-4 shadow-md" alt="Placeholder Cover"/>`}
+                        <div class="flex-grow">
+                            <h3 class="text-xl font-lora font-semibold text-white leading-tight">${p.title || 'Untitled Project'}</h3>
+                            ${p.authorName ? `<p class="text-sm text-gray-400">by ${p.authorName}</p>` : ''}
+                            <p class="text-xs text-gray-500 mt-1">Edited: ${p.lastModified ? new Date(p.lastModified.seconds * 1000).toLocaleDateString() : 'N/A'}</p>
                         </div>
-                        <p class="text-sm text-gray-500 mt-1">Created: ${p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</p>
                     </div>
                     <div class="flex mt-4 space-x-2">
                         <button data-route="editor" data-id="${p.id}" class="nav-button flex-grow accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Open</button>
                         <button data-action="delete" data-id="${p.id}" class="bg-gray-600 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg">🗑️</button>
                     </div>
-                </div>`).join('');
+                </div>`;
+            }).join('');
 
             if (projects.length === 0) {
                 listHtml = `<p class="col-span-full text-center text-gray-400">You have no projects yet. Start your first one!</p>`;
@@ -974,9 +989,9 @@
                     }
 
                     leftSidebar.innerHTML = `
-                        <div class="flex items-center mb-4">
-                            ${project.bookCoverUrl ? `<img src="${project.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/45x68/1F2937/D1D5DB?text=Cover';" class="w-9 h-14 object-cover rounded-md mr-2 shadow-md" alt="Book Cover Thumbnail"/>` : ''}
-                            <h2 class="text-base font-bold font-lora">${project.title || 'Untitled Project'}</h2>
+                        <div class="flex flex-col items-center mb-4">
+                            ${project.bookCoverUrl ? `<img src="${project.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/90x135/1F2937/D1D5DB?text=Cover';" class="w-[90px] h-[135px] object-cover rounded-md shadow-md mb-2" alt="Book Cover Thumbnail"/>` : `<img src="https://placehold.co/90x135/1F2937/D1D5DB?text=No+Cover" class="w-[90px] h-[135px] object-cover rounded-md shadow-md mb-2" alt="Placeholder Cover"/>`}
+                            <!-- Removed h2 for project title from here -->
                         </div>
                         <nav id="project-sections" class="flex flex-col space-y-2 flex-grow overflow-y-auto">
                             ${sections.map(s => `<a href="#" data-section-id="${s.id}" class="section-link p-2 rounded-md hover:bg-gray-700 transition-colors ${s.id === activeSectionId ? 'bg-blue-600 text-white' : ''}">${s.title}</a>`).join('')}
@@ -1069,17 +1084,13 @@
                             <button id="generate-concepts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate</button>
                         </div>
                         <div class="pt-4 border-t border-gray-700">
-                            <p class="text-sm font-semibold mb-2">Suggest POV & Voice</p>
-                            <button id="generate-pov-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest</button>
-                        </div>
-                        <div class="pt-4 border-t border-gray-700">
-                            <p class="text-sm font-semibold mb-2">Suggest Structural Template</p>
-                            <button id="generate-structure-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest</button>
-                        </div>
-                        <div class="pt-4 border-t border-gray-700">
-                            <p class="text-sm font-semibold mb-2">Suggest Titles</p>
-                            <button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest Titles</button>
-                        </div>`; // New button for title suggestions
+                            <p class="text-sm font-semibold mb-2">Brainstorming Tools</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button id="generate-pov-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">POV & Voice</button>
+                                <button id="generate-structure-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Structural Template</button>
+                                <button id="generate-titles-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button>
+                            </div>
+                        </div>`;
                 } else if (sectionId === 'character_development') {
                      aiPanelHtml += `
                         <div>
@@ -1192,7 +1203,7 @@
                         outputDiv.innerHTML = ''; // Clear loading after response
                         const concepts = conceptsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                         // Changed to open in modal
-                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHtml(concept.trim())}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Suggestion ${index + 1}:</strong> ${escapeHtml(concept.trim().substring(0, 80))}...</button>`).join('');
+                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHtml(concept.trim())}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHtml(concept.trim().substring(0, 80))}...</button>`).join('');
                     });
 
                     document.getElementById('generate-pov-btn').addEventListener('click', async () => {
@@ -1442,7 +1453,7 @@
                         }
                         // Title suggestion button handling
                         else if (target.classList.contains('ai-title-suggestion-btn')) {
-                            const newTitle = target.dataset.title;
+                            const newTitle = target.dataset.content; // Changed from data-title to data-content
                             if (newTitle) {
                                 await updateProjectTitle(userId, projectId, newTitle);
                                 project.title = newTitle; // Update local project object
@@ -1524,9 +1535,8 @@
                                 project.bookCoverUrl = downloadURL; // Update local project object
                                 renderSidebar(); // Re-render sidebar to show the new cover
                                 showNotification('Book cover uploaded and saved!', 'success');
-                                // Re-render dashboard to show updated thumbnail
-                                // This will cause a full page reload to dashboard, which is fine for now.
-                                navigateTo('dashboard');
+                                // Stay in editor section instead of navigating to dashboard
+                                // Removed: navigateTo('dashboard');
                             } catch (storageError) {
                                 console.error("Error uploading cover to storage:", storageError);
                                 showNotification(`Failed to save cover: ${storageError.message}`, 'error');
@@ -1703,8 +1713,6 @@
 
             const loadSection = async (sectionId) => {
                 const sectionData = await getSection(userId, projectId, sectionId);
-                // Removed: const currentSectionTitleElement = document.getElementById('section-title');
-                // Removed: if (currentSectionTitleElement) { currentSectionTitleElement.textContent = sectionData.title; }
                 // The project's main title will now always be displayed by projectMainTitle element.
 
                 activeSectionId = sectionId;
@@ -1886,6 +1894,11 @@
                         btn.classList.remove('ring-2', 'ring-offset-2', 'ring-offset-gray-900', 'ring-white');
                         if (btn.dataset.theme === themeName) btn.classList.add('ring-2', 'ring-offset-2', 'ring-offset-gray-900', 'ring-white');
                     });
+                    currentTheme = themeName; // Update global theme tracker
+                    // Re-render dashboard to apply new border colors
+                    if (document.location.hash === '#dashboard' && mainCurrentUserId) {
+                        renderDashboard(mainCurrentUserId);
+                    }
                 }
                 document.body.addEventListener('click', (event) => {
                     if (event.target.matches('.theme-button')) {
