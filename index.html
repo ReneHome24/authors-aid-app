@@ -1246,7 +1246,9 @@ Generate 5 character profiles:`;
                         if (!idea) { showNotification("Please enter a basic idea in the editor or the text box.", "error"); return; }
                         const conceptsText = await generateConcepts(idea);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        const concepts = conceptsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
+                        // Remove introductory sentence and strip markdown
+                        const cleanConceptsText = conceptsText.replace(/^(Concept \d+: )?Here are \d+ distinct core concept ideas.*?\n\n/i, '').trim();
+                        const concepts = cleanConceptsText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                         // Changed to open in modal
                         outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHtml(stripMarkdownAndHtml(concept.trim()))}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(concept.trim().substring(0, 80)))}...</button>`).join('');
                     });
@@ -1269,7 +1271,7 @@ Generate 5 character profiles:`;
                         const structuresText = await suggestStructures(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         // Remove introductory sentence if present and strip markdown
-                        const cleanStructuresText = stripMarkdownAndHtml(structuresText.replace(/^(Option \d+: )?Here are \d+ potential structural templates.*?\n\n/i, '').trim());
+                        const cleanStructuresText = structuresText.text.replace(/^(Option \d+: )?Here are \d+ potential structural templates.*?\n\n/i, '').trim();
                         const structures = cleanStructuresText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                         // Changed to open in modal
                         outputDiv.innerHTML = structures.map((structure, index) => `<button data-content="${escapeHtml(stripMarkdownAndHtml(structure.trim()))}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(structure.trim().substring(0, 80)))}...</button>`).join('');
@@ -1281,7 +1283,9 @@ Generate 5 character profiles:`;
                         if (!context) { showNotification("Please write a synopsis or brainstorming content in the editor first.", "error"); return; }
                         const titlesText = await generateTitles(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        const titles = titlesText.split(/\d+\.\s+/).filter(t => t.trim().length > 0);
+                        // Remove introductory sentence if present and strip markdown
+                        const cleanTitlesText = titlesText.replace(/^(Title \d+: )?Here are \d+ distinct and compelling title suggestions for.*?\n\n/i, '').trim();
+                        const titles = cleanTitlesText.split(/\d+\.\s+/).filter(t => t.trim().length > 0);
                         // Changed to open in modal
                         outputDiv.innerHTML = titles.map((title, index) => `<button data-content="${escapeHtml(stripMarkdownAndHtml(title.trim()))}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Title ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(title.trim()))}</button>`).join('');
                     });
@@ -1309,7 +1313,9 @@ Generate 5 character profiles:`;
                         const context = `Synopsis: ${charDevDoc.content}\n\nCharacter Development: ${charDevDoc.content}`;
                         const worldText = await generateWorldPrompts(context);
                         outputDiv.innerHTML = ''; // Clear loading after response
-                        const prompts = worldText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
+                        // Remove introductory sentence if present and strip markdown
+                        const cleanWorldText = worldText.replace(/^(Idea \d+: )?Here are \d+ distinct world-building element ideas.*?\n\n/i, '').trim();
+                        const prompts = cleanWorldText.split(/\d+\.\s+/).filter(c => c.trim().length > 0);
                         // Changed to open in modal
                         outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHtml(stripMarkdownAndHtml(prompt.trim()))}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(prompt.trim().substring(0, 80)))}...</button>`).join('');
                     });
@@ -1451,7 +1457,7 @@ Generate 5 character profiles:`;
                                     <p class="mb-2">Click a scripture to add it to your editor:</p>
                                     ${scriptures.map((scripture, index) => `
                                         <button data-content="${escapeHtml(stripMarkdownAndHtml(scripture.trim()))}"
-                                                class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm">
+                                                class="ai-scripture-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm">
                                             <strong>Scripture ${index + 1}:</strong> ${escapeHtml(stripMarkdownAndHtml(scripture.trim().substring(0, 100)))}...
                                         </button>
                                     `).join('')}
@@ -1482,7 +1488,7 @@ Generate 5 character profiles:`;
                 // This single listener handles clicks on all buttons with class 'ai-suggestion-btn'
                 // that are children of outputDiv, even if they are added to the DOM later.
                 outputDiv.addEventListener('click', async (e) => {
-                    const target = e.target.closest('.ai-suggestion-modal-btn, .ai-title-suggestion-btn, .ai-cover-concept-btn, .ai-proofread-suggestion-btn');
+                    const target = e.target.closest('.ai-suggestion-modal-btn, .ai-title-suggestion-btn, .ai-cover-concept-btn, .ai-proofread-suggestion-btn, .ai-scripture-suggestion-btn');
                     if (target) {
                         // Handle generic suggestion buttons that open a modal
                         if (target.classList.contains('ai-suggestion-modal-btn')) {
@@ -1569,6 +1575,13 @@ Generate 5 character profiles:`;
                             } else {
                                 showNotification("Could not find original text in editor.", "error");
                             }
+                        }
+                        // Scripture suggestion button handling
+                        else if (target.classList.contains('ai-scripture-suggestion-btn')) {
+                            const contentToInsert = target.dataset.content;
+                            editor.insertText(editor.getLength(), '\n\n' + contentToInsert);
+                            showNotification("Scripture added to editor!", "success");
+                            outputDiv.innerHTML = '';
                         }
                     }
                 });
