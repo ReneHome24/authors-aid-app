@@ -560,8 +560,8 @@ Understanding these different types of characters can help authors create a dive
                 showNotification(`Image generation failed: ${e.message}`, 'error');
                 return [];
             } finally {
-                // Clear loading spinner after response
-                document.getElementById('ai-output').innerHTML = '';
+                // Removed the unconditional clearing of outputDiv here.
+                // Specific AI functions will now manage the outputDiv content after results.
             }
         }
 
@@ -617,15 +617,15 @@ Understanding these different types of characters can help authors create a dive
                 showNotification(`AI call failed: ${e.message}`, 'error');
                 return `Error: API call failed: ${e.message}`;
             } finally {
-                // Clear loading spinner, but allow specific functions to re-render output
-                // document.getElementById('ai-output').innerHTML = '';
+                // Removed the unconditional clearing of outputDiv here.
+                // Specific AI functions will now manage the outputDiv content after results.
             }
         }
 
 
         async function generateSynopsisIdeas(idea) {
-            // Updated prompt to be more specific about Christian literature
-            const prompt = `You are an AI story consultant for Christian literature. Based on the user's basic idea, generate a numbered list of 5 distinct core concept ideas for a new Christian book. Each concept should be a single, concise paragraph, focusing on themes relevant to Christian faith, values, or life experiences. The tone should be encouraging and creative.\n\nBasic Idea: "${idea}"`;
+            // Updated prompt to be more specific about Christian literature and explicitly exclude titles.
+            const prompt = `You are an AI story consultant for Christian literature. Based on the user's basic idea, generate a numbered list of 5 distinct core concept ideas for a new Christian book. Each concept should be a single, concise paragraph describing the core idea, without suggesting a title. The tone should be encouraging and creative.\n\nBasic Idea: "${idea}"`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateOutlineBeats(context) {
@@ -699,8 +699,7 @@ Generate 5 character profiles:`;
         // New AI function to generate titles
         async function generateTitles(context) {
             // Ensure title generation uses synopsis context and asks for Christian titles
-            const prompt = `You are an AI creative assistant for Christian authors. Based on the following synopsis or brainstorming content, generate 5 distinct and compelling title suggestions for a Christian book. Provide ONLY the title and optional subtitle. Do NOT include any descriptive sentences or explanations after the title.
-            \n\nContent:\n---\n${context}\n---\n\nGenerate 5 title suggestions:`;
+            const prompt = `You are an AI creative assistant for Christian authors. Based on the following synopsis or brainstorming content, generate 5 distinct and compelling title suggestions for a Christian book. Provide ONLY the title and optional subtitle. Do NOT include any descriptive sentences or explanations after the title.\n\nContent:\n---\n${context}\n---\n\nGenerate 5 title suggestions:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
 
