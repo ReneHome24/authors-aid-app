@@ -185,7 +185,7 @@
         .project-card.theme-border-green { border-color: #059669; }
         .project-card.theme-border-purple { border-color: #7c3aed; }
 
-        /* FIX: [v2] New class for the footer on the dashboard/landing page to prevent duplication */
+        /* FIX: [v3] New class for the footer on the dashboard/landing page to prevent duplication */
         .main-footer {
              position: relative;
              z-index: 10;
@@ -278,7 +278,7 @@
             }
         }
         
-        // FIX: [v2] Moved handleSignUpClick and handleLoginClick to the global scope to fix ReferenceError on landing page.
+        // FIX: [v3] Moved these functions to the global scope to fix the ReferenceError.
         async function handleSignUpClick(e) {
             e.preventDefault();
             const content = `
@@ -309,7 +309,7 @@
                         }
                     } else {
                         // Create new account
-                        const newUser = await signUpWithEmail(email, password);
+                        const newUser = await createUserWithEmailAndPassword(authInstance, email, password);
                         if (newUser) {
                             navigateTo('dashboard');
                         }
@@ -318,7 +318,7 @@
             }, 'Sign Up');
         }
         
-        // FIX: [v2] Moved handleSignUpClick and handleLoginClick to the global scope to fix ReferenceError on landing page.
+        // FIX: [v3] Moved handleSignUpClick and handleLoginClick to the global scope to fix ReferenceError on landing page.
         async function handleLoginClick(e) {
             e.preventDefault();
             const content = `
@@ -339,7 +339,7 @@
                 const email = document.getElementById('login-email').value;
                 const password = document.getElementById('login-password').value;
                 if (email && password) {
-                    const user = await signInWithEmail(email, password);
+                    const user = await signInWithEmailAndPassword(authInstance, email, password);
                     if (user) {
                         navigateTo('dashboard');
                     }
@@ -654,7 +654,7 @@ Understanding these different types of characters can help authors create a dive
             } catch (e) {
                 console.error("Error calling Imagen API:", e);
                 showNotification(`Image generation failed: ${e.message}`, 'error');
-                return [];
+                return `Error: API call failed: ${e.message}`;
             } finally {
                 // The outputDiv will be managed by the calling function (ai-cover-concept-btn handler)
                 // coverDisplayContainer will be updated by the calling function
@@ -790,10 +790,10 @@ Generate 5 character profiles:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         
-        // FIX: [v2] The AI's prompt has been updated to be more specific and aware of the current chapter and its beats.
+        // FIX: [v3] The AI's prompt has been updated to be more specific and aware of the current chapter and its beats.
         async function generateNext(currentText, projectTitle, outlineContent, currentChapterTitle) { // New parameter for current chapter title
             
-            // FIX: [v2] Parse the outline to find the next beat.
+            // FIX: [v3] Parse the outline to find the next beat.
             const parsedOutline = parseOutline(outlineContent);
             const currentChapterNumber = parseInt(currentChapterTitle.match(/Chapter (\d+)/)?.[1]);
             const currentChapterBeats = parsedOutline.find(c => c.number === currentChapterNumber)?.beats;
@@ -814,24 +814,28 @@ Generate 5 character profiles:`;
                 return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
             }
             
-            // FIX: [v2] Determine the next beat to write based on the current content.
+            // FIX: [v3] Determine the next beat to write based on the current content.
             let nextBeat = null;
-            const currentParagraphs = currentText.split(/\n\s*\n/).filter(p => p.trim() !== '');
-            const lastParagraph = currentParagraphs.length > 0 ? currentParagraphs.pop() : '';
-            
-            // A simple way to check if a beat has been addressed by checking for a substring match.
-            // This can be improved with more complex logic.
-            let lastBeatIndex = -1;
-            for (let i = 0; i < currentChapterBeats.length; i++) {
+            // Get the last 10 words of the current text to find where the AI should pick up.
+            const lastWords = currentText.split(/\s+/).slice(-10).join(' ');
+
+            // Check if any of the beats are already in the current text to find the next beat.
+            let nextBeatIndex = -1;
+            for(let i = 0; i < currentChapterBeats.length; i++) {
                 if (currentText.includes(currentChapterBeats[i])) {
                     lastBeatIndex = i;
                 }
             }
             
-            if (lastBeatIndex < currentChapterBeats.length - 1) {
-                nextBeat = currentChapterBeats[lastBeatIndex + 1];
+            // If the chapter is empty, start with the first beat.
+            if (currentText.trim().length <= currentChapterTitle.length + 5 && currentText.includes(currentChapterTitle)) {
+                 nextBeat = currentChapterBeats[0];
+            } else if (nextBeatIndex >= 0 && nextBeatIndex < currentChapterBeats.length - 1) {
+                nextBeat = currentChapterBeats[nextBeatIndex + 1];
+            } else if (nextBeatIndex === currentChapterBeats.length - 1) {
+                nextBeat = "Conclude this chapter and set up the transition for the next one.";
             } else {
-                nextBeat = "Conclude this chapter based on the final beat and prepare for the next chapter's transition.";
+                nextBeat = currentChapterBeats[0]; // Default to the first beat if none are found.
             }
 
             const prompt = `You are a Christian ghostwriter. Your task is to continue the narrative for a book titled "${projectTitle}".
@@ -845,7 +849,7 @@ Generate 5 character profiles:`;
             ${currentText}
             ---
 
-            Continue the story, focusing on the next key beat. Ensure the tone, style, and Christian themes are consistent. Do not generate a new chapter title; simply continue the narrative.`;
+            Continue the story, focusing on the next key beat. Ensure the tone, style, and Christian themes are consistent. Do not generate any new chapter titles or headings; simply continue the narrative.`;
             
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
@@ -860,13 +864,13 @@ Generate 5 character profiles:`;
 
         // --- views.js content ---
         const appContainer = document.getElementById('app-container');
-        // FIX: [v2] Consolidated two user ID variables into one for consistency
+        // FIX: [v3] Consolidated two user ID variables into one for consistency
         let currentUserId = null;
         // This variable will store the current selection range for 'Alternative Words' and 'Suggested Youth Phrases'
         let currentSelectionRange = null;
         let currentTheme = 'theme-default'; // Track current theme for dynamic borders
 
-        // FIX: [v2] Utility function to parse the outline into a structured object for easier AI prompting
+        // FIX: [v3] Utility function to parse the outline into a structured object for easier AI prompting
         function parseOutline(outlineText) {
             const chapters = [];
             let currentChapter = null;
@@ -939,60 +943,62 @@ Generate 5 character profiles:`;
             showModal('How to Use Author\'s Aid', helpContent, () => {}, 'Close', false); // No confirm button, just close
         }
 
-        // FIX: [v2] Moved the footer generation into each render function to prevent duplication
+        // FIX: [v3] Moved the footer generation into each render function to prevent duplication
         function renderLandingPage() {
             document.body.style.overflow = 'auto';
             document.getElementById('theme-switcher').style.display = 'block';
-            appContainer.innerHTML = `
-                <div class="gradient-bg flex flex-col min-h-full">
-                    <header class="w-full z-10 p-4">
-                        <div class="container mx-auto flex justify-between items-center">
-                            <h1 class="text-2xl font-bold font-lora text-white">Author's Aid</h1>
-                            <nav class="hidden md:flex space-x-6 items-center">
-                                <a href="#features" class="accent-text-hover transition-colors">Features</a>
-                                <a href="#" id="sign-up-link" class="accent-text-hover transition-colors">Sign Up</a>
-                                <a href="#" id="login-link" class="accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg transition-colors">Login</a>
-                            </nav>
-                        </div>
-                    </header>
-                    <main class="relative pt-32 pb-20 md:pt-48 md:pb-32 flex-grow">
-                        <div class="container mx-auto text-center px-4">
-                            <h2 class="text-4xl md:text-6xl font-bold font-lora text-white leading-tight mb-4">Your AI Co-Author, Guided by Faith</h2>
-                            <p class="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto mb-8">
-                                Welcome, Rene' Stanley. Author's Aid is your personalized writing partner, trained on your unique style and grounded in Christian values. From manuscript to cover, let's bring your next masterpiece to life.
-                            </p>
-                            <button id="guest-btn" class="accent-bg accent-bg-hover text-white font-bold py-3 px-8 rounded-lg text-lg transition-transform transform hover:scale-105 inline-block">Continue as Guest</button>
-                        </div>
-                    </main>
-                    <section id="features" class="py-20 bg-black/30">
-                        <div class="container mx-auto px-4"><div class="text-center mb-12"><h3 class="text-3xl md:text-4xl font-bold font-lora">A Tool for Every Step of Your Journey</h3></div>
-                        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                            <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800"><h4 class="text-xl font-semibold mb-2 text-white">AI Co-Author & Ghostwriter</h4><p class="text-gray-400">Trained on your works, the AI learns your voice to help write, edit, and offer suggestions that sound authentically like you.</p></div>
-                            <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800"><h4 class="text-xl font-semibold mb-2 text-white">Multi-Format Support</h4><p class="text-gray-400">Get a tailored roadmap for fiction, non-fiction, devotionals, or Bible studies.</p></div>
-                            <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800"><h4 class="text-xl font-semibold mb-2 text-white">Faith-Based Assistance</h4><p class="text-gray-400">Get suggestions for relevant NIV Bible scriptures and theological insights.</p></div>
-                            <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800"><h4 class="text-xl font-semibold mb-2 text-white">Book Cover Generation</h4><p class="text-gray-400">Generate professional front, spine, and back covers using AI image prompts.
-</p></div>
-                        </div>
-                    </section>
-                    <section id="cta" class="py-20 bg-black/30">
-                        <div class="container mx-auto text-center px-4">
-                            <h3 class="text-3xl md:text-4xl font-bold font-lora text-white mb-4">Ready to Write Your Next Chapter?</h3>
-                            <p class="text-lg text-gray-400 max-w-2xl mx-auto mb-8">Sign up today to begin your journey with an AI partner that understands your faith, your voice, and your vision.</p>
-                            <div class="max-w-md mx-auto">
-                                <form class="flex flex-col sm:flex-row gap-4">
-                                    <input type="email" placeholder="Enter your email" class="w-full px-4 py-3 rounded-lg bg-gray-900 border border-gray-700 text-white focus:outline-none focus:ring-2 accent-ring" required>
-                                    <button type="submit" id="signup-free-btn" class="accent-bg accent-bg-hover text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105">Sign Up for Free</button>
-                                </form>
+            document.body.innerHTML = `
+                <div id="app-container" class="h-screen flex flex-col">
+                    <div class="gradient-bg flex flex-col min-h-full">
+                        <header class="w-full z-10 p-4">
+                            <div class="container mx-auto flex justify-between items-center">
+                                <h1 class="text-2xl font-bold font-lora text-white">Author's Aid</h1>
+                                <nav class="hidden md:flex space-x-6 items-center">
+                                    <a href="#features" class="accent-text-hover transition-colors">Features</a>
+                                    <a href="#" id="sign-up-link" class="accent-text-hover transition-colors">Sign Up</a>
+                                    <a href="#" id="login-link" class="accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg transition-colors">Login</a>
+                                </nav>
                             </div>
-                        </div>
-                    </section>
-                     <!-- This footer is now local to this view -->
-                    <footer class="ui-bg p-4 border-t border-gray-700 flex-shrink-0 main-footer">
-                        <div class="container mx-auto text-center text-gray-500">
-                            <p>&copy; 2025 Author's Aid. All Rights Reserved.</p>
-                            <p class="mt-2 text-sm">Created with faith for Rene' Stanley.</p>
-                        </div>
-                    </footer>
+                        </header>
+                        <main class="relative pt-32 pb-20 md:pt-48 md:pb-32 flex-grow">
+                            <div class="container mx-auto text-center px-4">
+                                <h2 class="text-4xl md:text-6xl font-bold font-lora text-white leading-tight mb-4">Your AI Co-Author, Guided by Faith</h2>
+                                <p class="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto mb-8">
+                                    Welcome, Rene' Stanley. Author's Aid is your personalized writing partner, trained on your unique style and grounded in Christian values. From manuscript to cover, let's bring your next masterpiece to life.
+                                </p>
+                                <button id="guest-btn" class="accent-bg accent-bg-hover text-white font-bold py-3 px-8 rounded-lg text-lg transition-transform transform hover:scale-105 inline-block">Continue as Guest</button>
+                            </div>
+                        </main>
+                        <section id="features" class="py-20 bg-black/30">
+                            <div class="container mx-auto px-4"><div class="text-center mb-12"><h3 class="text-3xl md:text-4xl font-bold font-lora">A Tool for Every Step of Your Journey</h3></div>
+                            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                                <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800"><h4 class="text-xl font-semibold mb-2 text-white">AI Co-Author & Ghostwriter</h4><p class="text-gray-400">Trained on your works, the AI learns your voice to help write, edit, and offer suggestions that sound authentically like you.</p></div>
+                                <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800"><h4 class="text-xl font-semibold mb-2 text-white">Multi-Format Support</h4><p class="text-gray-400">Get a tailored roadmap for fiction, non-fiction, devotionals, or Bible studies.</p></div>
+                                <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800"><h4 class="text-xl font-semibold mb-2 text-white">Faith-Based Assistance</h4><p class="text-gray-400">Get suggestions for relevant NIV Bible scriptures and theological insights.</p></div>
+                                <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800"><h4 class="text-xl font-semibold mb-2 text-white">Book Cover Generation</h4><p class="text-gray-400">Generate professional front, spine, and back covers using AI image prompts.
+    </p></div>
+                            </div>
+                        </section>
+                        <section id="cta" class="py-20 bg-black/30">
+                            <div class="container mx-auto text-center px-4">
+                                <h3 class="text-3xl md:text-4xl font-bold font-lora text-white mb-4">Ready to Write Your Next Chapter?</h3>
+                                <p class="text-lg text-gray-400 max-w-2xl mx-auto mb-8">Sign up today to begin your journey with an AI partner that understands your faith, your voice, and your vision.</p>
+                                <div class="max-w-md mx-auto">
+                                    <form class="flex flex-col sm:flex-row gap-4">
+                                        <input type="email" placeholder="Enter your email" class="w-full px-4 py-3 rounded-lg bg-gray-900 border border-gray-700 text-white focus:outline-none focus:ring-2 accent-ring" required>
+                                        <button type="submit" id="signup-free-btn" class="accent-bg accent-bg-hover text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105">Sign Up for Free</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </section>
+                         <!-- This footer is now local to this view -->
+                        <footer class="ui-bg p-4 border-t border-gray-700 flex-shrink-0 main-footer">
+                            <div class="container mx-auto text-center text-gray-500">
+                                <p>&copy; 2025 Author's Aid. All Rights Reserved.</p>
+                                <p class="mt-2 text-sm">Created with faith for Rene' Stanley.</p>
+                            </div>
+                        </footer>
+                    </div>
                 </div>
             `;
             document.getElementById('guest-btn').addEventListener('click', async (e) => {
@@ -1009,13 +1015,17 @@ Generate 5 character profiles:`;
             currentUserId = userId;
             document.body.style.overflow = 'auto';
             document.getElementById('theme-switcher').style.display = 'block';
-            appContainer.innerHTML = '';
-            appContainer.appendChild(renderHeader(true, false, userId)); // Pass userId to header
-            const mainContent = document.createElement('main');
-            mainContent.className = "container mx-auto p-8 flex-grow";
-            mainContent.innerHTML = `<div class="text-center text-gray-400">Loading projects...</div>`;
-            appContainer.appendChild(mainContent);
+            // FIX: [v3] Replaced body.innerHTML with a self-contained content string
+            document.body.innerHTML = `
+                <div id="app-container" class="h-screen flex flex-col">
+                    ${renderHeader(true, false, userId).outerHTML}
+                    <main class="container mx-auto p-8 flex-grow">
+                        <div class="text-center text-gray-400">Loading projects...</div>
+                    </main>
+                </div>
+            `;
 
+            const mainContent = document.querySelector('main');
             const projects = await getProjects(userId);
             let listHtml = projects.map(p => {
                 // Determine the border color class based on the current theme
@@ -1153,13 +1163,17 @@ Generate 5 character profiles:`;
             currentUserId = userId;
             document.body.style.overflow = 'hidden'; /* Prevent global scrollbar on editor page */
             document.getElementById('theme-switcher').style.display = 'none'; /* Hide global switcher */
-            appContainer.innerHTML = ''; // Clear existing content
-
-            appContainer.appendChild(renderHeader(true, true, userId)); // Pass userId to header
-            const mainContent = document.createElement('main');
-            mainContent.className = "flex flex-grow flex-col h-full min-h-0"; /* Added min-h-0 */
-            mainContent.innerHTML = `<div class="text-center text-gray-400">Loading project...</div>`;
-            appContainer.appendChild(mainContent);
+            
+            // FIX: [v3] Rewrote the entire body content to prevent rendering issues
+            document.body.innerHTML = `
+                <div id="app-container" class="h-screen flex flex-col">
+                    ${renderHeader(true, true, userId).outerHTML}
+                    <main class="flex flex-grow flex-col h-full min-h-0">
+                        <div class="text-center text-gray-400">Loading project...</div>
+                    </main>
+                </div>
+            `;
+            const mainContent = document.querySelector('main');
 
             const project = await getProject(userId, projectId);
             if (!project) {
@@ -1354,6 +1368,7 @@ Generate 5 character profiles:`;
                         </div>
                 `;
 
+                // FIX: [v3] Correctly checks the sectionId to render the right AI tools
                 if (sectionId === 'brainstorming') {
                     aiPanelHtml += `
                         <div>
@@ -1457,7 +1472,7 @@ Generate 5 character profiles:`;
                 setupAiPanelListeners(sectionId);
             };
             
-            // FIX: [v2] The header rendering function is now defined in the global scope
+            // FIX: [v3] The header rendering function is now defined in the global scope
             function renderHeader(isLoggedIn, inEditor = false, userId = '') {
                 let navLinksHtml = '';
                 let userDisplay = '';
@@ -1521,7 +1536,7 @@ Generate 5 character profiles:`;
                     }, 'Accept & Add to Editor');
                 };
 
-                // FIX: [v2] Use event delegation for dynamically created AI suggestion buttons
+                // FIX: [v3] Use event delegation for dynamically created AI suggestion buttons
                 outputDiv.addEventListener('click', async (e) => {
                     const target = e.target.closest('[data-content]');
                     if (target) {
@@ -1547,11 +1562,10 @@ Generate 5 character profiles:`;
                     }, 500));
                 }
 
-                // FIX: [v2] Correctly check the sectionId for rendering the right AI tools
+                // FIX: [v3] Correctly check the sectionId for rendering the right AI tools
                 if (sectionId === 'brainstorming') {
-                    outputDiv.innerHTML = `<div class="p-4 text-gray-400 text-sm">Select a tool to get started.</div>`; // Clear any previous output
-
                     const ideaInput = document.getElementById('ai-idea-input');
+                    if (ideaInput) ideaInput.value = editor.getText().trim(); // Prefill with editor content
 
                     document.getElementById('generate-synopsis-concepts-btn').addEventListener('click', async () => {
                         console.log("Generate Synopsis Ideas button clicked.");
@@ -1690,20 +1704,20 @@ Generate 5 character profiles:`;
                         const projectData = await getProject(currentUserId, projectId); // Fetch project data for title
                         const outlineDoc = await getSection(currentUserId, projectId, 'outline'); // Fetch the outline
                         
-                        // FIX: [v2] Get the current chapter title from the sections data
+                        // FIX: [v3] Get the current chapter title from the sections data
                         const currentChapterTitle = sections.find(s => s.id === sectionId)?.title || 'Untitled Chapter';
 
                         const projectTitle = projectData ? projectData.title : 'Untitled Book';
                         const outlineContent = outlineDoc ? outlineDoc.content : 'No outline provided.';
                         
-                        // FIX: [v2] Check if the chapter content is mostly just the placeholder title
+                        // FIX: [v3] Check if the chapter content is mostly just the placeholder title
                         if (currentText.trim().length <= currentChapterTitle.length + 5 && currentText.includes(currentChapterTitle)) {
                             // The chapter is effectively empty. Proceed with the first beat.
                             console.log("Chapter is empty. Generating from first beat.");
                         }
                         
                         console.log("Generating next section for current text:", currentText, "with project title:", projectTitle, "and outline:", outlineContent, "for chapter:", currentChapterTitle);
-                        // FIX: [v2] Pass the current chapter title to the AI
+                        // FIX: [v3] Pass the current chapter title to the AI
                         const suggestion = await generateNext(currentText, projectTitle, outlineContent, currentChapterTitle);
                         outputDiv.innerHTML = ''; // Clear loading after response
                         console.log("Generated next section:", suggestion);
@@ -2027,7 +2041,7 @@ Generate 5 character profiles:`;
                             modules: { toolbar: '#editor-toolbar' }, // Link toolbar to its ID
                             theme: 'snow'
                         });
-                        // FIX: [v2] Add selection-change listener to update currentSelectionRange
+                        // FIX: [v3] Add selection-change listener to update currentSelectionRange
                         editor.on('selection-change', (range) => {
                             currentSelectionRange = range;
                             console.log("Quill selection changed:", currentSelectionRange);
@@ -2040,8 +2054,9 @@ Generate 5 character profiles:`;
                         }, 1500));
                     }
                     
-                    // FIX: [v2] Check if chapter content is empty and add a placeholder title.
-                    if (sectionId.startsWith('chapter_') && sectionData.content.trim() === '{"ops":[{"insert":"\\n"}]}') {
+                    // FIX: [v3] Check if chapter content is empty and add a placeholder title.
+                    const emptyQuillContent = JSON.stringify({ ops: [{ insert: '\n' }] });
+                    if (sectionId.startsWith('chapter_') && sectionData.content === emptyQuillContent) {
                         const chapterTitle = sections.find(s => s.id === sectionId)?.title;
                         const placeholderTitle = `<h2>${chapterTitle || 'Untitled Chapter'}</h2>`;
                         editor.setContents(editor.clipboard.convert(placeholderTitle));
@@ -2095,7 +2110,7 @@ Generate 5 character profiles:`;
             await loadSection(activeSectionId);
         }
         
-        // FIX: [v2] The header rendering function is now defined in the global scope
+        // FIX: [v3] The header rendering function is now defined in the global scope
         function renderHeader(isLoggedIn, inEditor = false, userId = '') {
             let navLinksHtml = '';
             let userDisplay = '';
@@ -2149,12 +2164,15 @@ Generate 5 character profiles:`;
         // --- MAIN APPLICATION LOGIC ---
         //======================================================================
 
-        // FIX: [v2] Consolidated two user ID variables into one for consistency
+        // FIX: [v3] Consolidated two user ID variables into one for consistency
         // let mainCurrentUserId = null;
 
         function navigateTo(viewName, data = {}) {
             console.log("navigateTo: Navigating to view:", viewName, "with data:", data);
-            appContainer.innerHTML = ''; // Clear existing content
+            
+            // FIX: [v3] Replaced innerHTML with a more robust full-body replacement strategy
+            let bodyContent = '';
+            
             // Ensure body overflow is managed correctly based on view
             document.body.style.overflow = (viewName === 'landing' || viewName === 'dashboard') ? 'auto' : 'hidden';
 
@@ -2176,10 +2194,10 @@ Generate 5 character profiles:`;
 
             switch (viewName) {
                 case 'landing': renderLandingPage(); break;
-                // FIX: [v2] Use single `currentUserId` variable
+                // FIX: [v3] Use single `currentUserId` variable
                 case 'dashboard': if (currentUserId) renderDashboard(currentUserId); break;
                 case 'editor': if (currentUserId && data.projectId) renderEditor(currentUserId, data.projectId); break;
-                // FIX: [v2] Use single `currentUserId` variable
+                // FIX: [v3] Use single `currentUserId` variable
                 default: if(currentUserId) renderDashboard(currentUserId); else renderLandingPage();
             }
         }
@@ -2202,7 +2220,7 @@ Generate 5 character profiles:`;
                     });
                     currentTheme = themeName; // Update global theme tracker
                     // Re-render dashboard to apply new border colors
-                    // FIX: [v2] Use single `currentUserId` variable
+                    // FIX: [v3] Use single `currentUserId` variable
                     if (document.location.hash === '#dashboard' && currentUserId) {
                         console.log("Re-rendering dashboard due to theme change.");
                         renderDashboard(currentUserId);
@@ -2219,7 +2237,7 @@ Generate 5 character profiles:`;
             onAuth(async (user) => {
                 console.log("onAuth: Auth state changed. User:", user);
                 if (user) {
-                    // FIX: [v2] Use single `currentUserId` variable
+                    // FIX: [v3] Use single `currentUserId` variable
                     currentUserId = user.uid;
                     console.log("User is logged in. UID:", currentUserId);
 
@@ -2237,7 +2255,7 @@ Generate 5 character profiles:`;
                         navigateTo('dashboard');
                     }
                 } else {
-                    // FIX: [v2] Use single `currentUserId` variable
+                    // FIX: [v3] Use single `currentUserId` variable
                     currentUserId = null;
                     console.log("User is logged out. Navigating to landing page.");
                     navigateTo('landing');
