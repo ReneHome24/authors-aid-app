@@ -185,7 +185,7 @@
         .project-card.theme-border-green { border-color: #059669; }
         .project-card.theme-border-purple { border-color: #7c3aed; }
 
-        /* FIX: New class for the footer on the dashboard/landing page to prevent duplication */
+        /* FIX: [v2] New class for the footer on the dashboard/landing page to prevent duplication */
         .main-footer {
              position: relative;
              z-index: 10;
@@ -1547,8 +1547,10 @@ Generate 5 character profiles:`;
                     }, 500));
                 }
 
-
+                // FIX: [v2] Correctly check the sectionId for rendering the right AI tools
                 if (sectionId === 'brainstorming') {
+                    outputDiv.innerHTML = `<div class="p-4 text-gray-400 text-sm">Select a tool to get started.</div>`; // Clear any previous output
+
                     const ideaInput = document.getElementById('ai-idea-input');
 
                     document.getElementById('generate-synopsis-concepts-btn').addEventListener('click', async () => {
