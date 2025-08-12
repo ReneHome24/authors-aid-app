@@ -1391,12 +1391,12 @@ Generate 5 character profiles:`;
 
                 // Delegated event listener for dynamically generated buttons
                 rightSidebar.addEventListener('click', async (e) => {
-                    const target = e.target;
-                    
+                    const target = e.target.closest('button');
+                    if (!target) return;
+
                     // Handle modal pop-ups for suggestions
-                    const modalBtn = target.closest('.ai-suggestion-modal-btn');
-                    if (modalBtn) {
-                        const content = modalBtn.dataset.content;
+                    if (target.classList.contains('ai-suggestion-modal-btn')) {
+                        const content = target.dataset.content;
                         showContentInModal('Suggestion', content, (fullContent) => {
                              if (editor) {
                                 editor.insertText(editor.getLength(), '\n\n' + fullContent);
@@ -1407,9 +1407,8 @@ Generate 5 character profiles:`;
                     }
 
                     // Handle image prompt generation
-                    const imagePromptBtn = target.closest('.ai-image-prompt-btn');
-                    if (imagePromptBtn) {
-                        const prompt = imagePromptBtn.dataset.prompt;
+                    if (target.classList.contains('ai-image-prompt-btn')) {
+                        const prompt = target.dataset.prompt;
                         const imageUrls = await generateImage(prompt);
                         if (imageUrls.length > 0) {
                             coverDisplayContainer.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">${imageUrls.map(url => `
@@ -1433,37 +1432,45 @@ Generate 5 character profiles:`;
                     }
 
                     // Handle main AI action buttons
-                    if (target.id === 'generate-world-btn') {
-                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const context = synopsisDoc ? new Quill(document.createElement('div')).setContents(JSON.parse(synopsisDoc.content)).getText() : '';
-                        if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
-                        const worldText = await generateWorldPrompts(context);
-                        const prompts = parseNumberedAiList(worldText, false).map(p => stripMarkdownAndHtml(p.trim()));
-                        outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHTML(prompt)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHTML(prompt.substring(0, 80))}...</button>`).join('');
-                    } else if (target.id === 'generate-image-prompts-btn') {
-                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                        const context = synopsisDoc ? new Quill(document.createElement('div')).setContents(JSON.parse(synopsisDoc.content)).getText() : '';
-                        if (!context) { showNotification("Please write a synopsis in the 'Synopsis & Brainstorming' section first.", "error"); return; }
-                        const conceptsText = await generateCoverConcepts(context);
-                        const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
-                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-prompt="${escapeHTML(concept)}" class="ai-image-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Prompt ${index + 1}:</strong> ${escapeHTML(concept.substring(0, 80))}...</button>`).join('');
-                    } else if (target.id === 'suggest-alternatives-btn' || target.id === 'suggest-scripture-btn' || target.id === 'suggest-youth-phrases-btn') {
-                        const selection = editor.getSelection();
-                        if (!selection || selection.length === 0) {
-                            showNotification("Please select some text in the editor first.", "error");
-                            return;
+                    const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
+                    const context = synopsisDoc ? new Quill(document.createElement('div')).setContents(JSON.parse(synopsisDoc.content)).getText() : '';
+
+                    switch (target.id) {
+                        case 'generate-world-btn': {
+                            if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
+                            const worldText = await generateWorldPrompts(context);
+                            const prompts = parseNumberedAiList(worldText, false).map(p => stripMarkdownAndHtml(p.trim()));
+                            outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHTML(prompt)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHTML(prompt.substring(0, 80))}...</button>`).join('');
+                            break;
                         }
-                        const selectedText = editor.getText(selection.index, selection.length);
-                        const context = editor.getText();
-                        let resultsText = '';
-                        if (target.id === 'suggest-alternatives-btn') {
-                            resultsText = await suggestAlternatives(selectedText, context);
-                        } else if (target.id === 'suggest-scripture-btn') {
-                            resultsText = await suggestScripture(selectedText, context);
-                        } else {
-                            resultsText = await suggestYouthPhrases(selectedText, context);
+                        case 'generate-image-prompts-btn': {
+                            if (!context) { showNotification("Please write a synopsis in the 'Synopsis & Brainstorming' section first.", "error"); return; }
+                            const conceptsText = await generateCoverConcepts(context);
+                            const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
+                            outputDiv.innerHTML = concepts.map((concept, index) => `<button data-prompt="${escapeHTML(concept)}" class="ai-image-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Prompt ${index + 1}:</strong> ${escapeHTML(concept.substring(0, 80))}...</button>`).join('');
+                            break;
                         }
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${resultsText}</div>`;
+                        case 'suggest-alternatives-btn':
+                        case 'suggest-scripture-btn':
+                        case 'suggest-youth-phrases-btn': {
+                            const selection = editor.getSelection();
+                            if (!selection || selection.length === 0) {
+                                showNotification("Please select some text in the editor first.", "error");
+                                return;
+                            }
+                            const selectedText = editor.getText(selection.index, selection.length);
+                            const fullTextContext = editor.getText();
+                            let resultsText = '';
+                            if (target.id === 'suggest-alternatives-btn') {
+                                resultsText = await suggestAlternatives(selectedText, fullTextContext);
+                            } else if (target.id === 'suggest-scripture-btn') {
+                                resultsText = await suggestScripture(selectedText, fullTextContext);
+                            } else {
+                                resultsText = await suggestYouthPhrases(selectedText, fullTextContext);
+                            }
+                            outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${resultsText}</div>`;
+                            break;
+                        }
                     }
                 });
             };
@@ -1510,6 +1517,30 @@ Generate 5 character profiles:`;
                                     <label for="meta-author-name" class="block text-sm font-medium text-gray-300 mb-1">Author Name</label>
                                     <input type="text" id="meta-author-name" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.authorName || '')}">
                                 </div>
+                                <div>
+                                    <label for="meta-copyright-year" class="block text-sm font-medium text-gray-300 mb-1">Copyright Year</label>
+                                    <input type="number" id="meta-copyright-year" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.copyrightYear || new Date().getFullYear())}">
+                                </div>
+                                <div>
+                                    <label for="meta-publisher" class="block text-sm font-medium text-gray-300 mb-1">Publisher</label>
+                                    <input type="text" id="meta-publisher" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.publisher || '')}">
+                                </div>
+                                <div>
+                                    <label for="meta-isbn" class="block text-sm font-medium text-gray-300 mb-1">ISBN (Optional)</label>
+                                    <input type="text" id="meta-isbn" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.isbn || '')}">
+                                </div>
+                                <div>
+                                    <label for="meta-series-name" class="block text-sm font-medium text-gray-300 mb-1">Series Name (Optional)</label>
+                                    <input type="text" id="meta-series-name" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.seriesName || '')}">
+                                </div>
+                                <div>
+                                    <label for="meta-series-number" class="block text-sm font-medium text-gray-300 mb-1">Series Number (Optional)</label>
+                                    <input type="number" id="meta-series-number" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.seriesNumber || '')}">
+                                </div>
+                                <div>
+                                    <label for="meta-lccn" class="block text-sm font-medium text-gray-300 mb-1">Library of Congress Control Number (LCCN)</label>
+                                    <input type="text" id="meta-lccn" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.lccn || '')}">
+                                </div>
                                 <button id="save-metadata-btn" class="w-full mt-4 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Save Metadata</button>
                             </div>
                         </div>
@@ -1517,6 +1548,12 @@ Generate 5 character profiles:`;
                     document.getElementById('save-metadata-btn').addEventListener('click', async () => {
                         const newMetadata = {
                             authorName: document.getElementById('meta-author-name').value,
+                            copyrightYear: document.getElementById('meta-copyright-year').value,
+                            publisher: document.getElementById('meta-publisher').value,
+                            isbn: document.getElementById('meta-isbn').value,
+                            seriesName: document.getElementById('meta-series-name').value,
+                            seriesNumber: document.getElementById('meta-series-number').value,
+                            lccn: document.getElementById('meta-lccn').value,
                         };
                         await updateProjectMetadata(userId, projectId, newMetadata);
                     });
