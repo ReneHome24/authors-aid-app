@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en" class="theme-default">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Author's Aid | Your AI Co-author for Christian Literature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
+    <!-- Font Awesome for eye icon and loading spinner -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+        html, body {
+            height: 100%;
+            overflow: hidden; /* Prevent global scrollbar on editor pages */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000000;
+            color: #D1D5DB; /* Default light text color */
+        }
+        .font-lora { font-family: 'Lora', serif; }
+
+        /* --- THEME DEFINITIONS --- */
+        .theme-default .gradient-bg { background-color: #000000; background-image: radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent 50%), radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.08), transparent 60%); }
+        .theme-default .accent-bg { background-color: #2563eb; }
+        .theme-default .accent-bg-hover:hover { background-color: #1d4ed8; }
+        .theme-default .accent-text { color: #60a5fa; }
+        .theme-default .accent-text-hover:hover { color: #3b82f6; }
+        .theme-default .accent-ring:focus { ring-color: #3b82f6; }
+        .theme-default .ui-bg { background-color: #1f2937; }
+
+        .theme-red .gradient-bg { background-color: #000000; background-image: radial-gradient(circle at top right, rgba(220, 38, 38, 0.1), transparent 50%), radial-gradient(circle at bottom left, rgba(159, 18, 57, 0.1), transparent 60%); }
+        .theme-red .accent-bg { background-color: #dc2626; }
+        .theme-red .accent-bg-hover:hover { background-color: #b91c1c; }
+        .theme-red .accent-text { color: #f87171; }
+        .theme-red .accent-text-hover:hover { color: #ef4444; }
+        .theme-red .accent-ring:focus { ring-color: #ef4444; }
+        .theme-red .ui-bg { background-color: #261717; }
+
+
+        .theme-gold .gradient-bg { background-color: #000000; background-image: radial-gradient(circle at top right, rgba(252, 211, 77, 0.1), transparent 50%), radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.1), transparent 60%); }
+        .theme-gold .accent-bg { background-color: #f59e0b; }
+        .theme-gold .accent-bg-hover:hover { background-color: #d97706; }
+        .theme-gold .accent-text { color: #fcd34d; }
+        .theme-gold .accent-text-hover:hover { color: #fbbf24; }
+        .theme-gold .accent-ring:focus { ring-color: #fbbf24; }
+        .theme-gold .ui-bg { background-color: #292211; }
+
+        .theme-green .gradient-bg { background-color: #000000; background-image: radial-gradient(circle at top right, rgba(16, 185, 129, 0.1), transparent 50%), radial-gradient(circle at bottom left, rgba(5, 150, 105, 0.1), transparent 60%); }
+        .theme-green .accent-bg { background-color: #059669; }
+        .theme-green .accent-bg-hover:hover { background-color: #047857; }
+        .theme-green .accent-text { color: #34d399; }
+        .theme-green .accent-text-hover:hover { color: #10b981; }
+        .theme-green .accent-ring:focus { ring-color: #10b981; }
+        .theme-green .ui-bg { background-color: #132a23; }
+
+        .theme-purple .gradient-bg { background-color: #000000; background-image: radial-gradient(circle at top right, rgba(139, 92, 246, 0.1), transparent 50%), radial-gradient(circle at bottom left, rgba(124, 58, 237, 0.1), transparent 60%); }
+        .theme-purple .accent-bg { background-color: #7c3aed; }
+        .theme-purple .accent-bg-hover:hover { background-color: #6d28d9; }
+        .theme-purple .accent-text { color: #a78bfa; }
+        .theme-purple .accent-text-hover:hover { color: #8b5cf6; }
+        .theme-purple .accent-ring:focus { ring-color: #8b5cf6; }
+        .theme-purple .ui-bg { background-color: #241c33; }
+
+        /* Quill Editor specific styles */
+        .ql-container { border: none !important; display: flex; flex-direction: column; height: 100%; }
+        .ql-editor {
+            flex-grow: 1;
+            font-family: 'Lora', serif;
+            font-size: 1.125rem;
+            line-height: 1.75;
+            background-color: #111827;
+            color: #D1D5DB;
+            border-radius: 8px;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        
+        .ql-toolbar {
+            background-color: #1F2937 !important;
+            border-top-left-radius: 8px !important;
+            border-top-right-radius: 8px !important;
+            border: 1px solid #374151 !important;
+            border-bottom: none !important;
+        }
+        .ql-snow .ql-stroke { stroke: #9CA3AF !important; }
+        .ql-snow .ql-picker-label { color: #9CA3AF !important; }
+        .ql-snow .ql-picker-options { background-color: #374151 !important; color: #D1D5DB !important; }
+
+        /* Custom scrollbar styles */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1F2937; }
+        ::-webkit-scrollbar-thumb { background: #4B5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6B7280; }
+
+        /* Styles for password toggle */
+        .password-input-container {
+            position: relative;
+        }
+        .password-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #9CA3AF;
+        }
+
+        /* Loading spinner for buttons */
+        .loading-spinner {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid #fff;
+            border-radius: 50%;
+            width: 1em;
+            height: 1em;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+    </style>
+</head>
+<body class="gradient-bg">
+    
+    <!-- Main Application Container -->
+    <div id="app-container" class="h-screen flex flex-col"></div>
+
+    <!-- Notification & Modal Containers -->
+    <div id="notification-container" class="fixed bottom-20 right-5 z-50 w-full max-w-sm"></div>
+    <div id="modal-container" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4"></div>
+
+    <!-- Theme Switcher (Global) -->
+    <div id="theme-switcher" class="fixed bottom-4 right-4 bg-gray-900/80 backdrop-blur-sm p-3 rounded-xl border border-gray-700 shadow-lg">
+        <div class="flex space-x-2">
+            <button data-theme="theme-default" class="theme-button w-6 h-6 rounded-full bg-blue-500 ring-2 ring-offset-2 ring-offset-gray-900 ring-white" title="Default Blue"></button>
+            <button data-theme="theme-red" class="theme-button w-6 h-6 rounded-full bg-red-500" title="Redeemer's Red"></button>
+            <button data-theme="theme-gold" class="theme-button w-6 h-6 rounded-full bg-amber-400" title="Golden Light"></button>
+            <button data-theme="theme-green" class="theme-button w-6 h-6 rounded-full bg-emerald-500" title="Graceful Green"></button>
+            <button data-theme="theme-purple" class="theme-button w-6 h-6 rounded-full bg-violet-500" title="Royal Purple"></button>
+        </div>
+    </div>
+
+    <!-- ALL APPLICATION JAVASCRIPT -->
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+    <script type="module">
+        // Firebase SDK Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously, signOut as firebaseSignOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, linkWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, getDoc, getDocs, updateDoc, deleteDoc, serverTimestamp, query, onSnapshot, setDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCVsziM6I1QEU22YNPGTwLvN0EuW4k2SiY",
+            authDomain: "christian-author-app-54c4d.firebaseapp.com",
+            projectId: "christian-author-app-54c4d",
+            storageBucket: "christian-author-app-54c4d.firebasestorage.app",
+            messagingSenderId: "386312831448",
+            appId: "1:386312831448:web:80999eae638bbed28572ad"
+        };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        //======================================================================
+        // --- GLOBAL VARIABLES & INSTANCES ---
+        //======================================================================
+        let authInstance;
+        let dbInstance;
+        let currentUserId = null;
+        let editor; // Quill instance
+        let aiStylePreference = ""; // Global AI style preference
+
+        //======================================================================
+        // --- UTILITY FUNCTIONS ---
+        //======================================================================
+        
+        const debounce = (func, wait) => {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        };
+
+        function showNotification(message, type = 'info', duration = 3000) {
+            const container = document.getElementById('notification-container');
+            if (!container) return;
+            const notification = document.createElement('div');
+            let bgColor;
+            switch(type){
+                case 'success': bgColor='bg-green-500/90 border-green-400'; break;
+                case 'error': bgColor='bg-red-500/90 border-red-400'; break;
+                default: bgColor='bg-blue-500/90 border-blue-400'; break;
+            }
+            notification.className = `p-4 rounded-lg shadow-xl text-white ${bgColor} border mb-4 opacity-0 transition-all duration-500 transform translate-y-4`;
+            notification.textContent = message;
+            container.appendChild(notification);
+            setTimeout(() => {
+                notification.classList.remove('opacity-0', 'translate-y-4');
+            }, 10);
+            setTimeout(() => {
+                notification.classList.add('opacity-0');
+                notification.addEventListener('transitionend', () => notification.remove());
+            }, duration);
+        }
+
+        function showModal(title, contentHtml, onConfirm, confirmText = 'Confirm', showCancel = true) {
+            const modalContainer = document.getElementById('modal-container');
+            if (!modalContainer) return;
+
+            modalContainer.innerHTML = `<div class="bg-gray-800 text-gray-200 rounded-lg shadow-2xl w-full max-w-lg p-6 border border-gray-700 transform transition-all opacity-0 -translate-y-4"><div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-lora font-bold">${title}</h2><button id="modal-close-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button></div><div id="modal-content" class="max-h-[70vh] overflow-y-auto pr-2">${contentHtml}</div><div class="mt-6 flex justify-end space-x-4">${showCancel ? '<button id="modal-cancel-btn" class="py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-500 transition-colors">Cancel</button>' : ''}<button id="modal-confirm-btn" type="submit" class="py-2 px-4 rounded-lg accent-bg accent-bg-hover transition-colors font-semibold flex items-center justify-center">${confirmText}</button></div></div>`;
+            modalContainer.classList.remove('hidden');
+            modalContainer.classList.add('flex');
+            
+            const modalDialog = modalContainer.querySelector(':scope > div');
+            setTimeout(() => {
+                modalDialog.classList.remove('opacity-0', '-translate-y-4');
+            }, 10);
+
+            const closeModal = () => {
+                modalDialog.classList.add('opacity-0');
+                modalDialog.addEventListener('transitionend', () => {
+                    modalContainer.classList.add('hidden');
+                    modalContainer.classList.remove('flex');
+                    modalContainer.innerHTML = '';
+                }, { once: true });
+            };
+
+            document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+            if (showCancel) {
+                document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
+            }
+            
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+            confirmBtn.addEventListener('click', async () => {
+                const originalText = confirmBtn.innerHTML;
+                const form = modalContainer.querySelector('form');
+
+                if (form && !form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = `<span class="loading-spinner mr-2"></span> ${confirmText}`;
+
+                const success = await onConfirm();
+
+                if (success !== false) { // Allow onConfirm to return nothing on success
+                    closeModal();
+                } else {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = originalText;
+                }
+            });
+
+            modalContainer.querySelectorAll('.password-toggle').forEach(toggle => {
+                toggle.addEventListener('click', () => {
+                    const inputId = toggle.dataset.target;
+                    const passwordInput = document.getElementById(inputId);
+                    if (passwordInput) {
+                        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                        passwordInput.setAttribute('type', type);
+                        toggle.querySelector('i').classList.toggle('fa-eye');
+                        toggle.querySelector('i').classList.toggle('fa-eye-slash');
+                    }
+                });
+            });
+        }
+        
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+        
+        function parseNumberedAiList(aiText) {
+            if (!aiText) return [];
+            return aiText.split('\n')
+                .map(line => line.trim())
+                .filter(line => /^\d+\./.test(line)) // Filter lines that start with "1.", "2.", etc.
+                .map(line => line.replace(/^\d+\.\s*/, '')); // Remove the number and leading space
+        }
+
+        //======================================================================
+        // --- AUTHENTICATION FUNCTIONS ---
+        //======================================================================
+        
+        async function signInAnon() {
+            try {
+                await signInAnonymously(authInstance);
+                showNotification('Signed in as guest!', 'success');
+            } catch (e) {
+                console.error("Anon sign-in failed:", e);
+                showNotification(`Guest sign-in failed: ${e.message}`, 'error');
+            }
+        }
+
+        async function signOut() {
+            try {
+                await firebaseSignOut(authInstance);
+                showNotification('Signed out successfully.', 'info');
+            } catch (e) {
+                console.error("Sign-out failed:", e);
+                showNotification(`Sign-out failed: ${e.message}`, 'error');
+            }
+        }
+
+        async function linkGuestAccount(email, password) {
+            try {
+                const credential = EmailAuthProvider.credential(email, password);
+                await linkWithCredential(authInstance.currentUser, credential);
+                showNotification('Account successfully linked!', 'success');
+                return true;
+            } catch (error) {
+                console.error("Error linking guest account:", error);
+                showNotification(`Error linking account: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function handleSignUpClick(e, prefilledEmail = '') {
+            e.preventDefault();
+            const content = `
+                <form id="signup-form">
+                    <p class="text-gray-400 mb-4">Create an account to save your work permanently.</p>
+                    <div class="mb-4">
+                        <label for="email" class="block text-sm font-medium text-gray-300 mb-1">Email Address</label>
+                        <input type="email" id="email" name="email" required autocomplete="email" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring" value="${escapeHtml(prefilledEmail)}">
+                    </div>
+                    <div class="password-input-container">
+                        <label for="password" class="block text-sm font-medium text-gray-300 mb-1">Password</label>
+                        <input type="password" id="password" name="password" required minlength="6" autocomplete="new-password" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring">
+                        <span class="password-toggle" data-target="password"><i class="fas fa-eye"></i></span>
+                        <p class="text-xs text-gray-400 mt-1">Minimum 6 characters.</p>
+                    </div>
+                </form>
+            `;
+            showModal('Sign Up for Free', content, async () => {
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                if (!email || !password) return false;
+
+                const user = authInstance.currentUser;
+                if (user && user.isAnonymous) {
+                    return await linkGuestAccount(email, password);
+                } else {
+                    try {
+                        const newUserCredential = await createUserWithEmailAndPassword(authInstance, email, password);
+                        if (newUserCredential.user) {
+                            showNotification('Sign up successful! Welcome.', 'success');
+                            return true;
+                        }
+                    } catch (error) {
+                        console.error("Sign up failed:", error);
+                        showNotification(`Sign up failed: ${error.message}`, 'error');
+                        return false;
+                    }
+                }
+                return false;
+            }, 'Sign Up');
+        }
+        
+        async function handleLoginClick(e) {
+            e.preventDefault();
+            const content = `
+                <form id="login-form">
+                    <p class="text-gray-400 mb-4">Log in to access your saved projects.</p>
+                    <div class="mb-4">
+                        <label for="login-email" class="block text-sm font-medium text-gray-300 mb-1">Email Address</label>
+                        <input type="email" id="login-email" name="email" required autocomplete="email" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring">
+                    </div>
+                    <div class="password-input-container">
+                        <label for="login-password" class="block text-sm font-medium text-gray-300 mb-1">Password</label>
+                        <input type="password" id="login-password" name="password" required autocomplete="current-password" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring">
+                        <span class="password-toggle" data-target="login-password"><i class="fas fa-eye"></i></span>
+                    </div>
+                </form>
+            `;
+            showModal('Log In', content, async () => {
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+
+                if (!email || !password) return false;
+
+                try {
+                    const userCredential = await signInWithEmailAndPassword(authInstance, email, password);
+                    if (userCredential.user) {
+                        showNotification('Login successful! Welcome back.', 'success');
+                        return true;
+                    }
+                } catch (error) {
+                    console.error("Login failed:", error);
+                    showNotification(`Login failed: ${error.message}`, 'error');
+                    return false;
+                }
+                return false;
+            }, 'Login');
+        }
+
+        //======================================================================
+        // --- FIRESTORE FUNCTIONS ---
+        //======================================================================
+        function getProjectsCollection(userId) { 
+            return collection(dbInstance, `artifacts/${appId}/users/${userId}/projects`); 
+        }
+
+        function getProjectRef(userId, projectId) {
+            return doc(dbInstance, `artifacts/${appId}/users/${userId}/projects`, projectId);
+        }
+
+        function getSectionsCollection(userId, projectId) {
+            return collection(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`);
+        }
+
+        async function createProject(userId, data) {
+            try {
+                const projectRef = await addDoc(getProjectsCollection(userId), { 
+                    ...data, 
+                    createdAt: serverTimestamp(), 
+                    lastModified: serverTimestamp() 
+                });
+                const sectionsCollection = getSectionsCollection(userId, projectRef.id);
+                const emptyContent = JSON.stringify({ ops: [{ insert: '\n' }] });
+                
+                await setDoc(doc(sectionsCollection, 'synopsis'), { title: 'Synopsis & Brainstorming', content: emptyContent, order: 1 });
+                await setDoc(doc(sectionsCollection, 'characters'), { title: 'Character Development', content: emptyContent, order: 2 });
+                await setDoc(doc(sectionsCollection, 'outline'), { title: 'Outline', content: emptyContent, order: 3 });
+                await setDoc(doc(sectionsCollection, 'chapter_1'), { title: 'Chapter 1', content: emptyContent, order: 4 });
+                
+                showNotification('New project created!', 'success');
+                return projectRef.id;
+            } catch (e) { 
+                console.error("Error creating project:", e); 
+                showNotification(`Error creating project: ${e.message}`, 'error'); 
+                return null;
+            }
+        }
+
+        async function getProjects(userId) {
+            try {
+                const qSnapshot = await getDocs(query(getProjectsCollection(userId), orderBy("lastModified", "desc")));
+                const projects = [];
+                qSnapshot.forEach(d => projects.push({ id: d.id, ...d.data() }));
+                return projects;
+            } catch (e) {
+                console.error("Error fetching projects:", e);
+                showNotification(`Error fetching projects: ${e.message}`, 'error');
+                return [];
+            }
+        }
+
+        async function getProject(userId, projectId) {
+            try {
+                const docSnap = await getDoc(getProjectRef(userId, projectId));
+                return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+            } catch (e) {
+                console.error("Error fetching project:", e);
+                showNotification(`Error fetching project: ${e.message}`, 'error');
+                return null;
+            }
+        }
+        
+        async function getProjectSections(userId, projectId) {
+            try {
+                const qSnapshot = await getDocs(query(getSectionsCollection(userId, projectId), orderBy("order")));
+                const sections = [];
+                qSnapshot.forEach(d => sections.push({ id: d.id, ...d.data() }));
+                return sections;
+            } catch(e) {
+                console.error("Error fetching sections:", e);
+                showNotification(`Error fetching sections: ${e.message}`, 'error');
+                return [];
+            }
+        }
+
+        async function getSection(userId, projectId, sectionId) {
+            try {
+                const docSnap = await getDoc(doc(getSectionsCollection(userId, projectId), sectionId));
+                return docSnap.exists() ? docSnap.data() : null;
+            } catch (e) {
+                console.error("Error fetching section:", e);
+                showNotification(`Error fetching section: ${e.message}`, 'error');
+                return null;
+            }
+        }
+        
+        async function updateSectionContent(userId, projectId, sectionId, content) {
+            try {
+                const sectionRef = doc(getSectionsCollection(userId, projectId), sectionId);
+                await updateDoc(sectionRef, { content });
+                await updateDoc(getProjectRef(userId, projectId), { lastModified: serverTimestamp() });
+            } catch (e) {
+                console.error("Error updating section:", e);
+                showNotification(`Error saving progress: ${e.message}`, 'error');
+            }
+        }
+
+        async function deleteProject(userId, projectId) {
+            try {
+                await deleteDoc(getProjectRef(userId, projectId));
+                showNotification('Project deleted.', 'success');
+                return true;
+            } catch (e) {
+                console.error("Error deleting project:", e);
+                showNotification(`Error deleting project: ${e.message}`, 'error');
+                return false;
+            }
+        }
+        
+        //======================================================================
+        // --- AI SERVICE FUNCTIONS ---
+        //======================================================================
+        async function callGemini(prompt) {
+            const aiOutput = document.getElementById('ai-output');
+            if(aiOutput) {
+                aiOutput.innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading-spinner"></div><span class="ml-2">Generating...</span></div>`;
+            }
+
+            try {
+                const fullPrompt = `${aiStylePreference}\n\n${prompt}`;
+                let chatHistory = [{ role: "user", parts: [{ text: fullPrompt }] }];
+                const payload = { contents: chatHistory };
+                const apiKey = ""; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API request failed with status ${response.status}`);
+                }
+
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0) {
+                    return result.candidates[0].content.parts[0].text;
+                }
+                return "AI response was empty.";
+
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                showNotification(`AI generation failed: ${error.message}`, 'error');
+                return `Error: ${error.message}`;
+            } finally {
+                 if(aiOutput) aiOutput.innerHTML = '';
+            }
+        }
+
+        async function generateSynopsisIdeas(idea) {
+            const prompt = `You are an AI story consultant for Christian literature. Based on the user's basic idea, generate a numbered list of 3 distinct core concept ideas for a new Christian book. Each concept should be a single, concise paragraph. The tone should be encouraging and creative.\n\nBasic Idea: "${idea}"`;
+            return await callGemini(prompt);
+        }
+
+        async function generateCharacterProfiles(context) {
+            const prompt = `You are an AI character developer for Christian fiction. Based on the provided project synopsis, generate a numbered list of 3 distinct character profile ideas. Each profile should include a name, a brief backstory, core motivations, and personality quirks suitable for a Christian narrative.\n\nProject Synopsis:\n---\n${context}\n---`;
+            return await callGemini(prompt);
+        }
+
+        async function generateOutlineBeats(context) {
+            const prompt = `You are an AI outliner for a Christian author. Based on the provided synopsis and character ideas, generate a detailed chapter-by-chapter outline with key beats for each chapter. Ensure the outline aligns with Christian themes.\n\nProject Context:\n---\n${context}\n---`;
+            return await callGemini(prompt);
+        }
+        
+        async function continueWriting(context) {
+            const prompt = `You are a Christian ghostwriter. Continue the narrative based on the following text, maintaining a consistent tone, style, and adhering to Christian themes. Write the next 2-3 paragraphs.\n\nExisting Text:\n---\n${context}\n---`;
+            return await callGemini(prompt);
+        }
+
+        //======================================================================
+        // --- VIEW RENDERING & NAVIGATION ---
+        //======================================================================
+        const appContainer = document.getElementById('app-container');
+
+        function navigateTo(viewName, data = {}) {
+            console.log(`Navigating to ${viewName}`);
+            window.location.hash = viewName + (data.projectId ? `/${data.projectId}` : '');
+            route();
+        }
+
+        function renderHeader(isLoggedIn, inEditor = false, projectTitle = "Author's Aid") {
+             const backToDashboardLink = inEditor ? `<a href="#" id="dashboard-link" class="text-sm accent-text-hover flex items-center"><i class="fas fa-arrow-left mr-2"></i>Dashboard</a>` : '';
+             const titleDisplay = `<h1 class="text-xl font-bold text-white">${escapeHtml(projectTitle)}</h1>`;
+
+             return `
+                <header class="ui-bg p-4 border-b border-gray-700 flex-shrink-0">
+                    <div class="container mx-auto flex justify-between items-center">
+                        <div class="flex items-center space-x-4">
+                            ${backToDashboardLink}
+                            ${titleDisplay}
+                        </div>
+                        <nav class="flex space-x-4 items-center">
+                             <span class="text-gray-400 text-sm">Welcome!</span>
+                             <button id="sign-out-btn" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">Logout</button>
+                        </nav>
+                    </div>
+                </header>
+            `;
+        }
+
+        function renderLandingPage() {
+            document.body.style.overflow = 'auto';
+            document.getElementById('theme-switcher').style.display = 'block';
+            appContainer.innerHTML = `
+                <div class="gradient-bg flex flex-col min-h-full">
+                    <header class="w-full z-10 p-4">
+                        <div class="container mx-auto flex justify-between items-center">
+                            <h1 class="text-2xl font-bold font-lora text-white">Author's Aid</h1>
+                            <nav class="hidden md:flex space-x-6 items-center">
+                                <a href="#features" class="accent-text-hover transition-colors">Features</a>
+                                <a href="#" id="sign-up-link" class="accent-text-hover transition-colors">Sign Up</a>
+                                <a href="#" id="login-link" class="accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg transition-colors">Login</a>
+                            </nav>
+                        </div>
+                    </header>
+                    <main class="relative pt-32 pb-20 md:pt-48 md:pb-32 flex-grow">
+                        <div class="container mx-auto text-center px-4">
+                            <h2 class="text-4xl md:text-6xl font-bold font-lora text-white leading-tight mb-4">Your AI Co-Author, Guided by Faith</h2>
+                            <p class="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto mb-8">
+                                Welcome, Rene' Stanley. Author's Aid is your personalized writing partner, trained on your unique style and grounded in Christian values. From manuscript to cover, let's bring your next masterpiece to life.
+                            </p>
+                            <button id="guest-btn" class="accent-bg accent-bg-hover text-white font-bold py-3 px-8 rounded-lg text-lg transition-transform transform hover:scale-105 inline-block">Continue as Guest</button>
+                        </div>
+                    </main>
+                    <section id="features" class="py-20 bg-black/30">
+                        <div class="container mx-auto px-4"><div class="text-center mb-12"><h3 class="text-3xl md:text-4xl font-bold font-lora">A Tool for Every Step of Your Journey</h3></div>
+                        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                            <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800"><h4 class="text-xl font-semibold mb-2 text-white">AI Co-Author & Ghostwriter</h4><p class="text-gray-400">Trained on your works, the AI learns your voice to help write, edit, and offer suggestions that sound authentically like you.</p></div>
+                            <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800"><h4 class="text-xl font-semibold mb-2 text-white">Multi-Format Support</h4><p class="text-gray-400">Get a tailored roadmap for fiction, non-fiction, devotionals, or Bible studies.</p></div>
+                            <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800"><h4 class="text-xl font-semibold mb-2 text-white">Faith-Based Assistance</h4><p class="text-gray-400">Get suggestions for relevant NIV Bible scriptures and theological insights.</p></div>
+                            <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-800"><h4 class="text-xl font-semibold mb-2 text-white">Book Cover Generation</h4><p class="text-gray-400">Generate professional front, spine, and back covers using AI image prompts.</p></div>
+                        </div>
+                    </section>
+                    <section id="cta" class="py-20 bg-black/30">
+                        <div class="container mx-auto text-center px-4">
+                            <h3 class="text-3xl md:text-4xl font-bold font-lora text-white mb-4">Ready to Write Your Next Chapter?</h3>
+                            <p class="text-lg text-gray-400 max-w-2xl mx-auto mb-8">Sign up today to begin your journey with an AI partner that understands your faith, your voice, and your vision.</p>
+                            <div class="max-w-md mx-auto">
+                                <form id="cta-form" class="flex flex-col sm:flex-row gap-4">
+                                    <input type="email" placeholder="Enter your email" class="w-full px-4 py-3 rounded-lg bg-gray-900 border border-gray-700 text-white focus:outline-none focus:ring-2 accent-ring" required>
+                                    <button type="submit" class="accent-bg accent-bg-hover text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105">Sign Up for Free</button>
+                                </form>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            `;
+            // Attach event listeners
+            document.getElementById('guest-btn').addEventListener('click', signInAnon);
+            document.getElementById('login-link').addEventListener('click', handleLoginClick);
+            document.getElementById('sign-up-link').addEventListener('click', (e) => handleSignUpClick(e));
+            document.getElementById('cta-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = e.target.querySelector('input[type="email"]').value;
+                handleSignUpClick(e, email);
+            });
+        }
+
+        async function renderDashboard(userId) {
+            document.body.style.overflow = 'auto';
+            document.getElementById('theme-switcher').style.display = 'block';
+            appContainer.innerHTML = `
+                ${renderHeader(true, false, "Author's Aid")}
+                <main id="dashboard-main" class="container mx-auto p-8 flex-grow">
+                     <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-3xl font-lora font-bold text-white">Your Projects</h2>
+                        <button id="new-project-btn" class="accent-bg accent-bg-hover text-white font-bold py-2 px-6 rounded-lg text-lg">+ New Project</button>
+                    </div>
+                    <div id="projects-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        <div class="text-center text-gray-400 col-span-full py-10">
+                            <div class="loading-spinner mx-auto"></div>
+                            <p class="mt-2">Loading projects...</p>
+                        </div>
+                    </div>
+                </main>
+            `;
+            document.getElementById('sign-out-btn').addEventListener('click', signOut);
+            document.getElementById('new-project-btn').addEventListener('click', handleNewProject);
+
+            const projectsGrid = document.getElementById('projects-grid');
+            const projects = await getProjects(userId);
+
+            if (projects.length === 0) {
+                projectsGrid.innerHTML = `<p class="col-span-full text-center text-gray-400">You have no projects yet. Start your first one!</p>`;
+            } else {
+                projectsGrid.innerHTML = projects.map(p => `
+                    <div class="project-card bg-gray-800 p-4 rounded-lg border border-gray-700 flex flex-col justify-between hover:border-blue-500 transition-colors">
+                        <div>
+                            <h3 class="text-xl font-lora font-semibold text-white truncate">${escapeHtml(p.title || 'Untitled Project')}</h3>
+                            <p class="text-sm text-gray-400">${escapeHtml(p.genre || 'No Genre')}</p>
+                        </div>
+                        <div class="mt-4">
+                            <p class="text-xs text-gray-500">Edited: ${p.lastModified ? new Date(p.lastModified.seconds * 1000).toLocaleDateString() : 'N/A'}</p>
+                            <div class="flex mt-2 space-x-2">
+                                <button data-action="open" data-id="${p.id}" class="flex-grow accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Open</button>
+                                <button data-action="delete" data-id="${p.id}" class="bg-gray-600 hover:bg-red-600 text-white font-semibold p-2 rounded-lg">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            projectsGrid.addEventListener('click', (e) => {
+                const button = e.target.closest('button');
+                if (!button) return;
+
+                const action = button.dataset.action;
+                const projectId = button.dataset.id;
+
+                if (action === 'open') {
+                    navigateTo('editor', { projectId });
+                } else if (action === 'delete') {
+                    handleDeleteProject(projectId);
+                }
+            });
+        }
+
+        function handleNewProject() {
+            const content = `
+                <form id="new-project-form">
+                    <div class="space-y-4">
+                        <div>
+                            <label for="title" class="block text-sm font-medium text-gray-300 mb-1">Book Title (optional)</label>
+                            <input type="text" id="title" name="title" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring">
+                        </div>
+                        <div>
+                            <label for="genre" class="block text-sm font-medium text-gray-300 mb-1">Genre</label>
+                            <select id="genre" name="genre" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring">
+                                <option>Christian Romance</option>
+                                <option>Christian Fantasy</option>
+                                <option>Christian Thriller</option>
+                                <option>Devotional</option>
+                                <option>Bible Study</option>
+                                <option>Memoir</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            `;
+            showModal('Create a New Project', content, async () => {
+                const title = document.getElementById('title').value || 'Untitled Project';
+                const genre = document.getElementById('genre').value;
+                const projectData = { title, genre };
+                const newId = await createProject(currentUserId, projectData);
+                if (newId) {
+                    navigateTo('editor', { projectId: newId });
+                    return true;
+                }
+                return false;
+            }, 'Create Project');
+        }
+
+        function handleDeleteProject(projectId) {
+            showModal('Confirm Deletion', '<p>Are you sure you want to permanently delete this project?</p>', async () => {
+                const success = await deleteProject(currentUserId, projectId);
+                if (success) {
+                    renderDashboard(currentUserId); // Re-render the dashboard
+                }
+                return success;
+            }, 'Delete', true);
+        }
+
+        async function renderEditor(userId, projectId) {
+            document.body.style.overflow = 'hidden';
+            document.getElementById('theme-switcher').style.display = 'none';
+            appContainer.innerHTML = `<div class="text-center text-gray-400 p-10"><div class="loading-spinner mx-auto"></div><p class="mt-2">Loading editor...</p></div>`;
+
+            const project = await getProject(userId, projectId);
+            if (!project) {
+                appContainer.innerHTML = `<div class="text-center text-red-500 p-10">Error: Project not found.</div>`;
+                return;
+            }
+
+            appContainer.innerHTML = `
+                ${renderHeader(true, true, project.title)}
+                <main class="flex-grow flex overflow-hidden">
+                    <aside id="left-sidebar" class="w-1/5 bg-gray-800 p-4 border-r border-gray-700 overflow-y-auto"></aside>
+                    <section class="w-3/5 p-8 flex flex-col bg-black/50">
+                        <div id="editor-toolbar"></div>
+                        <div id="editor-wrapper" class="relative flex-grow">
+                            <div id="editor"></div>
+                        </div>
+                    </section>
+                    <aside id="right-sidebar" class="w-1/5 bg-gray-800 p-4 border-l border-gray-700 overflow-y-auto"></aside>
+                </main>
+            `;
+
+            document.getElementById('dashboard-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                navigateTo('dashboard');
+            });
+            document.getElementById('sign-out-btn').addEventListener('click', signOut);
+
+            setupEditor(userId, projectId);
+        }
+
+        async function setupEditor(userId, projectId) {
+            const leftSidebar = document.getElementById('left-sidebar');
+            const rightSidebar = document.getElementById('right-sidebar');
+            const editorContainer = document.getElementById('editor');
+            let activeSectionId = null;
+
+            const toolbarOptions = [
+                ['bold', 'italic', 'underline'],        
+                [{ 'header': 1 }, { 'header': 2 }],               
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['clean']                                         
+            ];
+
+            editor = new Quill(editorContainer, {
+                modules: { toolbar: '#editor-toolbar' },
+                theme: 'snow'
+            });
+
+            const debouncedSave = debounce(async () => {
+                if (!activeSectionId) return;
+                const content = JSON.stringify(editor.getContents());
+                await updateSectionContent(userId, projectId, activeSectionId, content);
+                showNotification('Progress saved!', 'success', 1500);
+            }, 2000);
+
+            editor.on('text-change', debouncedSave);
+            
+            const sections = await getProjectSections(userId, projectId);
+
+            const renderSidebar = () => {
+                leftSidebar.innerHTML = `
+                    <h2 class="text-lg font-semibold mb-4 text-white">Manuscript</h2>
+                    <nav class="flex flex-col space-y-1">
+                        ${sections.map(s => `
+                            <a href="#" data-section-id="${s.id}" class="section-link p-2 rounded-md hover:bg-gray-700 transition-colors text-gray-300 ${s.id === activeSectionId ? 'bg-blue-600 text-white' : ''}">
+                                ${escapeHtml(s.title)}
+                            </a>
+                        `).join('')}
+                    </nav>
+                `;
+            };
+
+            const renderAiPanel = (sectionId) => {
+                let content = '';
+                const aiOutput = `<div id="ai-output" class="mt-4 text-sm text-gray-300 space-y-2"></div>`;
+                
+                const stylePreference = `
+                    <div class="pb-4 border-b border-gray-600">
+                        <label for="ai-style-preference" class="block text-sm font-semibold text-gray-200 mb-2">AI Style Preference</label>
+                        <textarea id="ai-style-preference" class="w-full h-20 p-2 bg-gray-700 border border-gray-600 rounded-md text-sm" placeholder="e.g., Write in a formal, encouraging tone."></textarea>
+                    </div>
+                `;
+
+                if (sectionId === 'synopsis') {
+                    content = `
+                        ${stylePreference}
+                        <div class="mt-4">
+                            <label for="synopsis-idea" class="block text-sm font-semibold text-gray-200 mb-2">Generate Synopsis Ideas</label>
+                            <textarea id="synopsis-idea" class="w-full h-24 p-2 bg-gray-700 border border-gray-600 rounded-md text-sm" placeholder="e.g., A story about a family..."></textarea>
+                            <button id="generate-synopsis-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate</button>
+                        </div>
+                        ${aiOutput}
+                    `;
+                } else if (sectionId === 'characters') {
+                     content = `
+                        ${stylePreference}
+                        <div class="mt-4">
+                            <p class="text-sm font-semibold text-gray-200 mb-2">Generate Character Profiles</p>
+                            <p class="text-xs text-gray-400 mb-2">Generates characters based on your synopsis.</p>
+                            <button id="generate-characters-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate</button>
+                        </div>
+                        ${aiOutput}
+                    `;
+                } else if (sectionId === 'outline') {
+                    content = `
+                        ${stylePreference}
+                        <div class="mt-4">
+                            <p class="text-sm font-semibold text-gray-200 mb-2">Generate Chapter Outline</p>
+                            <p class="text-xs text-gray-400 mb-2">Generates an outline based on your synopsis and characters.</p>
+                            <button id="generate-outline-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate</button>
+                        </div>
+                        ${aiOutput}
+                    `;
+                } else if (sectionId.startsWith('chapter_')) {
+                     content = `
+                        ${stylePreference}
+                        <div class="mt-4">
+                            <p class="text-sm font-semibold text-gray-200 mb-2">Continue Writing</p>
+                            <p class="text-xs text-gray-400 mb-2">AI will continue writing from where you left off.</p>
+                            <button id="continue-writing-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Continue</button>
+                        </div>
+                        ${aiOutput}
+                    `;
+                }
+
+                rightSidebar.innerHTML = `
+                    <h3 class="text-lg font-bold mb-4 text-white">AI Co-Author</h3>
+                    ${content}
+                `;
+                setupAiPanelListeners(sectionId, userId, projectId);
+            };
+
+            const setupAiPanelListeners = (sectionId, userId, projectId) => {
+                const aiOutput = document.getElementById('ai-output');
+                const styleInput = document.getElementById('ai-style-preference');
+                if (styleInput) {
+                    styleInput.value = aiStylePreference;
+                    styleInput.addEventListener('input', debounce(() => aiStylePreference = styleInput.value, 500));
+                }
+
+                const handleGeneration = async (generator, context) => {
+                    const result = await generator(context);
+                    const suggestions = parseNumberedAiList(result);
+                    aiOutput.innerHTML = suggestions.map(s => `<button class="ai-suggestion">${escapeHtml(s)}</button>`).join('');
+                };
+
+                if (sectionId === 'synopsis') {
+                    document.getElementById('generate-synopsis-btn').addEventListener('click', () => {
+                        const idea = document.getElementById('synopsis-idea').value || editor.getText();
+                        if (!idea) {
+                            showNotification('Please provide an idea in the editor or text box.', 'error');
+                            return;
+                        }
+                        handleGeneration(generateSynopsisIdeas, idea);
+                    });
+                } else if (sectionId === 'characters') {
+                    document.getElementById('generate-characters-btn').addEventListener('click', async () => {
+                        const synopsisSec = await getSection(userId, projectId, 'synopsis');
+                        const context = synopsisSec ? JSON.parse(synopsisSec.content).ops.map(op=>op.insert).join('') : '';
+                         if (!context.trim()) {
+                            showNotification('Please write a synopsis first.', 'error');
+                            return;
+                        }
+                        handleGeneration(generateCharacterProfiles, context);
+                    });
+                } else if (sectionId === 'outline') {
+                     document.getElementById('generate-outline-btn').addEventListener('click', async () => {
+                        const synopsisSec = await getSection(userId, projectId, 'synopsis');
+                        const charSec = await getSection(userId, projectId, 'characters');
+                        const synopsis = synopsisSec ? JSON.parse(synopsisSec.content).ops.map(op=>op.insert).join('') : '';
+                        const chars = charSec ? JSON.parse(charSec.content).ops.map(op=>op.insert).join('') : '';
+                        const context = `SYNOPSIS:\n${synopsis}\n\nCHARACTERS:\n${chars}`;
+                         if (!synopsis.trim()) {
+                            showNotification('Please write a synopsis first.', 'error');
+                            return;
+                        }
+                        const result = await generateOutlineBeats(context);
+                        aiOutput.innerHTML = `<button class="ai-suggestion">${escapeHtml(result)}</button>`;
+                    });
+                } else if (sectionId.startsWith('chapter_')) {
+                    document.getElementById('continue-writing-btn').addEventListener('click', async () => {
+                        const context = editor.getText();
+                        if (!context.trim()) {
+                            showNotification('Please write something first for the AI to continue.', 'error');
+                            return;
+                        }
+                        const result = await continueWriting(context);
+                        aiOutput.innerHTML = `<button class="ai-suggestion">${escapeHtml(result)}</button>`;
+                    });
+                }
+
+                aiOutput.addEventListener('click', e => {
+                    if (e.target.classList.contains('ai-suggestion')) {
+                        editor.insertText(editor.getLength(), '\n\n' + e.target.textContent);
+                        aiOutput.innerHTML = '';
+                    }
+                });
+            };
+
+            const loadSection = async (sectionId) => {
+                activeSectionId = sectionId;
+                const sectionData = await getSection(userId, projectId, sectionId);
+                if (sectionData) {
+                    try {
+                        editor.setContents(JSON.parse(sectionData.content));
+                    } catch {
+                        editor.setText(sectionData.content || '');
+                    }
+                } else {
+                    editor.setText('');
+                }
+                renderSidebar();
+                renderAiPanel(sectionId);
+            };
+
+            leftSidebar.addEventListener('click', (e) => {
+                const link = e.target.closest('.section-link');
+                if (link) {
+                    e.preventDefault();
+                    const sectionId = link.dataset.sectionId;
+                    if (sectionId !== activeSectionId) {
+                        loadSection(sectionId);
+                    }
+                }
+            });
+
+            // Load the first section by default
+            if (sections.length > 0) {
+                loadSection(sections[0].id);
+            }
+        }
+
+        //======================================================================
+        // --- ROUTER & APP INITIALIZATION ---
+        //======================================================================
+
+        function route() {
+            const [view, param] = window.location.hash.slice(1).split('/');
+            
+            if (currentUserId) {
+                if (view === 'editor' && param) {
+                    renderEditor(currentUserId, param);
+                } else {
+                    renderDashboard(currentUserId);
+                }
+            } else {
+                renderLandingPage();
+            }
+        }
+
+        // --- App Startup ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = initializeApp(firebaseConfig);
+            authInstance = getAuth(app);
+            dbInstance = getFirestore(app);
+
+            onAuthStateChanged(authInstance, (user) => {
+                currentUserId = user ? user.uid : null;
+                route();
+            });
+
+            window.addEventListener('hashchange', route);
+            route();
+
+            document.getElementById('theme-switcher').addEventListener('click', (event) => {
+                const themeBtn = event.target.closest('.theme-button');
+                if (themeBtn) {
+                    const themeName = themeBtn.dataset.theme;
+                    document.documentElement.className = '';
+                    document.documentElement.classList.add(themeName);
+                    document.querySelectorAll('.theme-button').forEach(btn => {
+                        btn.classList.remove('ring-2', 'ring-offset-2', 'ring-offset-gray-900', 'ring-white');
+                    });
+                    themeBtn.classList.add('ring-2', 'ring-offset-2', 'ring-offset-gray-900', 'ring-white');
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>
