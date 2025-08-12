@@ -482,6 +482,12 @@
 
             // First, try to split by numbered list format (e.g., "1. Text")
             let lines = aiText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            
+            // Remove any intro line that doesn't start with a number.
+            if (lines.length > 0 && !lines[0].match(/^(\d+)\.\s*(.*)/)) {
+                lines.shift();
+            }
+
             let hasNumberedItems = false;
             for (const line of lines) {
                 if (line.match(/^(\d+)\.\s*(.*)/)) {
@@ -776,6 +782,12 @@ Generate 5 character profiles:`;
             ---
 
             Continue the story, adhering to the outline's progression:`;
+            return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+        }
+        // New AI function to generate titles
+        async function generateTitles(context) {
+            // Ensure title generation uses synopsis context and asks for Christian titles
+            const prompt = `You are an AI creative assistant for Christian authors. Based on the following synopsis or brainstorming content, generate 5 distinct and compelling title suggestions for a Christian book. Provide ONLY the title and optional subtitle. Do NOT include any descriptive sentences or explanations after the title.\n\nContent:\n---\n${context}\n---\n\nGenerate 5 title suggestions:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         // New AI functions for Front and Back Matter
@@ -1352,8 +1364,12 @@ Generate 5 character profiles:`;
                             </div>
                         </div>`;
                 } else if (sectionId === 'book_titles') {
-                    // No AI tools for book titles as requested
-                     aiPanelHtml += `<p class="text-sm text-gray-400">Use this section to manually list and manage your book title ideas.</p>`;
+                     aiPanelHtml += `
+                        <div>
+                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Book Titles</p>
+                            <p class="text-xs text-gray-300 mb-2">Generate title suggestions based on your synopsis.</p>
+                            <button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button>
+                        </div>`;
                 }
                 else if (sectionId === 'character_development') {
                      aiPanelHtml += `
@@ -1526,15 +1542,16 @@ Generate 5 character profiles:`;
                     const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
                     let modalContent = concepts.map((concept, index) => `
                         <div class="p-2 bg-gray-700 rounded-md mb-2">
-                            <p class="mb-2">${escapeHTML(concept)}</p>
-                            <button data-prompt="${escapeHTML(concept)}" class="ai-image-prompt-btn accent-bg accent-bg-hover text-white font-semibold py-1 px-3 rounded-lg">Generate Images</button>
+                            <textarea class="w-full h-24 p-2 bg-gray-800 border border-gray-600 rounded-md text-sm mb-2">${escapeHTML(concept)}</textarea>
+                            <button data-prompt-index="${index}" class="ai-image-prompt-btn accent-bg accent-bg-hover text-white font-semibold py-1 px-3 rounded-lg">Generate Images</button>
                         </div>`
                     ).join('');
                     showModal('Generated Cover Prompts', modalContent, null, 'Close', false);
                     
                     document.getElementById('modal-container').addEventListener('click', e => {
                         if (e.target.classList.contains('ai-image-prompt-btn')) {
-                            const prompt = e.target.dataset.prompt;
+                            const promptIndex = e.target.dataset.promptIndex;
+                            const prompt = e.target.previousElementSibling.value;
                             document.getElementById('modal-close-btn').click(); // Close the modal
                             generateImage(prompt).then(imageUrls => {
                                 if (imageUrls.length > 0) {
@@ -1588,6 +1605,15 @@ Generate 5 character profiles:`;
                     const resultsText = await suggestStructures(synopsis);
                     const results = parseNumberedAiList(resultsText, false).map(c => c.trim());
                     outputDiv.innerHTML = results.map((result, index) => `<button data-content="${escapeHTML(result)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Template ${index + 1}:</strong> ${escapeHTML(result.substring(0, 80))}...</button>`).join('');
+                });
+                
+                // Book Titles
+                addClickListener('generate-titles-btn', async () => {
+                    const { synopsis } = await getFullProjectContext();
+                    if (!synopsis) { showNotification("Please write a synopsis or some brainstorming notes first.", "error"); return; }
+                    const titlesText = await generateTitles(synopsis);
+                    const titles = parseNumberedAiList(titlesText, false).map(c => stripMarkdownAndHtml(c.trim()));
+                    outputDiv.innerHTML = titles.map((title) => `<button data-content="${escapeHTML(title)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHTML(title)}</button>`).join('');
                 });
 
                 // Character Development
@@ -1647,7 +1673,7 @@ Generate 5 character profiles:`;
                 addClickListener('continue-writing-btn', async () => {
                     const currentText = editor.getText();
                     const { title, outline } = await getFullProjectContext();
-                    if (!currentText.trim() || !outline.trim()) { showNotification("Please ensure you have some text in the current chapter and a generated outline.", "error"); return; }
+                    if (!outline.trim()) { showNotification("Please ensure you have a generated outline.", "error"); return; }
                     const nextText = await generateNext(currentText, title, outline);
                     showContentInModal('Suggested Continuation', nextText, (content) => {
                         if (editor) {
