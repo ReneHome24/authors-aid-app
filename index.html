@@ -513,7 +513,9 @@
         }
 
         function escapeHTML(unsafe) {
-            return unsafe
+            // FIX: Handle non-string inputs by converting them to strings first
+            const toStr = String(unsafe);
+            return toStr
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;")
