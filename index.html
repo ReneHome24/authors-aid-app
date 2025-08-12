@@ -417,6 +417,64 @@
         }
 
         //======================================================================
+        // --- FIRESTORE FUNCTIONS ---
+        //======================================================================
+        function getProjectsCollection(userId) { 
+            return collection(dbInstance, `artifacts/${appId}/users/${userId}/projects`); 
+        }
+
+        async function createProject(userId, data) {
+            try {
+                const projectRef = await addDoc(getProjectsCollection(userId), { 
+                    ...data, 
+                    createdAt: serverTimestamp(), 
+                    lastModified: serverTimestamp() 
+                });
+                const sectionsCollection = collection(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectRef.id}/sections`);
+                const emptyContent = JSON.stringify({ ops: [{ insert: '\n' }] });
+                await setDoc(doc(sectionsCollection, 'synopsis'), { title: 'Synopsis & Brainstorming', content: emptyContent, order: 1 });
+                await setDoc(doc(sectionsCollection, 'characters'), { title: 'Character Development', content: emptyContent, order: 2 });
+                await setDoc(doc(sectionsCollection, 'outline'), { title: 'Outline', content: emptyContent, order: 3 });
+                await setDoc(doc(sectionsCollection, 'chapter_1'), { title: 'Chapter 1', content: emptyContent, order: 4 });
+                showNotification('New project created!', 'success');
+                return projectRef.id;
+            } catch (e) { 
+                console.error("Error creating project:", e); 
+                showNotification(`Error creating project: ${e.message}`, 'error'); 
+                return null;
+            }
+        }
+
+        async function getProjects(userId) {
+            try {
+                const qSnapshot = await getDocs(getProjectsCollection(userId));
+                const projects = [];
+                qSnapshot.forEach(d => projects.push({ id: d.id, ...d.data() }));
+                projects.sort((a, b) => (b.lastModified?.toMillis() || 0) - (a.lastModified?.toMillis() || 0));
+                return projects;
+            } catch (e) {
+                console.error("Error fetching projects:", e);
+                showNotification(`Error fetching projects: ${e.message}`, 'error');
+                return [];
+            }
+        }
+        
+        async function deleteProject(userId, projectId) {
+            try {
+                // NOTE: This deletes the project document, but not subcollections.
+                // For a full cleanup, a Cloud Function would be needed to recursively delete sections.
+                await deleteDoc(doc(getProjectsCollection(userId), projectId));
+                showNotification('Project deleted.', 'success');
+                return true;
+            } catch (e) {
+                console.error("Error deleting project:", e);
+                showNotification(`Error deleting project: ${e.message}`, 'error');
+                return false;
+            }
+        }
+
+
+        //======================================================================
         // --- VIEW RENDERING & NAVIGATION ---
         //======================================================================
         const appContainer = document.getElementById('app-container');
@@ -490,7 +548,7 @@
             // Attach event listeners
             document.getElementById('guest-btn').addEventListener('click', signInAnon);
             document.getElementById('login-link').addEventListener('click', handleLoginClick);
-            document.getElementById('sign-up-link').addEventListener('click', handleSignUpClick);
+            document.getElementById('sign-up-link').addEventListener('click', (e) => handleSignUpClick(e));
             document.getElementById('cta-form').addEventListener('submit', (e) => {
                 e.preventDefault();
                 const email = e.target.querySelector('input[type="email"]').value;
@@ -498,9 +556,7 @@
             });
         }
 
-        function renderDashboard(userId) {
-            // This function would render the user's project dashboard.
-            // For now, it's a placeholder.
+        async function renderDashboard(userId) {
             document.body.style.overflow = 'auto';
             document.getElementById('theme-switcher').style.display = 'block';
             appContainer.innerHTML = `
@@ -513,17 +569,110 @@
                         </nav>
                     </div>
                 </header>
-                <main class="container mx-auto p-8 flex-grow">
-                     <h2 class="text-3xl font-lora font-bold text-white">Your Dashboard</h2>
-                     <p class="text-gray-400 mt-4">Your projects will appear here. (Functionality to be built)</p>
+                <main id="dashboard-main" class="container mx-auto p-8 flex-grow">
+                     <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-3xl font-lora font-bold text-white">Your Projects</h2>
+                        <button id="new-project-btn" class="accent-bg accent-bg-hover text-white font-bold py-2 px-6 rounded-lg text-lg">+ New Project</button>
+                    </div>
+                    <div id="projects-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        <div class="text-center text-gray-400 col-span-full">Loading projects...</div>
+                    </div>
                 </main>
             `;
             document.getElementById('sign-out-btn').addEventListener('click', signOut);
+            document.getElementById('new-project-btn').addEventListener('click', handleNewProject);
+
+            const projectsGrid = document.getElementById('projects-grid');
+            const projects = await getProjects(userId);
+
+            if (projects.length === 0) {
+                projectsGrid.innerHTML = `<p class="col-span-full text-center text-gray-400">You have no projects yet. Start your first one!</p>`;
+            } else {
+                projectsGrid.innerHTML = projects.map(p => `
+                    <div class="project-card bg-gray-800 p-4 rounded-lg border border-gray-700 flex flex-col justify-between hover:border-blue-500 transition-colors">
+                        <div>
+                            <h3 class="text-xl font-lora font-semibold text-white truncate">${escapeHtml(p.title || 'Untitled Project')}</h3>
+                            <p class="text-sm text-gray-400">${escapeHtml(p.genre || 'No Genre')}</p>
+                        </div>
+                        <div class="mt-4">
+                            <p class="text-xs text-gray-500">Edited: ${p.lastModified ? new Date(p.lastModified.seconds * 1000).toLocaleDateString() : 'N/A'}</p>
+                            <div class="flex mt-2 space-x-2">
+                                <button data-action="open" data-id="${p.id}" class="flex-grow accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Open</button>
+                                <button data-action="delete" data-id="${p.id}" class="bg-gray-600 hover:bg-red-600 text-white font-semibold p-2 rounded-lg">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            projectsGrid.addEventListener('click', (e) => {
+                const button = e.target.closest('button');
+                if (!button) return;
+
+                const action = button.dataset.action;
+                const projectId = button.dataset.id;
+
+                if (action === 'open') {
+                    navigateTo('editor', { projectId });
+                } else if (action === 'delete') {
+                    handleDeleteProject(projectId);
+                }
+            });
+        }
+
+        function handleNewProject() {
+            const content = `
+                <form id="new-project-form">
+                    <div class="space-y-4">
+                        <div>
+                            <label for="title" class="block text-sm font-medium text-gray-300 mb-1">Book Title</label>
+                            <input type="text" id="title" name="title" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring" required>
+                        </div>
+                        <div>
+                            <label for="genre" class="block text-sm font-medium text-gray-300 mb-1">Genre</label>
+                            <select id="genre" name="genre" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring">
+                                <option>Christian Romance</option>
+                                <option>Christian Fantasy</option>
+                                <option>Christian Thriller</option>
+                                <option>Devotional</option>
+                                <option>Bible Study</option>
+                                <option>Memoir</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            `;
+            showModal('Create a New Project', content, async () => {
+                const title = document.getElementById('title').value;
+                const genre = document.getElementById('genre').value;
+                if (!title) {
+                    showNotification('Please enter a title for your project.', 'error');
+                    return false;
+                }
+                const projectData = { title, genre };
+                const newId = await createProject(currentUserId, projectData);
+                if (newId) {
+                    navigateTo('editor', { projectId: newId });
+                    return true;
+                }
+                return false;
+            }, 'Create Project');
+        }
+
+        function handleDeleteProject(projectId) {
+            showModal('Confirm Deletion', '<p>Are you sure you want to permanently delete this project?</p>', async () => {
+                const success = await deleteProject(currentUserId, projectId);
+                if (success) {
+                    renderDashboard(currentUserId); // Re-render the dashboard
+                }
+                return success;
+            }, 'Delete', true);
         }
 
         function renderEditor(userId, projectId) {
-            // This function would render the main editor view for a project.
-            // For now, it's a placeholder.
+            // This is a placeholder for the editor view.
             document.body.style.overflow = 'hidden';
             document.getElementById('theme-switcher').style.display = 'none';
             appContainer.innerHTML = `
@@ -538,7 +687,7 @@
                 </header>
                 <main class="flex-grow p-8">
                     <h2 class="text-2xl font-lora font-bold">Editing Project: ${projectId}</h2>
-                    <p class="text-gray-400 mt-4">Editor interface will be built here.</p>
+                    <p class="text-gray-400 mt-4">The full editor interface will be built here.</p>
                 </main>
             `;
             document.getElementById('dashboard-link').addEventListener('click', (e) => {
