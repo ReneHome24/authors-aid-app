@@ -20,6 +20,7 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: #000000;
+            color: #D1D5DB; /* Set a light default text color for the whole body */
         }
         .font-lora { font-family: 'Lora', serif; }
 
@@ -183,6 +184,11 @@
         .project-card.theme-border-gold { border-color: #f59e0b; }
         .project-card.theme-border-green { border-color: #059669; }
         .project-card.theme-border-purple { border-color: #7c3aed; }
+
+        /* FIX: Style for placeholder text */
+        textarea::placeholder, input::placeholder {
+            color: #6B7280; /* A light gray */
+        }
 
     </style>
 </head>
@@ -824,14 +830,16 @@ Generate 5 character profiles:`;
             let navLinksHtml = '';
             let userDisplay = '';
             if (isLoggedIn) {
-                userDisplay = `<span class="text-gray-400 text-sm">${userId.substring(0, 8)}...</span>`; // Display truncated user ID
+                // FIX: Changed text color for better visibility
+                userDisplay = `<span class="text-gray-300 text-sm">${userId.substring(0, 8)}...</span>`; 
                 navLinksHtml = `
-                    <a href="#" id="help-link" class="accent-text-hover transition-colors text-sm">Help</a>
+                    <a href="#" id="help-link" class="text-gray-300 hover:text-white transition-colors text-sm">Help</a>
                     ${userDisplay}
                     <button id="sign-out-btn" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">Logout</button>
                 `;
             }
-             const dashboardLink = inEditor ? `<a href="#" data-route="dashboard" class="nav-button text-sm accent-text-hover flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Dashboard</a>` : '';
+             // FIX: Changed text color for better visibility
+             const dashboardLink = inEditor ? `<a href="#" data-route="dashboard" class="nav-button text-sm text-gray-300 hover:text-white flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Dashboard</a>` : '';
 
             const headerHtml = `
                 <header class="ui-bg p-4 border-b border-gray-700 flex-shrink-0">
@@ -1239,7 +1247,8 @@ Generate 5 character profiles:`;
                             ${sections.map(s => {
                                 // FIX: Use the section title directly. The 'extractCleanTitle' function was causing the "Untitled" bug.
                                 const displayTitle = s.title;
-                                return `<a href="#" data-section-id="${s.id}" class="section-link p-2 rounded-md hover:bg-gray-700 transition-colors ${s.id === activeSectionId ? 'bg-blue-600 text-white' : ''}">${displayTitle}</a>`;
+                                // FIX: Added text-gray-300 for better visibility
+                                return `<a href="#" data-section-id="${s.id}" class="section-link p-2 rounded-md text-gray-300 hover:bg-gray-700 transition-colors ${s.id === activeSectionId ? 'bg-blue-600 text-white' : ''}">${displayTitle}</a>`;
                             }).join('')}
                         </nav>
                     `;
@@ -1331,21 +1340,21 @@ Generate 5 character profiles:`;
                     <h3 class="text-lg font-bold mb-4">AI Co-Author</h3>
                     <div class="space-y-4 flex-grow flex flex-col">
                         <div class="pb-4 border-b border-gray-700">
-                            <p class="text-sm font-semibold mb-2">AI Style Preference</p>
+                            <p class="text-sm font-semibold mb-2 text-gray-200">AI Style Preference</p>
                             <textarea id="ai-style-preference-input" class="w-full h-20 p-2 bg-gray-700 border border-gray-600 rounded-md text-sm" placeholder="e.g., Write in a formal, encouraging tone."></textarea>
-                            <p class="text-xs text-gray-400 mt-1">Describe the tone or style you'd like the AI to use. For deeper style mimicry from your books, more advanced features are needed.</p>
+                            <p class="text-xs text-gray-300 mt-1">Describe the tone or style you'd like the AI to use. For deeper style mimicry from your books, more advanced features are needed.</p>
                         </div>
                 `;
 
                 if (sectionId === 'brainstorming') {
                     aiPanelHtml += `
                         <div>
-                            <p class="text-sm font-semibold mb-2">Generate Synopsis Ideas</p>
+                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Synopsis Ideas</p>
                             <textarea id="ai-idea-input" class="w-full h-24 p-2 bg-gray-700 border border-gray-600 rounded-md text-sm" placeholder="e.g., A story about a family..."></textarea>
                             <button id="generate-synopsis-concepts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate</button>
                         </div>
                         <div class="pt-4 border-t border-gray-700">
-                            <p class="text-sm font-semibold mb-2">Brainstorming Tools</p>
+                            <p class="text-sm font-semibold mb-2 text-gray-200">Brainstorming Tools</p>
                             <div class="grid grid-cols-2 gap-2">
                                 <button id="generate-pov-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">POV & Voice</button>
                                 <button id="generate-structure-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Structural Template</button>
@@ -1354,37 +1363,37 @@ Generate 5 character profiles:`;
                 } else if (sectionId === 'book_titles') { // NEW SECTION for book titles
                     aiPanelHtml += `
                         <div>
-                            <p class="text-sm font-semibold mb-2">Generate Book Titles</p>
-                            <p class="text-xs text-gray-400 mb-2">Generate title suggestions based on your synopsis.</p>
+                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Book Titles</p>
+                            <p class="text-xs text-gray-300 mb-2">Generate title suggestions based on your synopsis.</p>
                             <button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button>
                         </div>`;
                 }
                 else if (sectionId === 'character_development') {
                      aiPanelHtml += `
                         <div>
-                            <p class="text-sm font-semibold mb-2">Generate Character Profiles</p>
-                            <p class="text-xs text-gray-400 mb-2">Let the AI create character ideas based on your story's concept and title.</p>
+                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Character Profiles</p>
+                            <p class="text-xs text-gray-300 mb-2">Let the AI create character ideas based on your story's concept and title.</p>
                             <button id="generate-characters-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Characters</button>
                         </div>`;
                 } else if (sectionId === 'world_building') {
                      aiPanelHtml += `
                         <div>
-                            <p class="text-sm font-semibold mb-2">Generate World Prompts</p>
-                            <p class="text-xs text-gray-400 mb-2">Brainstorm elements for your story's universe.</p>
+                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate World Prompts</p>
+                            <p class="text-xs text-gray-300 mb-2">Brainstorm elements for your story's universe.</p>
                             <button id="generate-world-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate World Ideas</button>
                         </div>`;
                 }
                 else if (sectionId === 'outline') {
                     aiPanelHtml += `
                         <div>
-                            <p class="text-sm font-semibold mb-2">Generate Chapter Beats</p>
-                            <p class="text-xs text-gray-400 mb-2">Let the AI create a detailed outline based on your project's foundation.</p>
+                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Chapter Beats</p>
+                            <p class="text-xs text-gray-300 mb-2">Let the AI create a detailed outline based on your project's foundation.</p>
                             <button id="generate-outline-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Outline</button>
                         </div>`;
                 } else if (sectionId.startsWith('chapter_')) {
                     aiPanelHtml += `
                         <div>
-                            <p class="text-sm font-semibold mb-2">Drafting & Revising</p>
+                            <p class="text-sm font-semibold mb-2 text-gray-200">Drafting & Revising</p>
                             <div class="grid grid-cols-2 gap-2"> <!-- Two columns for drafting buttons -->
                                 <button id="continue-writing-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Continue Writing</button> <!-- Renamed button -->
                                 <button id="analyze-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Analyze Chapter</button>
@@ -1394,14 +1403,14 @@ Generate 5 character profiles:`;
                 } else if (sectionId === 'book_cover') {
                     aiPanelHtml += `
                         <div>
-                            <p class="text-sm font-semibold mb-2">Generate Image Prompts</p> <!-- Renamed from Generate Cover Concepts -->
-                            <p class="text-xs text-gray-400 mb-2">Generate descriptive prompts for an AI image generator based on your synopsis.</p>
+                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Image Prompts</p> <!-- Renamed from Generate Cover Concepts -->
+                            <p class="text-xs text-gray-300 mb-2">Generate descriptive prompts for an AI image generator based on your synopsis.</p>
                             <button id="generate-image-prompts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Image Prompts</button>
                         </div>`;
                 } else if (sectionId === 'front_matter') {
                     aiPanelHtml += `
                         <div>
-                            <p class="text-sm font-semibold mb-2">Generate Front Matter</p>
+                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Front Matter</p>
                             <div class="grid grid-cols-2 gap-2">
                                 <button id="generate-dedication-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Dedication</button>
                                 <button id="generate-acknowledgments-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Acknowledge</button>
@@ -1411,7 +1420,7 @@ Generate 5 character profiles:`;
                 } else if (sectionId === 'back_matter') {
                     aiPanelHtml += `
                         <div>
-                            <p class="text-sm font-semibold mb-2">Generate Back Matter</p>
+                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Back Matter</p>
                             <div class="grid grid-cols-2 gap-2">
                                 <button id="generate-blurb-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Blurb</button>
                                 <button id="generate-author-bio-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Author Bio</button>
@@ -1420,13 +1429,13 @@ Generate 5 character profiles:`;
                         </div>`;
                 } else if (sectionId === 'metadata') {
                     // No AI generation for metadata section, but still show style preference
-                    aiPanelHtml += `<div class="p-4 text-gray-400 text-sm">No AI generation tools for Project Metadata. This section is for manual input.</div>`;
+                    aiPanelHtml += `<div class="p-4 text-gray-300 text-sm">No AI generation tools for Project Metadata. This section is for manual input.</div>`;
                 }
 
 
                 aiPanelHtml += `
                     <div class="pt-4 border-t border-gray-700 flex-shrink-0">
-                        <p class="text-sm font-semibold mb-2">Editing & Faith Tools</p>
+                        <p class="text-sm font-semibold mb-2 text-gray-200">Editing & Faith Tools</p>
                         <div class="grid grid-cols-2 gap-2"> <!-- Two columns for editing buttons -->
                             <button id="suggest-alternatives-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Alternative Words</button> <!-- Renamed button -->
                             <button id="suggest-scripture-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest Scripture</button>
