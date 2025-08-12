@@ -412,7 +412,7 @@
 
         // --- utils.js content ---
         function debounce(func, wait) { let timeout; return function(...args) { const later = () => { clearTimeout(timeout); func(...args); args = null; }; clearTimeout(timeout); timeout = setTimeout(later, wait); }; }
-        function showNotification(message, type = 'info', duration = 3000) { const container = document.getElementById('notification-container'); if (!container) return; const notification = document.createElement('div'); let bgColor; switch(type){ case 'success': bgColor='bg-green-500/90 border-green-400'; break; case 'error': bgColor='bg-red-500/90 border-red-400'; break; default: bgColor='bg-blue-500/90 border-blue-400'; break; } notification.className = `p-4 rounded-lg shadow-xl text-white ${bgColor} border mb-4 opacity-0 transition-all duration-500`; container.appendChild(notification); setTimeout(() => notification.classList.remove('opacity-0'), 10); setTimeout(() => { notification.classList.add('opacity-0'); notification.addEventListener('transitionend', () => notification.remove()); }, duration); }
+        function showNotification(message, type = 'info', duration = 3000) { const container = document.getElementById('notification-container'); if (!container) return; const notification = document.createElement('div'); let bgColor; switch(type){ case 'success': bgColor='bg-green-500/90 border-green-400'; break; case 'error': bgColor='bg-red-500/90 border-red-400'; break; default: bgColor='bg-blue-500/90 border-blue-400'; break; } notification.className = `p-4 rounded-lg shadow-xl text-white ${bgColor} border mb-4 opacity-0 transition-all duration-500`; notification.innerHTML = message; container.appendChild(notification); setTimeout(() => notification.classList.remove('opacity-0'), 10); setTimeout(() => { notification.classList.add('opacity-0'); notification.addEventListener('transitionend', () => notification.remove()); }, duration); }
         function showModal(title, contentHtml, onConfirm, confirmText = 'Confirm', showCancel = true) {
             const modalContainer = document.getElementById('modal-container');
             if (!modalContainer) return;
@@ -526,9 +526,8 @@
 
         // --- aiService.js content ---
         const API_KEY = "AIzaSyCVsziM6I1QEU22YNPGTwLvN0EuW4k2SiY"; // User's provided API Key
-        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`; // Changed to gemini-2.5-flash
-        // CORRECTED: Use the stable imagegeneration model
-        const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`; // Corrected Imagen model
+        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
+        const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`;
 
         // Global variable to store AI style preference
         let aiStylePreference = "";
@@ -590,7 +589,7 @@ Understanding these different types of characters can help authors create a dive
                 // Moved loading spinner to coverDisplayContainer
                 document.getElementById('cover-display-container').innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading-spinner"></div><span class="ml-2">Generating images...</span></div>`;
 
-                const payload = { instances: { prompt: prompt }, parameters: { "sampleCount": 3 } }; // Request 3 images
+                const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 3 } }; // Request 3 images
                 console.log("generateImage: Sending payload to Imagen API:", payload);
                 const response = await fetch(IMAGEN_API_URL, {
                     method: 'POST',
@@ -1251,7 +1250,7 @@ Generate 5 character profiles:`;
                 showNotification('Preparing manuscript for export...', 'info');
                 try {
                     const allSections = await getProjectSections(userId, projectId);
-                    let fullHtmlContent = '';
+                    let fullHtmlContent = '<html><head><meta charset="UTF-8"><title>'+escapeHTML(project.title || 'Untitled Manuscript')+'</title></head><body>';
                     fullHtmlContent += `<h1>${stripMarkdownAndHtml(project.title || 'Untitled Manuscript')}</h1>\n\n`;
 
                     for (const section of allSections) {
@@ -1266,6 +1265,7 @@ Generate 5 character profiles:`;
                         }
                         fullHtmlContent += tempDiv.querySelector('.ql-editor').innerHTML + '\n\n';
                     }
+                    fullHtmlContent += '</body></html>';
 
                     const blob = new Blob([fullHtmlContent], { type: 'text/html;charset=utf-8' });
                     const a = document.createElement('a');
@@ -1390,6 +1390,45 @@ Generate 5 character profiles:`;
                         showNotification('AI style preference updated!', 'info', 1000);
                     }, 500));
                 }
+                
+                // Helper to get full project context for AI prompts
+                const getFullProjectContext = async () => {
+                    const projectData = await getProject(userId, projectId);
+                    const allSections = await getProjectSections(userId, projectId);
+                    
+                    const tempDiv = document.createElement('div');
+                    const tempQuill = new Quill(tempDiv);
+
+                    const getQuillText = (sectionId) => {
+                        const section = allSections.find(s => s.id === sectionId);
+                        if (!section || !section.content) return '';
+                        try {
+                            tempQuill.setContents(JSON.parse(section.content));
+                            return tempQuill.getText().trim();
+                        } catch (e) {
+                            return section.content; // Fallback for plain text
+                        }
+                    };
+
+                    const synopsisText = getQuillText('brainstorming');
+                    const charactersText = getQuillText('character_development');
+                    const worldText = getQuillText('world_building');
+                    const outlineText = getQuillText('outline');
+
+                    return {
+                        fullContext: `
+                            Book Title: ${projectData.title || 'Untitled'}
+                            Synopsis: ${synopsisText}
+                            Characters: ${charactersText}
+                            World-building: ${worldText}
+                            Outline: ${outlineText}
+                        `.trim(),
+                        synopsis: synopsisText,
+                        outline: outlineText,
+                        title: projectData.title || 'Untitled'
+                    };
+                };
+
 
                 // Delegated event listener for dynamically generated buttons
                 outputDiv.addEventListener('click', (e) => {
@@ -1439,32 +1478,109 @@ Generate 5 character profiles:`;
                 };
 
                 addClickListener('generate-synopsis-concepts-btn', async () => {
-                    const idea = editor.getText().trim();
-                    if (!idea) { showNotification("Please enter a basic idea in the editor.", "error"); return; }
+                    const idea = document.getElementById('ai-idea-input').value.trim();
+                    if (!idea) { showNotification("Please enter a basic idea in the text box.", "error"); return; }
                     const conceptsText = await generateSynopsisIdeas(idea);
                     const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
                     outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHTML(concept)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHTML(concept.substring(0, 80))}...</button>`).join('');
                 });
 
                 addClickListener('generate-world-btn', async () => {
-                    const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                    const context = synopsisDoc ? new Quill(document.createElement('div')).setContents(JSON.parse(synopsisDoc.content)).getText() : '';
-                    if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
-                    const worldText = await generateWorldPrompts(context);
+                    const { synopsis } = await getFullProjectContext();
+                    if (!synopsis) { showNotification("Please write a synopsis first.", "error"); return; }
+                    const worldText = await generateWorldPrompts(synopsis);
                     const prompts = parseNumberedAiList(worldText, false).map(p => stripMarkdownAndHtml(p.trim()));
                     outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHTML(prompt)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHTML(prompt.substring(0, 80))}...</button>`).join('');
                 });
 
                 addClickListener('generate-image-prompts-btn', async () => {
-                    const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
-                    const context = synopsisDoc ? new Quill(document.createElement('div')).setContents(JSON.parse(synopsisDoc.content)).getText() : '';
-                    if (!context) { showNotification("Please write a synopsis in the 'Synopsis & Brainstorming' section first.", "error"); return; }
-                    const conceptsText = await generateCoverConcepts(context);
+                    const { synopsis } = await getFullProjectContext();
+                    if (!synopsis) { showNotification("Please write a synopsis in the 'Synopsis & Brainstorming' section first.", "error"); return; }
+                    const conceptsText = await generateCoverConcepts(synopsis);
                     const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
                     outputDiv.innerHTML = concepts.map((concept, index) => `<button data-prompt="${escapeHTML(concept)}" class="ai-image-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Prompt ${index + 1}:</strong> ${escapeHTML(concept.substring(0, 80))}...</button>`).join('');
                 });
+                
+                // Brainstorming Tools
+                addClickListener('generate-pov-btn', async () => {
+                    const { synopsis } = await getFullProjectContext();
+                    if (!synopsis) { showNotification("Please write a synopsis first.", "error"); return; }
+                    const resultsText = await suggestPOVs(synopsis);
+                    const results = parseNumberedAiList(resultsText, false).map(c => c.trim());
+                    outputDiv.innerHTML = results.map((result, index) => `<button data-content="${escapeHTML(result)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHTML(result.substring(0, 80))}...</button>`).join('');
+                });
+
+                addClickListener('generate-structure-btn', async () => {
+                    const { synopsis } = await getFullProjectContext();
+                    if (!synopsis) { showNotification("Please write a synopsis first.", "error"); return; }
+                    const resultsText = await suggestStructures(synopsis);
+                    const results = parseNumberedAiList(resultsText, false).map(c => c.trim());
+                    outputDiv.innerHTML = results.map((result, index) => `<button data-content="${escapeHTML(result)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Template ${index + 1}:</strong> ${escapeHTML(result.substring(0, 80))}...</button>`).join('');
+                });
+
+                // Book Titles
+                addClickListener('generate-titles-btn', async () => {
+                    const { synopsis } = await getFullProjectContext();
+                    if (!synopsis) { showNotification("Please write a synopsis or some brainstorming notes first.", "error"); return; }
+                    const titlesText = await generateTitles(synopsis);
+                    const titles = parseNumberedAiList(titlesText, false).map(c => stripMarkdownAndHtml(c.trim()));
+                    outputDiv.innerHTML = titles.map((title) => `<button data-content="${escapeHTML(title)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHTML(title)}</button>`).join('');
+                });
+
+                // Character Development
+                addClickListener('generate-characters-btn', async () => {
+                    const { fullContext } = await getFullProjectContext();
+                    if (!fullContext.trim()) { showNotification("Please write a synopsis first.", "error"); return; }
+                    const charactersText = await generateCharacterProfiles(fullContext);
+                    const profiles = parseNumberedAiList(charactersText, false).map(c => c.trim());
+                    outputDiv.innerHTML = profiles.map((profile, index) => `<button data-content="${escapeHTML(profile)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Profile ${index + 1}:</strong> ${escapeHTML(profile.substring(0, 80))}...</button>`).join('');
+                });
+
+                // Outline
+                addClickListener('generate-outline-btn', async () => {
+                    const { fullContext, title } = await getFullProjectContext();
+                    if (!fullContext.trim()) { showNotification("Please fill out your synopsis, characters, and world-building sections first.", "error"); return; }
+                    const outlineText = await generateOutlineBeats(fullContext, title);
+                     showContentInModal('Generated Outline', outlineText, (content) => {
+                        if (editor) {
+                            editor.setText(content);
+                            showNotification("Outline added to editor!", "success");
+                        }
+                    });
+                });
+
+                // Chapter Tools
+                addClickListener('continue-writing-btn', async () => {
+                    const currentText = editor.getText();
+                    const { title, outline } = await getFullProjectContext();
+                    if (!currentText.trim() || !outline.trim()) { showNotification("Please ensure you have some text in the current chapter and a generated outline.", "error"); return; }
+                    const nextText = await generateNext(currentText, title, outline);
+                    showContentInModal('Suggested Continuation', nextText, (content) => {
+                        if (editor) {
+                            editor.insertText(editor.getLength(), '\n\n' + content);
+                            showNotification("Content added to editor!", "success");
+                        }
+                    });
+                });
+
+                addClickListener('analyze-chapter-btn', async () => {
+                    const chapterText = editor.getText();
+                    if (!chapterText.trim()) { showNotification("Please write something in the chapter to analyze.", "error"); return; }
+                    const { fullContext } = await getFullProjectContext();
+                    const analysis = await analyzeChapter(chapterText, fullContext);
+                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${escapeHTML(analysis)}</div>`;
+                });
+
+                addClickListener('proofread-chapter-btn', async () => {
+                    const chapterText = editor.getText();
+                    if (!chapterText.trim()) { showNotification("Please write something in the chapter to proofread.", "error"); return; }
+                    const suggestions = await proofreadChapter(chapterText);
+                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${escapeHTML(suggestions)}</div>`;
+                });
+
 
                 const handleSelectionTools = async (e) => {
+                    if (!editor) return;
                     const selection = editor.getSelection();
                     if (!selection || selection.length === 0) {
                         showNotification("Please select some text in the editor first.", "error");
@@ -1574,7 +1690,12 @@ Generate 5 character profiles:`;
                     editorContainer.classList.remove('hidden');
                     if (!editor) {
                         editor = new Quill('#editor', {
-                            modules: { toolbar: '#editor-toolbar' },
+                            modules: { toolbar: [
+                                [{ 'header': [1, 2, 3, false] }],
+                                ['bold', 'italic', 'underline'],
+                                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                ['clean']
+                            ] },
                             theme: 'snow'
                         });
                         editor.on('text-change', debounce(async () => {
@@ -1680,7 +1801,7 @@ Generate 5 character profiles:`;
                     mainCurrentUserId = user.uid;
                     currentUserId = user.uid;
                     if (user.isAnonymous) {
-                        showNotification('You are signed in as a guest. Your data may be lost. Consider signing up to save your work permanently!', 'info', 7000);
+                        showNotification('You are signed in as a guest. Your data may be lost. Sign up to save your work!', 'info', 7000);
                     }
                     const hash = document.location.hash;
                     if (hash.startsWith('#editor/')) {
