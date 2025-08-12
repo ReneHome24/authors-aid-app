@@ -512,6 +512,16 @@
             return results;
         }
 
+        // FIX: Corrected the typo from 'escapeHtml' to 'escapeHTML'
+        function escapeHTML(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
 
         // --- aiService.js content ---
         const API_KEY = "AIzaSyCVsziM6I1QEU22YNPGTwLvN0EuW4k2SiY"; // User's provided API Key
@@ -1028,7 +1038,7 @@ Generate 5 character profiles:`;
                     <div class="flex-grow flex flex-col justify-between w-full">
                         <div>
                             <h3 class="text-xl font-lora font-semibold text-white leading-tight mb-1">${stripMarkdownAndHtml(p.title || 'Untitled Project')}</h3>
-                            ${p.authorName ? `<p class="text-sm text-gray-400">by ${escapeHtml(p.authorName)}</p>` : ''}
+                            ${p.authorName ? `<p class="text-sm text-gray-400">by ${escapeHTML(p.authorName)}</p>` : ''}
                         </div>
                         <p class="text-xs text-gray-500 mt-auto">Edited: ${p.lastModified ? new Date(p.lastModified.seconds * 1000).toLocaleDateString() : 'N/A'}</p>
                     </div>
@@ -1366,7 +1376,7 @@ Generate 5 character profiles:`;
                 const outputDiv = document.getElementById('ai-output');
 
                 const showContentInModal = (title, content, onAcceptCallback) => {
-                    showModal(title, `<div class="whitespace-pre-wrap text-gray-300 text-sm">${escapeHtml(content)}</div>`, async () => {
+                    showModal(title, `<div class="whitespace-pre-wrap text-gray-300 text-sm">${escapeHTML(content)}</div>`, async () => {
                         await onAcceptCallback(content);
                     }, 'Accept & Add to Editor');
                 };
@@ -1430,14 +1440,14 @@ Generate 5 character profiles:`;
                         if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
                         const worldText = await generateWorldPrompts(context);
                         const prompts = parseNumberedAiList(worldText, false).map(p => stripMarkdownAndHtml(p.trim()));
-                        outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHtml(prompt)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHtml(prompt.substring(0, 80))}...</button>`).join('');
+                        outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHTML(prompt)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHTML(prompt.substring(0, 80))}...</button>`).join('');
                     } else if (target.id === 'generate-image-prompts-btn') {
                          const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const context = synopsisDoc ? new Quill(document.createElement('div')).setContents(JSON.parse(synopsisDoc.content)).getText() : '';
                         if (!context) { showNotification("Please write a synopsis in the 'Synopsis & Brainstorming' section first.", "error"); return; }
                         const conceptsText = await generateCoverConcepts(context);
                         const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
-                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-prompt="${escapeHtml(concept)}" class="ai-image-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Prompt ${index + 1}:</strong> ${escapeHtml(concept.substring(0, 80))}...</button>`).join('');
+                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-prompt="${escapeHTML(concept)}" class="ai-image-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Prompt ${index + 1}:</strong> ${escapeHTML(concept.substring(0, 80))}...</button>`).join('');
                     } else if (target.id === 'suggest-alternatives-btn' || target.id === 'suggest-scripture-btn' || target.id === 'suggest-youth-phrases-btn') {
                         const selection = editor.getSelection();
                         if (!selection || selection.length === 0) {
@@ -1478,7 +1488,7 @@ Generate 5 character profiles:`;
                     if (projectData && projectData.bookCoverUrl) {
                         coverDisplayContainer.innerHTML = `
                             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
-                                <div class="cover-image-wrapper selected" data-image-url="${escapeHtml(projectData.bookCoverUrl)}">
+                                <div class="cover-image-wrapper selected" data-image-url="${escapeHTML(projectData.bookCoverUrl)}">
                                     <img src="${projectData.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/400x600/FF0000/FFFFFF?text=Image+Load+Error';" class="w-full h-auto rounded-lg shadow-lg" alt="Selected Book Cover"/>
                                     <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div>
                                 </div>
