@@ -1380,9 +1380,12 @@ Generate 5 character profiles:`;
                     }, 500));
                 }
 
-                // FIX: Add delegated event listener for modal buttons
-                outputDiv.addEventListener('click', (e) => {
-                    const modalBtn = e.target.closest('.ai-suggestion-modal-btn');
+                // Delegated event listener for dynamically generated buttons
+                rightSidebar.addEventListener('click', async (e) => {
+                    const target = e.target;
+                    
+                    // Handle modal pop-ups for suggestions
+                    const modalBtn = target.closest('.ai-suggestion-modal-btn');
                     if (modalBtn) {
                         const content = modalBtn.dataset.content;
                         showContentInModal('Suggestion', content, (fullContent) => {
@@ -1391,71 +1394,69 @@ Generate 5 character profiles:`;
                                 showNotification("Content added to editor!", "success");
                             }
                         });
+                        return;
                     }
-                });
 
-                const generateSynopsisBtn = document.getElementById('generate-synopsis-concepts-btn');
-                if (generateSynopsisBtn) {
-                    generateSynopsisBtn.addEventListener('click', async () => {
-                        const idea = editor.getText().trim();
-                        if (!idea) { showNotification("Please enter a basic idea in the editor.", "error"); return; }
-                        const conceptsText = await generateSynopsisIdeas(idea);
-                        const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
-                        outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHtml(concept)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHtml(concept.substring(0, 80))}...</button>`).join('');
-                    });
-                }
-                
-                const generateWorldBtn = document.getElementById('generate-world-btn');
-                if(generateWorldBtn){
-                    generateWorldBtn.addEventListener('click', async () => {
+                    // Handle image prompt generation
+                    const imagePromptBtn = target.closest('.ai-image-prompt-btn');
+                    if (imagePromptBtn) {
+                        const prompt = imagePromptBtn.dataset.prompt;
+                        const imageUrls = await generateImage(prompt);
+                        if (imageUrls.length > 0) {
+                            coverDisplayContainer.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">${imageUrls.map(url => `
+                                <div class="cover-image-wrapper" data-image-url="${url}">
+                                    <img src="${url}" class="w-full h-auto rounded-lg shadow-lg" alt="Generated Book Cover"/>
+                                    <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i></div>
+                                </div>
+                            `).join('')}</div>`;
+                            
+                            coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(wrapper => {
+                                wrapper.addEventListener('click', async (e) => {
+                                    coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(w => w.classList.remove('selected'));
+                                    e.currentTarget.classList.add('selected');
+                                    const selectedUrl = e.currentTarget.dataset.imageUrl;
+                                    await updateProjectCover(userId, projectId, selectedUrl);
+                                    renderSidebar();
+                                });
+                            });
+                        }
+                        return;
+                    }
+
+                    // Handle main AI action buttons
+                    if (target.id === 'generate-world-btn') {
                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const context = synopsisDoc ? new Quill(document.createElement('div')).setContents(JSON.parse(synopsisDoc.content)).getText() : '';
                         if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
                         const worldText = await generateWorldPrompts(context);
                         const prompts = parseNumberedAiList(worldText, false).map(p => stripMarkdownAndHtml(p.trim()));
                         outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHtml(prompt)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHtml(prompt.substring(0, 80))}...</button>`).join('');
-                    });
-                }
-
-                // FIX: Add listener for the generate image prompts button
-                const generateImagePromptsBtn = document.getElementById('generate-image-prompts-btn');
-                if (generateImagePromptsBtn) {
-                    generateImagePromptsBtn.addEventListener('click', async () => {
-                        const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
+                    } else if (target.id === 'generate-image-prompts-btn') {
+                         const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                         const context = synopsisDoc ? new Quill(document.createElement('div')).setContents(JSON.parse(synopsisDoc.content)).getText() : '';
                         if (!context) { showNotification("Please write a synopsis in the 'Synopsis & Brainstorming' section first.", "error"); return; }
                         const conceptsText = await generateCoverConcepts(context);
                         const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
-                        
                         outputDiv.innerHTML = concepts.map((concept, index) => `<button data-prompt="${escapeHtml(concept)}" class="ai-image-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Prompt ${index + 1}:</strong> ${escapeHtml(concept.substring(0, 80))}...</button>`).join('');
-                        
-                        // Add listener for the newly created prompt buttons
-                        outputDiv.querySelectorAll('.ai-image-prompt-btn').forEach(btn => {
-                            btn.addEventListener('click', async (e) => {
-                                const prompt = e.currentTarget.dataset.prompt;
-                                const imageUrls = await generateImage(prompt);
-                                if (imageUrls.length > 0) {
-                                    coverDisplayContainer.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">${imageUrls.map(url => `
-                                        <div class="cover-image-wrapper" data-image-url="${url}">
-                                            <img src="${url}" class="w-full h-auto rounded-lg shadow-lg" alt="Generated Book Cover"/>
-                                            <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i></div>
-                                        </div>
-                                    `).join('')}</div>`;
-                                    
-                                    coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(wrapper => {
-                                        wrapper.addEventListener('click', async (e) => {
-                                            coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(w => w.classList.remove('selected'));
-                                            e.currentTarget.classList.add('selected');
-                                            const selectedUrl = e.currentTarget.dataset.imageUrl;
-                                            await updateProjectCover(userId, projectId, selectedUrl);
-                                            renderSidebar(); // Re-render sidebar to show new cover
-                                        });
-                                    });
-                                }
-                            });
-                        });
-                    });
-                }
+                    } else if (target.id === 'suggest-alternatives-btn' || target.id === 'suggest-scripture-btn' || target.id === 'suggest-youth-phrases-btn') {
+                        const selection = editor.getSelection();
+                        if (!selection || selection.length === 0) {
+                            showNotification("Please select some text in the editor first.", "error");
+                            return;
+                        }
+                        const selectedText = editor.getText(selection.index, selection.length);
+                        const context = editor.getText();
+                        let resultsText = '';
+                        if (target.id === 'suggest-alternatives-btn') {
+                            resultsText = await suggestAlternatives(selectedText, context);
+                        } else if (target.id === 'suggest-scripture-btn') {
+                            resultsText = await suggestScripture(selectedText, context);
+                        } else {
+                            resultsText = await suggestYouthPhrases(selectedText, context);
+                        }
+                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${resultsText}</div>`;
+                    }
+                });
             };
             
             const loadSection = async (sectionId) => {
