@@ -512,7 +512,6 @@
             return results;
         }
 
-        // FIX: Corrected the typo from 'escapeHtml' to 'escapeHTML'
         function escapeHTML(unsafe) {
             return unsafe
                 .replace(/&/g, "&amp;")
@@ -1496,6 +1495,31 @@ Generate 5 character profiles:`;
                     } else {
                         coverDisplayContainer.innerHTML = `<div class="text-center text-gray-400">Your generated book cover will appear here.</div>`;
                     }
+                } else if (sectionId === 'metadata') {
+                    metadataFormContainer.classList.remove('hidden');
+                    let metadata = {};
+                    try {
+                        metadata = JSON.parse(sectionData.content);
+                    } catch(e) { /* Ignore parsing errors */ }
+                    
+                    metadataFormContainer.innerHTML = `
+                        <div class="bg-gray-900 p-6 rounded-lg border border-gray-700 w-full max-w-md">
+                            <h3 class="text-xl font-lora font-bold mb-4 text-white">Project Metadata</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="meta-author-name" class="block text-sm font-medium text-gray-300 mb-1">Author Name</label>
+                                    <input type="text" id="meta-author-name" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.authorName || '')}">
+                                </div>
+                                <button id="save-metadata-btn" class="w-full mt-4 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Save Metadata</button>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('save-metadata-btn').addEventListener('click', async () => {
+                        const newMetadata = {
+                            authorName: document.getElementById('meta-author-name').value,
+                        };
+                        await updateProjectMetadata(userId, projectId, newMetadata);
+                    });
                 } else {
                     editorContainer.classList.remove('hidden');
                     if (!editor) {
