@@ -67,28 +67,18 @@
         .theme-purple .ui-bg { background-color: #241c33; }
 
         /* Quill Editor specific styles */
-        .ql-container { border: none !important; display: flex; flex-direction: column; height: 100%; }
+        #editor-wrapper { height: calc(100vh - 250px); } /* Adjust height based on header/footer */
+        .ql-container { border: none !important; height: 100%; }
         .ql-editor {
-            flex-grow: 1;
             font-family: 'Lora', serif;
             font-size: 1.125rem;
             line-height: 1.75;
             background-color: #111827;
             color: #D1D5DB;
             border-radius: 8px;
-            padding: 1rem;
+            padding: 2rem;
+            height: 100%;
             overflow-y: auto;
-            padding-top: 0 !important;
-            padding-bottom: 1rem;
-        }
-        .ql-editor p:first-child,
-        .ql-editor h1:first-child,
-        .ql-editor h2:first-child,
-        .ql-editor h3:first-child,
-        .ql-editor ol:first-child,
-        .ql-editor ul:first-child {
-            margin-top: 0 !important;
-            padding-top: 0 !important;
         }
 
         .ql-toolbar {
@@ -173,9 +163,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInAnonymously, signOut as firebaseSignOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, linkWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, addDoc, getDoc, getDocs, updateDoc, deleteDoc, serverTimestamp, query, onSnapshot, setDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
-
-
+        
         // Your web app's Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCVsziM6I1QEU22YNPGTwLvN0EuW4k2SiY",
@@ -194,11 +182,24 @@
         let authInstance;
         let dbInstance;
         let currentUserId = null;
+        let editor; // Quill instance
 
         //======================================================================
         // --- UTILITY FUNCTIONS ---
         //======================================================================
         
+        const debounce = (func, wait) => {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        };
+
         function showNotification(message, type = 'info', duration = 3000) {
             const container = document.getElementById('notification-container');
             if (!container) return;
@@ -423,6 +424,14 @@
             return collection(dbInstance, `artifacts/${appId}/users/${userId}/projects`); 
         }
 
+        function getProjectRef(userId, projectId) {
+            return doc(dbInstance, `artifacts/${appId}/users/${userId}/projects`, projectId);
+        }
+
+        function getSectionsCollection(userId, projectId) {
+            return collection(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`);
+        }
+
         async function createProject(userId, data) {
             try {
                 const projectRef = await addDoc(getProjectsCollection(userId), { 
@@ -430,12 +439,15 @@
                     createdAt: serverTimestamp(), 
                     lastModified: serverTimestamp() 
                 });
-                const sectionsCollection = collection(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectRef.id}/sections`);
+                const sectionsCollection = getSectionsCollection(userId, projectRef.id);
                 const emptyContent = JSON.stringify({ ops: [{ insert: '\n' }] });
+                
+                // Create default sections for a new project
                 await setDoc(doc(sectionsCollection, 'synopsis'), { title: 'Synopsis & Brainstorming', content: emptyContent, order: 1 });
                 await setDoc(doc(sectionsCollection, 'characters'), { title: 'Character Development', content: emptyContent, order: 2 });
                 await setDoc(doc(sectionsCollection, 'outline'), { title: 'Outline', content: emptyContent, order: 3 });
                 await setDoc(doc(sectionsCollection, 'chapter_1'), { title: 'Chapter 1', content: emptyContent, order: 4 });
+                
                 showNotification('New project created!', 'success');
                 return projectRef.id;
             } catch (e) { 
@@ -447,10 +459,9 @@
 
         async function getProjects(userId) {
             try {
-                const qSnapshot = await getDocs(getProjectsCollection(userId));
+                const qSnapshot = await getDocs(query(getProjectsCollection(userId), orderBy("lastModified", "desc")));
                 const projects = [];
                 qSnapshot.forEach(d => projects.push({ id: d.id, ...d.data() }));
-                projects.sort((a, b) => (b.lastModified?.toMillis() || 0) - (a.lastModified?.toMillis() || 0));
                 return projects;
             } catch (e) {
                 console.error("Error fetching projects:", e);
@@ -458,12 +469,59 @@
                 return [];
             }
         }
+
+        async function getProject(userId, projectId) {
+            try {
+                const docSnap = await getDoc(getProjectRef(userId, projectId));
+                return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+            } catch (e) {
+                console.error("Error fetching project:", e);
+                showNotification(`Error fetching project: ${e.message}`, 'error');
+                return null;
+            }
+        }
         
+        async function getProjectSections(userId, projectId) {
+            try {
+                const qSnapshot = await getDocs(query(getSectionsCollection(userId, projectId), orderBy("order")));
+                const sections = [];
+                qSnapshot.forEach(d => sections.push({ id: d.id, ...d.data() }));
+                return sections;
+            } catch(e) {
+                console.error("Error fetching sections:", e);
+                showNotification(`Error fetching sections: ${e.message}`, 'error');
+                return [];
+            }
+        }
+
+        async function getSection(userId, projectId, sectionId) {
+            try {
+                const docSnap = await getDoc(doc(getSectionsCollection(userId, projectId), sectionId));
+                return docSnap.exists() ? docSnap.data() : null;
+            } catch (e) {
+                console.error("Error fetching section:", e);
+                showNotification(`Error fetching section: ${e.message}`, 'error');
+                return null;
+            }
+        }
+        
+        async function updateSectionContent(userId, projectId, sectionId, content) {
+            try {
+                const sectionRef = doc(getSectionsCollection(userId, projectId), sectionId);
+                await updateDoc(sectionRef, { content });
+                // Also update the project's lastModified timestamp
+                await updateDoc(getProjectRef(userId, projectId), { lastModified: serverTimestamp() });
+            } catch (e) {
+                console.error("Error updating section:", e);
+                showNotification(`Error saving progress: ${e.message}`, 'error');
+            }
+        }
+
         async function deleteProject(userId, projectId) {
             try {
-                // NOTE: This deletes the project document, but not subcollections.
-                // For a full cleanup, a Cloud Function would be needed to recursively delete sections.
-                await deleteDoc(doc(getProjectsCollection(userId), projectId));
+                // This only deletes the main project doc. For full cleanup of subcollections,
+                // a Cloud Function is the recommended approach.
+                await deleteDoc(getProjectRef(userId, projectId));
                 showNotification('Project deleted.', 'success');
                 return true;
             } catch (e) {
@@ -481,15 +539,27 @@
 
         function navigateTo(viewName, data = {}) {
             console.log(`Navigating to ${viewName}`);
-            // Simple hash-based routing
-            if (viewName === 'editor' && data.projectId) {
-                window.location.hash = `editor/${data.projectId}`;
-            } else if (viewName === 'dashboard') {
-                window.location.hash = 'dashboard';
-            } else {
-                window.location.hash = '';
-            }
-            route(); // Call the router function to render the correct view
+            window.location.hash = viewName + (data.projectId ? `/${data.projectId}` : '');
+            route();
+        }
+
+        function renderHeader(isLoggedIn, inEditor = false, projectTitle = "Author's Aid") {
+             const backToDashboardLink = inEditor ? `<a href="#" id="dashboard-link" class="text-sm accent-text-hover flex items-center"><i class="fas fa-arrow-left mr-2"></i>Dashboard</a>` : '';
+             const titleDisplay = inEditor ? `<span class="text-lg font-semibold text-gray-300">${escapeHtml(projectTitle)}</span>` : `<h1 class="text-xl font-bold text-white">Author's Aid</h1>`;
+
+             return `
+                <header class="ui-bg p-4 border-b border-gray-700 flex-shrink-0">
+                    <div class="container mx-auto flex justify-between items-center">
+                        <div class="flex items-center space-x-4">
+                            ${backToDashboardLink || titleDisplay}
+                        </div>
+                        <nav class="flex space-x-4 items-center">
+                             <span class="text-gray-400 text-sm">Welcome!</span>
+                             <button id="sign-out-btn" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">Logout</button>
+                        </nav>
+                    </div>
+                </header>
+            `;
         }
 
         function renderLandingPage() {
@@ -560,22 +630,17 @@
             document.body.style.overflow = 'auto';
             document.getElementById('theme-switcher').style.display = 'block';
             appContainer.innerHTML = `
-                <header class="ui-bg p-4 border-b border-gray-700 flex-shrink-0">
-                    <div class="container mx-auto flex justify-between items-center">
-                        <h1 class="text-xl font-bold text-white">Author's Aid</h1>
-                        <nav class="flex space-x-4 items-center">
-                             <span class="text-gray-400 text-sm">Welcome!</span>
-                             <button id="sign-out-btn" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">Logout</button>
-                        </nav>
-                    </div>
-                </header>
+                ${renderHeader(true)}
                 <main id="dashboard-main" class="container mx-auto p-8 flex-grow">
                      <div class="flex justify-between items-center mb-8">
                         <h2 class="text-3xl font-lora font-bold text-white">Your Projects</h2>
                         <button id="new-project-btn" class="accent-bg accent-bg-hover text-white font-bold py-2 px-6 rounded-lg text-lg">+ New Project</button>
                     </div>
                     <div id="projects-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        <div class="text-center text-gray-400 col-span-full">Loading projects...</div>
+                        <div class="text-center text-gray-400 col-span-full py-10">
+                            <div class="loading-spinner mx-auto"></div>
+                            <p class="mt-2">Loading projects...</p>
+                        </div>
                     </div>
                 </main>
             `;
@@ -671,30 +736,120 @@
             }, 'Delete', true);
         }
 
-        function renderEditor(userId, projectId) {
-            // This is a placeholder for the editor view.
+        async function renderEditor(userId, projectId) {
             document.body.style.overflow = 'hidden';
             document.getElementById('theme-switcher').style.display = 'none';
+            appContainer.innerHTML = `<div class="text-center text-gray-400 p-10"><div class="loading-spinner mx-auto"></div><p class="mt-2">Loading editor...</p></div>`;
+
+            const project = await getProject(userId, projectId);
+            if (!project) {
+                appContainer.innerHTML = `<div class="text-center text-red-500 p-10">Error: Project not found.</div>`;
+                return;
+            }
+
             appContainer.innerHTML = `
-                 <header class="ui-bg p-4 border-b border-gray-700 flex-shrink-0">
-                    <div class="container mx-auto flex justify-between items-center">
-                        <a href="#" id="dashboard-link" class="text-sm accent-text-hover">&larr; Dashboard</a>
-                        <h1 class="text-xl font-bold text-white">Editor</h1>
-                        <nav class="flex space-x-4 items-center">
-                             <button id="sign-out-btn" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">Logout</button>
-                        </nav>
-                    </div>
-                </header>
-                <main class="flex-grow p-8">
-                    <h2 class="text-2xl font-lora font-bold">Editing Project: ${projectId}</h2>
-                    <p class="text-gray-400 mt-4">The full editor interface will be built here.</p>
+                ${renderHeader(true, true, project.title)}
+                <main class="flex-grow flex overflow-hidden">
+                    <!-- Left Sidebar: Project Sections -->
+                    <aside id="left-sidebar" class="w-1/5 bg-gray-800 p-4 border-r border-gray-700 overflow-y-auto"></aside>
+                    
+                    <!-- Center Panel: Editor -->
+                    <section class="w-3/5 p-8 flex flex-col bg-black">
+                        <div id="editor-toolbar"></div>
+                        <div id="editor-wrapper" class="relative flex-grow">
+                            <div id="editor"></div>
+                        </div>
+                    </section>
+
+                    <!-- Right Sidebar: AI Tools -->
+                    <aside id="right-sidebar" class="w-1/5 bg-gray-800 p-4 border-l border-gray-700 overflow-y-auto">
+                        <h3 class="text-lg font-bold mb-4">AI Co-Author</h3>
+                        <div id="ai-tools-container"></div>
+                    </aside>
                 </main>
             `;
+
             document.getElementById('dashboard-link').addEventListener('click', (e) => {
                 e.preventDefault();
                 navigateTo('dashboard');
             });
             document.getElementById('sign-out-btn').addEventListener('click', signOut);
+
+            setupEditor(userId, projectId);
+        }
+
+        async function setupEditor(userId, projectId) {
+            const leftSidebar = document.getElementById('left-sidebar');
+            const editorContainer = document.getElementById('editor');
+            let activeSectionId = null;
+
+            const toolbarOptions = [
+                ['bold', 'italic', 'underline'],        
+                [{ 'header': 1 }, { 'header': 2 }],               
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['clean']                                         
+            ];
+
+            editor = new Quill(editorContainer, {
+                modules: { toolbar: toolbarOptions },
+                theme: 'snow'
+            });
+
+            const debouncedSave = debounce(async () => {
+                if (!activeSectionId) return;
+                const content = JSON.stringify(editor.getContents());
+                await updateSectionContent(userId, projectId, activeSectionId, content);
+                showNotification('Progress saved!', 'success', 1500);
+            }, 2000);
+
+            editor.on('text-change', debouncedSave);
+            
+            const sections = await getProjectSections(userId, projectId);
+
+            const renderSidebar = () => {
+                leftSidebar.innerHTML = `
+                    <h2 class="text-lg font-semibold mb-4">Sections</h2>
+                    <nav class="flex flex-col space-y-2">
+                        ${sections.map(s => `
+                            <a href="#" data-section-id="${s.id}" class="section-link p-2 rounded-md hover:bg-gray-700 transition-colors ${s.id === activeSectionId ? 'bg-blue-600 text-white' : ''}">
+                                ${escapeHtml(s.title)}
+                            </a>
+                        `).join('')}
+                    </nav>
+                `;
+            };
+
+            const loadSection = async (sectionId) => {
+                activeSectionId = sectionId;
+                const sectionData = await getSection(userId, projectId, sectionId);
+                if (sectionData) {
+                    try {
+                        editor.setContents(JSON.parse(sectionData.content));
+                    } catch {
+                        editor.setText(sectionData.content);
+                    }
+                } else {
+                    editor.setText('');
+                }
+                renderSidebar(); // Re-render to highlight active section
+                // TODO: Render AI tools based on section
+            };
+
+            leftSidebar.addEventListener('click', (e) => {
+                const link = e.target.closest('.section-link');
+                if (link) {
+                    e.preventDefault();
+                    const sectionId = link.dataset.sectionId;
+                    if (sectionId !== activeSectionId) {
+                        loadSection(sectionId);
+                    }
+                }
+            });
+
+            // Load the first section by default
+            if (sections.length > 0) {
+                loadSection(sections[0].id);
+            }
         }
 
         //======================================================================
@@ -702,11 +857,11 @@
         //======================================================================
 
         function route() {
-            const hash = window.location.hash;
+            const [view, param] = window.location.hash.slice(1).split('/');
+            
             if (currentUserId) {
-                if (hash.startsWith('#editor/')) {
-                    const projectId = hash.split('/')[1];
-                    renderEditor(currentUserId, projectId);
+                if (view === 'editor' && param) {
+                    renderEditor(currentUserId, param);
                 } else {
                     renderDashboard(currentUserId);
                 }
