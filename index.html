@@ -1392,13 +1392,10 @@ Generate 5 character profiles:`;
                 }
 
                 // Delegated event listener for dynamically generated buttons
-                rightSidebar.addEventListener('click', async (e) => {
-                    const target = e.target.closest('button');
-                    if (!target) return;
-
-                    // Handle modal pop-ups for suggestions
-                    if (target.classList.contains('ai-suggestion-modal-btn')) {
-                        const content = target.dataset.content;
+                outputDiv.addEventListener('click', (e) => {
+                    const modalBtn = e.target.closest('.ai-suggestion-modal-btn');
+                    if (modalBtn) {
+                        const content = modalBtn.dataset.content;
                         showContentInModal('Suggestion', content, (fullContent) => {
                              if (editor) {
                                 editor.insertText(editor.getLength(), '\n\n' + fullContent);
@@ -1408,73 +1405,87 @@ Generate 5 character profiles:`;
                         return;
                     }
 
-                    // Handle image prompt generation
-                    if (target.classList.contains('ai-image-prompt-btn')) {
-                        const prompt = target.dataset.prompt;
-                        const imageUrls = await generateImage(prompt);
-                        if (imageUrls.length > 0) {
-                            coverDisplayContainer.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">${imageUrls.map(url => `
-                                <div class="cover-image-wrapper" data-image-url="${url}">
-                                    <img src="${url}" class="w-full h-auto rounded-lg shadow-lg" alt="Generated Book Cover"/>
-                                    <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i></div>
-                                </div>
-                            `).join('')}</div>`;
-                            
-                            coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(wrapper => {
-                                wrapper.addEventListener('click', async (e) => {
-                                    coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(w => w.classList.remove('selected'));
-                                    e.currentTarget.classList.add('selected');
-                                    const selectedUrl = e.currentTarget.dataset.imageUrl;
-                                    await updateProjectCover(userId, projectId, selectedUrl);
-                                    renderSidebar();
+                    const imagePromptBtn = e.target.closest('.ai-image-prompt-btn');
+                    if (imagePromptBtn) {
+                        const prompt = imagePromptBtn.dataset.prompt;
+                        generateImage(prompt).then(imageUrls => {
+                            if (imageUrls.length > 0) {
+                                coverDisplayContainer.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">${imageUrls.map(url => `
+                                    <div class="cover-image-wrapper" data-image-url="${url}">
+                                        <img src="${url}" class="w-full h-auto rounded-lg shadow-lg" alt="Generated Book Cover"/>
+                                        <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i></div>
+                                    </div>
+                                `).join('')}</div>`;
+                                
+                                coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(wrapper => {
+                                    wrapper.addEventListener('click', async (e) => {
+                                        coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(w => w.classList.remove('selected'));
+                                        e.currentTarget.classList.add('selected');
+                                        const selectedUrl = e.currentTarget.dataset.imageUrl;
+                                        await updateProjectCover(userId, projectId, selectedUrl);
+                                        renderSidebar();
+                                    });
                                 });
-                            });
-                        }
+                            }
+                        });
                         return;
                     }
+                });
 
-                    // Handle main AI action buttons
+                // Individual listeners for each button
+                const addClickListener = (id, handler) => {
+                    const btn = document.getElementById(id);
+                    if (btn) btn.addEventListener('click', handler);
+                };
+
+                addClickListener('generate-synopsis-concepts-btn', async () => {
+                    const idea = editor.getText().trim();
+                    if (!idea) { showNotification("Please enter a basic idea in the editor.", "error"); return; }
+                    const conceptsText = await generateSynopsisIdeas(idea);
+                    const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
+                    outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHTML(concept)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHTML(concept.substring(0, 80))}...</button>`).join('');
+                });
+
+                addClickListener('generate-world-btn', async () => {
                     const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
                     const context = synopsisDoc ? new Quill(document.createElement('div')).setContents(JSON.parse(synopsisDoc.content)).getText() : '';
-
-                    switch (target.id) {
-                        case 'generate-world-btn': {
-                            if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
-                            const worldText = await generateWorldPrompts(context);
-                            const prompts = parseNumberedAiList(worldText, false).map(p => stripMarkdownAndHtml(p.trim()));
-                            outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHTML(prompt)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHTML(prompt.substring(0, 80))}...</button>`).join('');
-                            break;
-                        }
-                        case 'generate-image-prompts-btn': {
-                            if (!context) { showNotification("Please write a synopsis in the 'Synopsis & Brainstorming' section first.", "error"); return; }
-                            const conceptsText = await generateCoverConcepts(context);
-                            const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
-                            outputDiv.innerHTML = concepts.map((concept, index) => `<button data-prompt="${escapeHTML(concept)}" class="ai-image-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Prompt ${index + 1}:</strong> ${escapeHTML(concept.substring(0, 80))}...</button>`).join('');
-                            break;
-                        }
-                        case 'suggest-alternatives-btn':
-                        case 'suggest-scripture-btn':
-                        case 'suggest-youth-phrases-btn': {
-                            const selection = editor.getSelection();
-                            if (!selection || selection.length === 0) {
-                                showNotification("Please select some text in the editor first.", "error");
-                                return;
-                            }
-                            const selectedText = editor.getText(selection.index, selection.length);
-                            const fullTextContext = editor.getText();
-                            let resultsText = '';
-                            if (target.id === 'suggest-alternatives-btn') {
-                                resultsText = await suggestAlternatives(selectedText, fullTextContext);
-                            } else if (target.id === 'suggest-scripture-btn') {
-                                resultsText = await suggestScripture(selectedText, fullTextContext);
-                            } else {
-                                resultsText = await suggestYouthPhrases(selectedText, fullTextContext);
-                            }
-                            outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${resultsText}</div>`;
-                            break;
-                        }
-                    }
+                    if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
+                    const worldText = await generateWorldPrompts(context);
+                    const prompts = parseNumberedAiList(worldText, false).map(p => stripMarkdownAndHtml(p.trim()));
+                    outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHTML(prompt)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHTML(prompt.substring(0, 80))}...</button>`).join('');
                 });
+
+                addClickListener('generate-image-prompts-btn', async () => {
+                    const synopsisDoc = await getSection(userId, projectId, 'brainstorming');
+                    const context = synopsisDoc ? new Quill(document.createElement('div')).setContents(JSON.parse(synopsisDoc.content)).getText() : '';
+                    if (!context) { showNotification("Please write a synopsis in the 'Synopsis & Brainstorming' section first.", "error"); return; }
+                    const conceptsText = await generateCoverConcepts(context);
+                    const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
+                    outputDiv.innerHTML = concepts.map((concept, index) => `<button data-prompt="${escapeHTML(concept)}" class="ai-image-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Prompt ${index + 1}:</strong> ${escapeHTML(concept.substring(0, 80))}...</button>`).join('');
+                });
+
+                const handleSelectionTools = async (e) => {
+                    const selection = editor.getSelection();
+                    if (!selection || selection.length === 0) {
+                        showNotification("Please select some text in the editor first.", "error");
+                        return;
+                    }
+                    const selectedText = editor.getText(selection.index, selection.length);
+                    const fullTextContext = editor.getText();
+                    let resultsText = '';
+                    if (e.target.id === 'suggest-alternatives-btn') {
+                        resultsText = await suggestAlternatives(selectedText, fullTextContext);
+                    } else if (e.target.id === 'suggest-scripture-btn') {
+                        resultsText = await suggestScripture(selectedText, fullTextContext);
+                    } else {
+                        resultsText = await suggestYouthPhrases(selectedText, fullTextContext);
+                    }
+                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${resultsText}</div>`;
+                };
+
+                addClickListener('suggest-alternatives-btn', handleSelectionTools);
+                addClickListener('suggest-scripture-btn', handleSelectionTools);
+                addClickListener('suggest-youth-phrases-btn', handleSelectionTools);
             };
             
             const loadSection = async (sectionId) => {
