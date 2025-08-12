@@ -219,11 +219,13 @@
             <p class="mt-2 text-sm">Created with faith for Rene' Stanley.</p>
         </div>
         <div id="footer-content-editor" class="container mx-auto flex justify-between items-center hidden">
-            <button id="add-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">+ New Chapter</button>
-            <button id="export-project-btn" class="accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Export Project</button>
-            <div class="flex space-x-2 items-center">
-                <!-- Theme buttons are removed from here in editor view -->
+             <!-- Chapter Navigation -->
+            <div class="flex items-center space-x-2">
+                <button id="prev-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">&lt; Prev Chapter</button>
+                <button id="add-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">+ New Chapter</button>
+                <button id="next-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">Next Chapter &gt;</button>
             </div>
+            <button id="export-project-btn" class="accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Export Project</button>
         </div>
     </footer>
 
@@ -242,7 +244,7 @@
             apiKey: "AIzaSyCVsziM6I1QEU22YNPGTwLvN0EuW4k2SiY",
             authDomain: "christian-author-app-54c4d.firebaseapp.com",
             projectId: "christian-author-app-54c4d",
-            storageBucket: "christian-author-app-54c4d.firebasestorage.app",
+            storageBucket: "christian-author-app-54c4d.appspot.com", // Corrected storage bucket
             messagingSenderId: "386312831448",
             appId: "1:386312831448:web:80999eae638bbed28572ad"
         };
@@ -426,15 +428,21 @@
             }
             // Reverted: Attach onConfirm directly to the button click for simplicity,
             // as the form submit listener was causing issues.
-            document.getElementById('modal-confirm-btn').addEventListener('click', async () => {
-                const form = modalContainer.querySelector('form');
-                if (form && !form.checkValidity()) {
-                    form.reportValidity();
-                    return;
-                }
-                await onConfirm();
-                closeModal();
-            });
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+            if(onConfirm) {
+                 confirmBtn.addEventListener('click', async () => {
+                    const form = modalContainer.querySelector('form');
+                    if (form && !form.checkValidity()) {
+                        form.reportValidity();
+                        return;
+                    }
+                    await onConfirm();
+                    closeModal();
+                });
+            } else {
+                confirmBtn.addEventListener('click', closeModal);
+            }
+            
 
             // Add password toggle functionality after modal content is rendered
             modalContainer.querySelectorAll('.password-toggle').forEach(toggle => {
@@ -770,10 +778,16 @@ Generate 5 character profiles:`;
             Continue the story, adhering to the outline's progression:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        // New AI function to generate titles
-        async function generateTitles(context) {
-            // Ensure title generation uses synopsis context and asks for Christian titles
-            const prompt = `You are an AI creative assistant for Christian authors. Based on the following synopsis or brainstorming content, generate 5 distinct and compelling title suggestions for a Christian book. Provide ONLY the title and optional subtitle. Do NOT include any descriptive sentences or explanations after the title.\n\nContent:\n---\n${context}\n---\n\nGenerate 5 title suggestions:`;
+        // New AI functions for Front and Back Matter
+        async function generateFrontMatter(context) {
+            const prompt = `You are an AI publishing assistant for Christian authors. Based on the provided project details, generate a list of standard front matter sections appropriate for the book (e.g., Title Page, Copyright Page, Dedication, Table of Contents, Foreword, Preface, Acknowledgments). For each section, provide a brief template or example content.
+            \n\nProject Details:\n---\n${context}\n---\n\nGenerate front matter suggestions:`;
+            return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+        }
+
+        async function generateBackMatter(context) {
+            const prompt = `You are an AI publishing assistant for Christian authors. Based on the provided project details, generate a list of standard back matter sections appropriate for the book (e.g., Appendix, Glossary, Bibliography, About the Author, Discussion Questions). For each section, provide a brief template or example content.
+            \n\nProject Details:\n---\n${context}\n---\n\nGenerate back matter suggestions:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
 
@@ -811,7 +825,6 @@ Generate 5 character profiles:`;
                     <ul class="list-disc list-inside space-y-1">
                         <li><strong>AI Style Preference:</strong> Use the text area at the top to describe the writing style or tone you'd like the AI to adopt (e.g., "Write in a formal, encouraging tone," "Use concise, impactful language"). This preference is applied to all AI-generated content.</li>
                         <li><strong>Generate Synopsis Ideas (Synopsis & Brainstorming):</strong> Provide a basic idea in the editor, and the AI will generate core concept ideas for your book.</li>
-                        <li><strong>Generate Titles (Book Titles):</strong> Based on your synopsis, the AI can suggest compelling book titles.</li>
                         <li><strong>POV & Voice (Synopsis & Brainstorming):</strong> Based on your synopsis, the AI can suggest different points of view and narrative voices.</li>
                         <li><strong>Structural Template (Synopsis & Brainstorming):</strong> Get AI-generated structural ideas (e.g., Three-Act Structure) for your story.</li>
                         <li><strong>Generate Character Profiles (Character Development):</strong> The AI helps you create detailed character ideas based on your story's concept.</li>
@@ -832,7 +845,7 @@ Generate 5 character profiles:`;
                     <p class="text-sm text-gray-400 mt-4">Remember that AI generation relies on external services. If you encounter "API call failed" errors, please check your Google Cloud Project settings for API enablement and quotas.</p>
                 </div>
             `;
-            showModal('How to Use Author\'s Aid', helpContent, () => {}, 'Close', false); // No confirm button, just close
+            showModal('How to Use Author\'s Aid', helpContent, null, 'Close', false); // No confirm button, just close
         }
 
 
@@ -1233,6 +1246,36 @@ Generate 5 character profiles:`;
                     });
                 });
             };
+            
+            // Chapter Navigation Logic
+            const updateChapterNavButtons = () => {
+                const chapterSections = sections.filter(s => s.id.startsWith('chapter_'));
+                const currentIndex = chapterSections.findIndex(s => s.id === activeSectionId);
+                const prevBtn = document.getElementById('prev-chapter-btn');
+                const nextBtn = document.getElementById('next-chapter-btn');
+
+                if (prevBtn && nextBtn) {
+                    prevBtn.disabled = currentIndex <= 0;
+                    nextBtn.disabled = currentIndex < 0 || currentIndex >= chapterSections.length - 1;
+                }
+            };
+            
+            document.getElementById('prev-chapter-btn').addEventListener('click', () => {
+                const chapterSections = sections.filter(s => s.id.startsWith('chapter_'));
+                const currentIndex = chapterSections.findIndex(s => s.id === activeSectionId);
+                if (currentIndex > 0) {
+                    loadSection(chapterSections[currentIndex - 1].id);
+                }
+            });
+
+            document.getElementById('next-chapter-btn').addEventListener('click', () => {
+                const chapterSections = sections.filter(s => s.id.startsWith('chapter_'));
+                const currentIndex = chapterSections.findIndex(s => s.id === activeSectionId);
+                if (currentIndex >= 0 && currentIndex < chapterSections.length - 1) {
+                    loadSection(chapterSections[currentIndex + 1].id);
+                }
+            });
+
 
             document.getElementById('add-chapter-btn').addEventListener('click', async () => {
                 console.log("Add Chapter button clicked.");
@@ -1309,12 +1352,8 @@ Generate 5 character profiles:`;
                             </div>
                         </div>`;
                 } else if (sectionId === 'book_titles') {
-                    aiPanelHtml += `
-                        <div>
-                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Book Titles</p>
-                            <p class="text-xs text-gray-300 mb-2">Generate title suggestions based on your synopsis.</p>
-                            <button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button>
-                        </div>`;
+                    // No AI tools for book titles as requested
+                     aiPanelHtml += `<p class="text-sm text-gray-400">Use this section to manually list and manage your book title ideas.</p>`;
                 }
                 else if (sectionId === 'character_development') {
                      aiPanelHtml += `
@@ -1354,6 +1393,20 @@ Generate 5 character profiles:`;
                             <p class="text-sm font-semibold mb-2 text-gray-200">Generate Image Prompts</p>
                             <p class="text-xs text-gray-300 mb-2">Generate descriptive prompts for an AI image generator based on your synopsis.</p>
                             <button id="generate-image-prompts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Image Prompts</button>
+                        </div>`;
+                } else if (sectionId === 'front_matter') {
+                     aiPanelHtml += `
+                        <div>
+                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Front Matter</p>
+                            <p class="text-xs text-gray-300 mb-2">Get suggestions for your book's opening sections.</p>
+                            <button id="generate-front-matter-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Ideas</button>
+                        </div>`;
+                } else if (sectionId === 'back_matter') {
+                     aiPanelHtml += `
+                        <div>
+                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Back Matter</p>
+                            <p class="text-xs text-gray-300 mb-2">Get suggestions for your book's closing sections.</p>
+                            <button id="generate-back-matter-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Ideas</button>
                         </div>`;
                 }
 
@@ -1429,7 +1482,6 @@ Generate 5 character profiles:`;
                     };
                 };
 
-
                 // Delegated event listener for dynamically generated buttons
                 outputDiv.addEventListener('click', (e) => {
                     const modalBtn = e.target.closest('.ai-suggestion-modal-btn');
@@ -1439,32 +1491,6 @@ Generate 5 character profiles:`;
                              if (editor) {
                                 editor.insertText(editor.getLength(), '\n\n' + fullContent);
                                 showNotification("Content added to editor!", "success");
-                            }
-                        });
-                        return;
-                    }
-
-                    const imagePromptBtn = e.target.closest('.ai-image-prompt-btn');
-                    if (imagePromptBtn) {
-                        const prompt = imagePromptBtn.dataset.prompt;
-                        generateImage(prompt).then(imageUrls => {
-                            if (imageUrls.length > 0) {
-                                coverDisplayContainer.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">${imageUrls.map(url => `
-                                    <div class="cover-image-wrapper" data-image-url="${url}">
-                                        <img src="${url}" class="w-full h-auto rounded-lg shadow-lg" alt="Generated Book Cover"/>
-                                        <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i></div>
-                                    </div>
-                                `).join('')}</div>`;
-                                
-                                coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(wrapper => {
-                                    wrapper.addEventListener('click', async (e) => {
-                                        coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(w => w.classList.remove('selected'));
-                                        e.currentTarget.classList.add('selected');
-                                        const selectedUrl = e.currentTarget.dataset.imageUrl;
-                                        await updateProjectCover(userId, projectId, selectedUrl);
-                                        renderSidebar();
-                                    });
-                                });
                             }
                         });
                         return;
@@ -1498,7 +1524,53 @@ Generate 5 character profiles:`;
                     if (!synopsis) { showNotification("Please write a synopsis in the 'Synopsis & Brainstorming' section first.", "error"); return; }
                     const conceptsText = await generateCoverConcepts(synopsis);
                     const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
-                    outputDiv.innerHTML = concepts.map((concept, index) => `<button data-prompt="${escapeHTML(concept)}" class="ai-image-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Prompt ${index + 1}:</strong> ${escapeHTML(concept.substring(0, 80))}...</button>`).join('');
+                    let modalContent = concepts.map((concept, index) => `
+                        <div class="p-2 bg-gray-700 rounded-md mb-2">
+                            <p class="mb-2">${escapeHTML(concept)}</p>
+                            <button data-prompt="${escapeHTML(concept)}" class="ai-image-prompt-btn accent-bg accent-bg-hover text-white font-semibold py-1 px-3 rounded-lg">Generate Images</button>
+                        </div>`
+                    ).join('');
+                    showModal('Generated Cover Prompts', modalContent, null, 'Close', false);
+                    
+                    document.getElementById('modal-container').addEventListener('click', e => {
+                        if (e.target.classList.contains('ai-image-prompt-btn')) {
+                            const prompt = e.target.dataset.prompt;
+                            document.getElementById('modal-close-btn').click(); // Close the modal
+                            generateImage(prompt).then(imageUrls => {
+                                if (imageUrls.length > 0) {
+                                    coverDisplayContainer.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">${imageUrls.map(url => `
+                                        <div class="cover-image-wrapper" data-image-url="${url}">
+                                            <img src="${url}" class="w-full h-auto rounded-lg shadow-lg" alt="Generated Book Cover"/>
+                                            <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i></div>
+                                        </div>
+                                    `).join('')}</div>`;
+                                    
+                                    coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(wrapper => {
+                                        wrapper.addEventListener('click', async (e) => {
+                                            const selectedWrapper = e.currentTarget;
+                                            const base64Url = selectedWrapper.dataset.imageUrl;
+                                            showNotification('Saving cover... please wait.', 'info');
+                                            try {
+                                                const storagePath = `artifacts/${appId}/users/${userId}/projects/${projectId}/covers/${Date.now()}.png`;
+                                                const storageRef = ref(storageInstance, storagePath);
+                                                const uploadResult = await uploadString(storageRef, base64Url, 'data_url');
+                                                const downloadUrl = await getDownloadURL(uploadResult.ref);
+                                                
+                                                await updateProjectCover(userId, projectId, downloadUrl);
+                                                
+                                                coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(w => w.classList.remove('selected'));
+                                                selectedWrapper.classList.add('selected');
+                                                renderSidebar(); // Refresh sidebar to show new cover
+                                            } catch (error) {
+                                                console.error("Error uploading image and updating cover:", error);
+                                                showNotification(`Error saving cover: ${error.message}`, 'error');
+                                            }
+                                        });
+                                    });
+                                }
+                            });
+                        }
+                    });
                 });
                 
                 // Brainstorming Tools
@@ -1518,22 +1590,44 @@ Generate 5 character profiles:`;
                     outputDiv.innerHTML = results.map((result, index) => `<button data-content="${escapeHTML(result)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Template ${index + 1}:</strong> ${escapeHTML(result.substring(0, 80))}...</button>`).join('');
                 });
 
-                // Book Titles
-                addClickListener('generate-titles-btn', async () => {
-                    const { synopsis } = await getFullProjectContext();
-                    if (!synopsis) { showNotification("Please write a synopsis or some brainstorming notes first.", "error"); return; }
-                    const titlesText = await generateTitles(synopsis);
-                    const titles = parseNumberedAiList(titlesText, false).map(c => stripMarkdownAndHtml(c.trim()));
-                    outputDiv.innerHTML = titles.map((title) => `<button data-content="${escapeHTML(title)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHTML(title)}</button>`).join('');
-                });
-
                 // Character Development
                 addClickListener('generate-characters-btn', async () => {
                     const { fullContext } = await getFullProjectContext();
                     if (!fullContext.trim()) { showNotification("Please write a synopsis first.", "error"); return; }
                     const charactersText = await generateCharacterProfiles(fullContext);
                     const profiles = parseNumberedAiList(charactersText, false).map(c => c.trim());
-                    outputDiv.innerHTML = profiles.map((profile, index) => `<button data-content="${escapeHTML(profile)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Profile ${index + 1}:</strong> ${escapeHTML(profile.substring(0, 80))}...</button>`).join('');
+
+                    // Sort profiles based on role
+                    const roleOrder = ['Protagonist', 'Antagonist', 'Mentor', 'Deuteragonist', 'Love Interest', 'Confidant', 'Foil', 'Sidekick'];
+                    const getRole = (profileText) => {
+                        const match = profileText.match(/By Role:\s*([^\n,]+)/i);
+                        return match ? match[1].trim() : 'zzzz'; // 'zzzz' to push unknown to the end
+                    };
+
+                    profiles.sort((a, b) => {
+                        const roleA = getRole(a);
+                        const roleB = getRole(b);
+                        const indexA = roleOrder.indexOf(roleA);
+                        const indexB = roleOrder.indexOf(roleB);
+                        if (indexA === -1 && indexB === -1) return 0;
+                        if (indexA === -1) return 1;
+                        if (indexB === -1) return -1;
+                        return indexA - indexB;
+                    });
+                    
+                    let modalContent = profiles.map(profile => `
+                        <div class="p-2 bg-gray-700 rounded-md mb-2">
+                            <p class="whitespace-pre-wrap">${escapeHTML(profile)}</p>
+                        </div>`
+                    ).join('');
+                    
+                    showModal('Generated Character Profiles', modalContent, () => {
+                        const fullText = profiles.join('\n\n---\n\n');
+                        if (editor) {
+                            editor.insertText(editor.getLength(), '\n\n' + fullText);
+                            showNotification("Characters added to editor!", "success");
+                        }
+                    }, 'Add All to Editor');
                 });
 
                 // Outline
@@ -1576,6 +1670,29 @@ Generate 5 character profiles:`;
                     if (!chapterText.trim()) { showNotification("Please write something in the chapter to proofread.", "error"); return; }
                     const suggestions = await proofreadChapter(chapterText);
                     outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${escapeHTML(suggestions)}</div>`;
+                });
+
+                // Front & Back Matter
+                addClickListener('generate-front-matter-btn', async () => {
+                    const { fullContext } = await getFullProjectContext();
+                    const frontMatterText = await generateFrontMatter(fullContext);
+                    showContentInModal('Front Matter Ideas', frontMatterText, (content) => {
+                        if (editor) {
+                            editor.insertText(editor.getLength(), '\n\n' + content);
+                            showNotification("Content added to editor!", "success");
+                        }
+                    });
+                });
+
+                addClickListener('generate-back-matter-btn', async () => {
+                    const { fullContext } = await getFullProjectContext();
+                    const backMatterText = await generateBackMatter(fullContext);
+                    showContentInModal('Back Matter Ideas', backMatterText, (content) => {
+                        if (editor) {
+                            editor.insertText(editor.getLength(), '\n\n' + content);
+                            showNotification("Content added to editor!", "success");
+                        }
+                    });
                 });
 
 
@@ -1713,6 +1830,7 @@ Generate 5 character profiles:`;
 
                 renderSidebar();
                 renderAiPanel(sectionId);
+                updateChapterNavButtons();
             };
 
             sections = await getProjectSections(userId, projectId);
