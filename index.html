@@ -1474,6 +1474,20 @@ Generate 5 character profiles:`;
                 console.log("renderAiPanel: Rendering AI panel for section:", sectionId);
                 
                 let contextualButtonsHtml = '';
+                let pageGeneratorButtonsHtml = '';
+
+                // This block defines buttons that are ALWAYS available, unless on a special page.
+                const commonPageGenerators = `
+                    <div class="pt-4 mt-4 border-t border-gray-700">
+                        <p class="text-sm font-semibold mb-2 text-gray-200">Page Generators</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button data-topic="Copyright" data-matter-type="front" class="generate-matter-btn w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Copyright</button>
+                            <button data-topic="Dedication" data-matter-type="front" class="generate-matter-btn w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Dedication</button>
+                            <button data-topic="Preface" data-matter-type="front" class="generate-matter-btn w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Preface</button>
+                            <button data-topic="Acknowledgments" data-matter-type="front" class="generate-matter-btn w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Acknowledgments</button>
+                            <button data-topic="About the Author" data-matter-type="back" class="generate-matter-btn w-full col-span-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">About the Author</button>
+                        </div>
+                    </div>`;
 
                 if (sectionId === 'brainstorming') {
                     contextualButtonsHtml = `
@@ -1489,6 +1503,7 @@ Generate 5 character profiles:`;
                                 <button id="generate-structure-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Structural Template</button>
                             </div>
                         </div>`;
+                    pageGeneratorButtonsHtml = commonPageGenerators;
                 } else if (sectionId === 'book_titles') {
                      contextualButtonsHtml = `
                         <div>
@@ -1496,6 +1511,7 @@ Generate 5 character profiles:`;
                             <p class="text-xs text-gray-300 mb-2">Generate title suggestions based on your synopsis.</p>
                             <button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button>
                         </div>`;
+                     pageGeneratorButtonsHtml = commonPageGenerators;
                 }
                 else if (sectionId === 'character_development') {
                      contextualButtonsHtml = `
@@ -1504,6 +1520,7 @@ Generate 5 character profiles:`;
                             <p class="text-xs text-gray-300 mb-2">Let the AI create character ideas based on your story's concept.</p>
                             <button id="generate-characters-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Characters</button>
                         </div>`;
+                     pageGeneratorButtonsHtml = commonPageGenerators;
                 } else if (sectionId === 'world_building') {
                      contextualButtonsHtml = `
                         <div>
@@ -1511,6 +1528,7 @@ Generate 5 character profiles:`;
                             <p class="text-xs text-gray-300 mb-2">Brainstorm elements for your story's universe.</p>
                             <button id="generate-world-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate World Ideas</button>
                         </div>`;
+                     pageGeneratorButtonsHtml = commonPageGenerators;
                 }
                 else if (sectionId === 'outline') {
                     contextualButtonsHtml = `
@@ -1519,6 +1537,7 @@ Generate 5 character profiles:`;
                             <p class="text-xs text-gray-300 mb-2">Let the AI create a detailed outline based on your project's foundation.</p>
                             <button id="generate-outline-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Outline</button>
                         </div>`;
+                    pageGeneratorButtonsHtml = commonPageGenerators;
                 } else if (sectionId.startsWith('chapter_')) {
                     contextualButtonsHtml = `
                         <div>
@@ -1529,6 +1548,7 @@ Generate 5 character profiles:`;
                                 <button id="proofread-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Proofread Chapter</button>
                             </div>
                         </div>`;
+                    pageGeneratorButtonsHtml = commonPageGenerators;
                 } else if (sectionId === 'book_cover') {
                     contextualButtonsHtml = `
                         <div>
@@ -1536,16 +1556,9 @@ Generate 5 character profiles:`;
                             <p class="text-xs text-gray-300 mb-2">Generate descriptive prompts for an AI image generator based on your synopsis.</p>
                             <button id="generate-image-prompts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Image Prompts</button>
                         </div>`;
-                } else if (['copyright', 'dedication', 'preface', 'acknowledgments', 'about_the_author', 'discussion_questions'].includes(sectionId)) {
-                     const titleCase = sectionId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                     const isFrontMatter = ['Copyright', 'Dedication', 'Preface', 'Acknowledgments'].includes(titleCase);
-                     const matterType = isFrontMatter ? 'front' : 'back';
-                     contextualButtonsHtml = `
-                        <div>
-                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate ${titleCase}</p>
-                            <p class="text-xs text-gray-300 mb-2">Get a template for your book's ${titleCase.toLowerCase()} section.</p>
-                            <button data-topic="${titleCase}" data-matter-type="${matterType}" class="generate-matter-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate</button>
-                        </div>`;
+                } else {
+                    // For pages like Dedication, Preface, etc., show the page generators
+                    pageGeneratorButtonsHtml = commonPageGenerators;
                 }
 
                 const aiPanelHtml = `
@@ -1567,6 +1580,9 @@ Generate 5 character profiles:`;
                                 <button id="suggest-youth-phrases-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest Youth Phrases</button>
                             </div>
                         </div>
+
+                        ${pageGeneratorButtonsHtml}
+
                         <div id="ai-output" class="mt-4 text-sm text-gray-300 space-y-2 flex-grow overflow-y-auto"></div>
                     </div>`;
 
