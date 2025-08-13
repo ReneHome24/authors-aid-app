@@ -700,7 +700,6 @@
             - Sidekick: A companion to the protagonist.
         `;
         
-        // FIX: Updated Book Structure knowledge base
         const BOOK_STRUCTURES_KNOWLEDGE = `
             A plot is the sequence of events that make up a story. It is the way that the story unfolds, from the beginning to the end. There are various ways you could structure the plot a fiction novel
 
@@ -827,10 +826,6 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
 
-        async function generateWorldPrompts(context) {
-            const prompt = `You are an AI world-builder for Christian narratives. Based on the provided project details, generate a numbered list of 5 distinct world-building element ideas. These could include unique faith-based societal structures, spiritual challenges, or historical events relevant to a Christian story. **Do not add titles or prefixes like "Idea 1:" to your responses.** Provide ONLY the descriptive world-building idea.\n\nProject Details:\n---\n${context}\n---\n\nGenerate 5 world-building prompts:`;
-            return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
-        }
         async function suggestAlternatives(selectedText, context) { 
             const prompt = `You are an AI thesaurus and editor for Christian literature. The user has selected a sentence and wants alternative phrasing for its key ideas. Analyze the following sentence and provide a list of alternative phrases for its most significant parts. Do not suggest alternatives for the entire sentence, but for its core components.
             \n\nContext:\n---\n${context}\n---\n\nSelected Text: "${selectedText}"
@@ -920,54 +915,54 @@
 
         // --- NEW WORLD-BUILDING & CHARACTER FUNCTIONS ---
         async function generateSettingDescription(location, setting, plot) {
-            const prompt = `This story will take place in ${location} within a ${setting} setting. Write a short description about this environment that ties into the following plot:\n\n${plot}`;
+            const prompt = `This story will take place in ${location} within a ${setting} setting. Write a short, plain-text description about this environment that ties into the following plot. Do not use any markdown formatting. \n\n${plot}`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateLocationIdeas(context) {
-            const prompt = `Write a few ideas where the story can take place based on the following Plot & Story idea:\n\n${context}`;
+            const prompt = `Write a numbered list of a few ideas where the story can take place based on the following Plot & Story idea. Do not use any markdown formatting. \n\n${context}`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateTechnologyIdeas(context) {
-            const prompt = `Write a few ideas about the technology in the story that helps the characters move through the plot, based on this context:\n\n${context}`;
+            const prompt = `Write a numbered list of a few ideas about the technology in the story that helps the characters move through the plot, based on this context. Do not use any markdown formatting.\n\n${context}`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function developTechnologyIdeas(context) {
-            const prompt = `The technology needed in the story will be communication systems, systems that allow the civilization to analyze planets, asteroids, and threats beyond the solar system, Space Armor, Mechanical space suits, and Defense systems. Develop a few ideas for some technology based off the information provided in the story context:\n\n${context}`;
+            const prompt = `The technology needed in the story will be communication systems, systems that allow the civilization to analyze planets, asteroids, and threats beyond the solar system, Space Armor, Mechanical space suits, and Defense systems. Develop a numbered list of a few ideas for some technology based off the information provided in the story context. Do not use any markdown formatting.\n\n${context}`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function developPowerSystem(context) {
-            const prompt = `Develop a power system for the story based on the following context:\n\n${context}`;
+            const prompt = `Develop a power system for the story based on the following context. Describe it as plain text, without markdown formatting.\n\n${context}`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function describeFuturisticWeapons(context) {
-            const prompt = `Describe futuristic weapons that allow characters to protect their civilization from threats, to explore the solar system, and to fight enemies that pose a threat, based on this story context:\n\n${context}`;
+            const prompt = `Describe futuristic weapons that allow characters to protect their civilization from threats, to explore the solar system, and to fight enemies that pose a threat, based on this story context. Use plain text without markdown.\n\n${context}`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateWeaponList(context) {
-            const prompt = `Generate a list of weapons that tie into the story idea and the plot:\n\n${context}`;
+            const prompt = `Generate a numbered list of weapons that tie into the story idea and the plot. Do not use markdown formatting.\n\n${context}`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function createTransportationIdeas(context) {
-            const prompt = `Create some ideas for interplanetary space travel for the civilization in the story, as well as for space marines. Include things like cruise ships, starships, and battleships, based on the following context:\n\n${context}`;
+            const prompt = `Create a numbered list of ideas for interplanetary space travel for the civilization in the story, as well as for space marines. Include things like cruise ships, starships, and battleships, based on the following context. Do not use markdown formatting.\n\n${context}`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function identifyNeededCharacters(context) {
-            const prompt = `Based on the following story context, what characters are needed to move the story forward? Provide a list of character roles and a brief explanation for each.
+            const prompt = `Based on the following story context, what characters are needed to move the story forward? Provide a list of character roles and a brief explanation for each. Use plain text without markdown.
             \n\nStory Context:\n---\n${context}\n---`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateCharacterBackstory(characterName, context) {
-            const prompt = `Write a detailed backstory for the character named "${characterName}". Use the provided story context to ensure the backstory is relevant and compelling.
+            const prompt = `Write a detailed backstory for the character named "${characterName}". Use the provided story context to ensure the backstory is relevant and compelling. Use plain text without markdown.
             \n\nStory Context:\n---\n${context}\n---`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateCharacterArc(characterName, context) {
-            const prompt = `Write a compelling character arc for "${characterName}". Describe their journey and transformation from the beginning to the end of the story, based on the provided context.
+            const prompt = `Write a compelling character arc for "${characterName}". Describe their journey and transformation from the beginning to the end of the story, based on the provided context. Use plain text without markdown.
             \n\nStory Context:\n---\n${context}\n---`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateCharacterName(characterType) {
-            const prompt = `Generate a numbered list of 10 potential names for a ${characterType} character in a Christian novel.`;
+            const prompt = `Generate a numbered list of 10 potential names for a ${characterType} character in a Christian novel. Do not use markdown formatting.`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
 
@@ -1610,7 +1605,6 @@
                         </div>
                     `;
                 } else if (sectionId === 'world_building') {
-                     // FIX: Updated world-building panel with new tools
                     contextualButtonsHtml = `
                         <div class="space-y-4">
                             <div>
@@ -1779,7 +1773,7 @@
                         if (target) {
                             const content = target.dataset.content;
                             if (editor) {
-                                editor.setText(content + '\n');
+                                editor.insertText(editor.getLength(), '\n\n' + content);
                                 showNotification("Content added to editor!", "success");
                             }
                             modalContainer.querySelector('#modal-close-btn')?.click();
@@ -1878,7 +1872,12 @@
                     const context = await getFullProjectContext();
                     if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
                     const resultText = await identifyNeededCharacters(context);
-                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${escapeHTML(resultText)}</div>`;
+                    showContentInModal('Needed Characters', resultText, (content) => {
+                        if(editor) {
+                            editor.insertText(editor.getLength(), '\n\n' + content);
+                            showNotification("Content added to editor!", "success");
+                        }
+                    });
                 });
 
                 addClickListener('generate-backstory-btn', async () => {
@@ -1909,61 +1908,50 @@
 
                 addClickListener('generate-name-btn', async () => {
                     const type = document.getElementById('character-type-select').value;
-                    const resultText = await generateCharacterName(type);
-                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${escapeHTML(resultText)}</div>`;
+                    handleBrainstormingChoice( () => generateCharacterName(type), `Names for ${type}`);
                 });
 
-                // --- NEW WORLD-BUILDING LISTENERS ---
+                // --- WORLD-BUILDING LISTENERS (REFACTORED) ---
                 addClickListener('generate-setting-desc-btn', async () => {
                     const location = document.getElementById('wb-location-input').value.trim();
                     const setting = document.getElementById('wb-setting-input').value.trim();
                     if(!location || !setting) { showNotification("Please provide a location and setting.", "error"); return; }
                     const context = await getFullProjectContext();
                     const resultText = await generateSettingDescription(location, setting, context);
-                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${escapeHTML(resultText)}</div>`;
+                    showContentInModal('Setting Description', resultText, (content) => {
+                        if(editor) {
+                            editor.insertText(editor.getLength(), '\n\n' + content);
+                            showNotification("Description added to editor!", "success");
+                        }
+                    });
                 });
-                addClickListener('generate-location-ideas-btn', async () => {
-                    const context = await getFullProjectContext();
-                    if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
-                    const resultText = await generateLocationIdeas(context);
-                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${escapeHTML(resultText)}</div>`;
-                });
-                addClickListener('generate-tech-ideas-btn', async () => {
-                    const context = await getFullProjectContext();
-                    if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
-                    const resultText = await generateTechnologyIdeas(context);
-                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${escapeHTML(resultText)}</div>`;
-                });
-                addClickListener('develop-tech-ideas-btn', async () => {
-                    const context = await getFullProjectContext();
-                    if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
-                    const resultText = await developTechnologyIdeas(context);
-                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${escapeHTML(resultText)}</div>`;
-                });
+                addClickListener('generate-location-ideas-btn', () => handleBrainstormingChoice(generateLocationIdeas, 'Location Ideas'));
+                addClickListener('generate-tech-ideas-btn', () => handleBrainstormingChoice(generateTechnologyIdeas, 'Technology Ideas'));
+                addClickListener('develop-tech-ideas-btn', () => handleBrainstormingChoice(developTechnologyIdeas, 'Developed Technology Ideas'));
                 addClickListener('develop-power-system-btn', async () => {
                     const context = await getFullProjectContext();
                     if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
                     const resultText = await developPowerSystem(context);
-                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${escapeHTML(resultText)}</div>`;
+                     showContentInModal('Power System Idea', resultText, (content) => {
+                        if(editor) {
+                            editor.insertText(editor.getLength(), '\n\n' + content);
+                            showNotification("Power System added to editor!", "success");
+                        }
+                    });
                 });
                 addClickListener('describe-weapons-btn', async () => {
-                    const context = await getFullProjectContext();
+                     const context = await getFullProjectContext();
                     if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
                     const resultText = await describeFuturisticWeapons(context);
-                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${escapeHTML(resultText)}</div>`;
+                     showContentInModal('Weapon Descriptions', resultText, (content) => {
+                        if(editor) {
+                            editor.insertText(editor.getLength(), '\n\n' + content);
+                            showNotification("Descriptions added to editor!", "success");
+                        }
+                    });
                 });
-                addClickListener('generate-weapon-list-btn', async () => {
-                    const context = await getFullProjectContext();
-                    if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
-                    const resultText = await generateWeaponList(context);
-                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${escapeHTML(resultText)}</div>`;
-                });
-                addClickListener('create-transport-ideas-btn', async () => {
-                    const context = await getFullProjectContext();
-                    if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
-                    const resultText = await createTransportationIdeas(context);
-                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${escapeHTML(resultText)}</div>`;
-                });
+                addClickListener('generate-weapon-list-btn', () => handleBrainstormingChoice(generateWeaponList, 'Weapon Ideas'));
+                addClickListener('create-transport-ideas-btn', () => handleBrainstormingChoice(createTransportationIdeas, 'Transportation Ideas'));
 
 
                 addClickListener('generate-outline-btn', async () => {
