@@ -222,6 +222,34 @@
         }
         /* END: New Toast Notification Styles */
 
+        /* START: Styles for deletable sidebar links */
+        .sidebar-link-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .sidebar-link-container .section-link {
+            flex-grow: 1;
+        }
+        .delete-section-btn {
+            background: none;
+            border: none;
+            color: #9CA3AF;
+            cursor: pointer;
+            padding: 0.25rem;
+            margin-left: 0.5rem;
+            display: none; /* Hidden by default */
+        }
+        .sidebar-link-container:hover .delete-section-btn {
+            display: inline-block; /* Show on hover */
+        }
+        .delete-section-btn:hover {
+            color: #EF4444; /* Red on hover */
+        }
+        /* END: Styles for deletable sidebar links */
+
+
     </style>
 </head>
 <body>
@@ -370,7 +398,6 @@
                 const sectionsCollection = collection(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectRef.id}/sections`);
                 const emptyContent = JSON.stringify({ ops: [{ insert: '\n' }] });
                 
-                // START: Re-ordered and added Foreword
                 const sectionsToAdd = [
                     { id: 'metadata', title: 'Project Metadata', content: JSON.stringify({ authorName: '', copyrightYear: '', publisher: '', isbn: '', seriesName: '', seriesNumber: '', lccn: '', coverDesigner: '', interiorDesigner: '', publisherWebsite: '' }), order: 0 },
                     { id: 'brainstorming', title: 'Synopsis & Brainstorming', content: emptyContent, order: 1 },
@@ -388,7 +415,6 @@
                     { id: 'about_the_author', title: 'About the Author', content: emptyContent, order: 100 },
                     { id: 'discussion_questions', title: 'Discussion Questions', content: emptyContent, order: 101 },
                 ];
-                // END: Re-ordered and added Foreword
 
                 for (const section of sectionsToAdd) {
                     await setDoc(doc(sectionsCollection, section.id), { title: section.title, content: section.content, order: section.order });
@@ -427,6 +453,20 @@
                 return true;
             } catch (e) { console.error("Error adding back matter page:", e); showNotification(`Error adding page: ${e.message}`, 'error'); return false; }
         }
+        
+        // START: New function to delete a section
+        async function deleteSection(userId, projectId, sectionId) {
+            try {
+                const sectionRef = doc(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`, sectionId);
+                await deleteDoc(sectionRef);
+                return true;
+            } catch (e) {
+                console.error("Error deleting section:", e);
+                showNotification(`Error deleting page: ${e.message}`, 'error');
+                return false;
+            }
+        }
+        // END: New function
 
         async function getProjects(userId) { try { const qSnapshot = await getDocs(getProjectsCollection(userId)); const projects = []; qSnapshot.forEach(d => projects.push({ id: d.id, ...d.data() })); projects.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0)); return projects; } catch (e) { console.error("Error fetching projects:", e); showNotification(`Error fetching projects: ${e.message}`, 'error'); return []; } }
         async function getProject(userId, projectId) { try { const docRef = doc(getProjectsCollection(userId), projectId); const docSnap = await getDoc(docRef); return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null; } catch (e) { console.error("Error fetching project:", e); showNotification(`Error fetching project: ${e.message}`, 'error'); } }
@@ -663,8 +703,9 @@
 
         async function callGemini(contents, generationConfig = {}) {
             console.log("callGemini: Starting Gemini call with contents:", contents);
+            const outputDiv = document.getElementById('ai-output');
             try {
-                document.getElementById('ai-output').innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading-spinner"></div><span class="ml-2">Generating...</span></div>`;
+                outputDiv.innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading-spinner"></div><span class="ml-2">Generating...</span></div>`;
                 const finalContents = contents.map(item => {
                     if (item.parts?.[0]?.text) {
                         return { ...item, parts: [{ text: `AI Style Preference: ${aiStylePreference}\n\n${item.parts[0].text}` }] };
@@ -692,6 +733,10 @@
                 console.error("Error calling Gemini API:", e);
                 showNotification(`AI call failed: ${e.message}`, 'error');
                 return `Error: API call failed: ${e.message}`;
+            } finally {
+                // START: Ensure spinner is always cleared
+                if (outputDiv) outputDiv.innerHTML = '';
+                // END: Ensure spinner is always cleared
             }
         }
 
@@ -787,12 +832,12 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateFrontMatter(context, topic) {
-            const prompt = `You are an AI publishing assistant for Christian authors. For a book with the following details, generate a template or example content for the "${topic}" section of the front matter.
+            const prompt = `You are an AI publishing assistant for Christian authors. For a book with the following details, generate content for the "${topic}" section of the front matter. Do not include a title or any template-like explanations.
             \n\nProject Details:\n---\n${context}\n---\n\nGenerate content for the ${topic}:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateBackMatter(context, topic) {
-            const prompt = `You are an AI publishing assistant for Christian authors. For a book with the following details, generate a template or example content for the "${topic}" section of the back matter.
+            const prompt = `You are an AI publishing assistant for Christian authors. For a book with the following details, generate content for the "${topic}" section of the back matter. Do not include a title or any template-like explanations.
             \n\nProject Details:\n---\n${context}\n---\n\nGenerate content for the ${topic}:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
@@ -974,7 +1019,7 @@
                         <div class="container mx-auto text-center px-4">
                             <h2 class="text-4xl md:text-6xl font-bold font-lora text-white leading-tight mb-4">Your AI Co-Author, Guided by Faith</h2>
                             <p class="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto mb-8">
-                                Your personalized writing partner, trained on your unique style and grounded in Christian values. From manuscript to cover, let's bring your next masterpiece to life.
+                                Welcome, Rene' Stanly. Your personalized writing partner, trained on your unique style and grounded in Christian values. From manuscript to cover, let's bring your next masterpiece to life.
                             </p>
                             <button id="guest-btn" class="accent-bg accent-bg-hover text-white font-bold py-3 px-8 rounded-lg text-lg transition-transform transform hover:scale-105 inline-block">Continue as Guest</button>
                         </div>
@@ -1211,6 +1256,8 @@
                         project: [], frontMatter: [], chapters: [], backMatter: []
                     };
 
+                    const corePages = ['metadata', 'brainstorming', 'book_titles', 'character_development', 'world_building', 'outline', 'book_cover', 'copyright', 'dedication', 'foreword', 'preface', 'acknowledgments', 'chapter_1', 'about_the_author', 'discussion_questions'];
+
                     sections.forEach(s => {
                         if (s.order < 7) sectionGroups.project.push(s);
                         else if (s.order >= 7 && s.order < 11) sectionGroups.frontMatter.push(s);
@@ -1218,10 +1265,15 @@
                         else sectionGroups.backMatter.push(s);
                     });
 
-                    const createSectionLinks = (group) => group.map(s => `<a href="#" data-section-id="${s.id}" class="section-link p-2 rounded-md text-gray-300 hover:bg-gray-700 transition-colors ${s.id === activeSectionId ? 'bg-blue-600 text-white' : ''}">${s.title}</a>`).join('');
+                    const createSectionLinks = (group) => group.map(s => `
+                        <div class="sidebar-link-container">
+                            <a href="#" data-section-id="${s.id}" class="section-link p-2 rounded-md text-gray-300 hover:bg-gray-700 transition-colors ${s.id === activeSectionId ? 'bg-blue-600 text-white' : ''}">${s.title}</a>
+                            ${!corePages.includes(s.id) ? `<button data-section-id="${s.id}" class="delete-section-btn" title="Delete Page">🗑️</button>` : ''}
+                        </div>
+                    `).join('');
 
                     const sidebarNav = `
-                        <nav id="project-sections" class="flex flex-col space-y-2 flex-grow overflow-y-auto">
+                        <nav id="project-sections" class="flex flex-col space-y-1 flex-grow overflow-y-auto">
                             ${createSectionLinks(sectionGroups.project)}
                             ${sectionGroups.frontMatter.length > 0 ? `<div class="pt-4 mt-2 border-t border-gray-700"><h4 class="text-xs font-bold uppercase text-gray-500 px-2 mb-2">Front Matter</h4></div>` : ''}
                             ${createSectionLinks(sectionGroups.frontMatter)}
@@ -1240,6 +1292,29 @@
                             loadSection(activeSectionId);
                         });
                     });
+                    
+                    // START: Add event listeners for delete buttons
+                    leftSidebar.querySelectorAll('.delete-section-btn').forEach(btn => {
+                        btn.addEventListener('click', async (e) => {
+                            e.stopPropagation();
+                            const sectionIdToDelete = e.target.dataset.sectionId;
+                            const sectionToDelete = sections.find(s => s.id === sectionIdToDelete);
+                            showModal('Confirm Deletion', `<p>Are you sure you want to delete the page "${sectionToDelete.title}"?</p>`, async () => {
+                                const success = await deleteSection(userId, projectId, sectionIdToDelete);
+                                if (success) {
+                                    sections = await getProjectSections(userId, projectId);
+                                    // If the deleted section was active, switch to brainstorming
+                                    if (activeSectionId === sectionIdToDelete) {
+                                        activeSectionId = 'brainstorming';
+                                        await loadSection(activeSectionId);
+                                    }
+                                    renderSidebar();
+                                    showNotification('Page deleted.', 'success');
+                                }
+                            }, 'Delete');
+                        });
+                    });
+                    // END: Add event listeners for delete buttons
                 });
             };
             
@@ -1276,7 +1351,6 @@
                 }
             });
 
-            // START: Updated event listeners for new page buttons using modals
             document.getElementById('add-front-matter-btn').addEventListener('click', () => {
                 const content = `<form><label for="page-title" class="block text-sm font-medium text-gray-300 mb-1">Page Title</label><input type="text" id="page-title" name="title" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required></form>`;
                 showModal('Add Front Matter Page', content, async (modal) => {
@@ -1310,7 +1384,6 @@
                     }
                 }, 'Add Page');
             });
-            // END: Updated event listeners
 
             document.getElementById('export-project-btn').addEventListener('click', async () => {
                 showNotification('Preparing manuscript for export...', 'info');
@@ -1348,7 +1421,6 @@
             const renderAiPanel = (sectionId) => {
                 let contextualButtonsHtml = '';
                 
-                // START: Simplified AI Panel with Page Generators
                 const pageGenerators = `
                     <div class="pt-4 mt-4 border-t border-gray-700">
                         <p class="text-sm font-semibold mb-2 text-gray-200">Page Generators</p>
@@ -1417,7 +1489,6 @@
                         ${pageGenerators}
                         <div id="ai-output" class="mt-4 text-sm text-gray-300 space-y-2 flex-grow overflow-y-auto"></div>
                     </div>`;
-                // END: Simplified AI Panel
 
                 rightSidebar.innerHTML = aiPanelHtml;
                 setupAiPanelListeners(userId, projectId, editor);
