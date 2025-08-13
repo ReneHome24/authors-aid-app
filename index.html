@@ -1469,20 +1469,14 @@ Generate 5 character profiles:`;
                 }
             });
 
+            // FIX: Refactored this function to be more reliable
             const renderAiPanel = (sectionId) => {
                 console.log("renderAiPanel: Rendering AI panel for section:", sectionId);
-                let aiPanelHtml = `
-                    <h3 class="text-lg font-bold mb-4">AI Co-Author</h3>
-                    <div class="space-y-4 flex-grow flex flex-col">
-                        <div class="pb-4 border-b border-gray-700">
-                            <p class="text-sm font-semibold mb-2 text-gray-200">AI Style Preference</p>
-                            <textarea id="ai-style-preference-input" class="w-full h-20 p-2 bg-gray-700 border border-gray-600 rounded-md text-sm" placeholder="e.g., Write in a formal, encouraging tone."></textarea>
-                            <p class="text-xs text-gray-300 mt-1">Describe the tone or style you'd like the AI to use.</p>
-                        </div>
-                `;
+                
+                let contextualButtonsHtml = '';
 
                 if (sectionId === 'brainstorming') {
-                    aiPanelHtml += `
+                    contextualButtonsHtml = `
                         <div>
                             <p class="text-sm font-semibold mb-2 text-gray-200">Generate Synopsis Ideas</p>
                             <textarea id="ai-idea-input" class="w-full h-24 p-2 bg-gray-700 border border-gray-600 rounded-md text-sm" placeholder="e.g., A story about a family..."></textarea>
@@ -1496,7 +1490,7 @@ Generate 5 character profiles:`;
                             </div>
                         </div>`;
                 } else if (sectionId === 'book_titles') {
-                     aiPanelHtml += `
+                     contextualButtonsHtml = `
                         <div>
                             <p class="text-sm font-semibold mb-2 text-gray-200">Generate Book Titles</p>
                             <p class="text-xs text-gray-300 mb-2">Generate title suggestions based on your synopsis.</p>
@@ -1504,14 +1498,14 @@ Generate 5 character profiles:`;
                         </div>`;
                 }
                 else if (sectionId === 'character_development') {
-                     aiPanelHtml += `
+                     contextualButtonsHtml = `
                         <div>
                             <p class="text-sm font-semibold mb-2 text-gray-200">Generate Character Profiles</p>
                             <p class="text-xs text-gray-300 mb-2">Let the AI create character ideas based on your story's concept.</p>
                             <button id="generate-characters-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Characters</button>
                         </div>`;
                 } else if (sectionId === 'world_building') {
-                     aiPanelHtml += `
+                     contextualButtonsHtml = `
                         <div>
                             <p class="text-sm font-semibold mb-2 text-gray-200">Generate World Prompts</p>
                             <p class="text-xs text-gray-300 mb-2">Brainstorm elements for your story's universe.</p>
@@ -1519,14 +1513,14 @@ Generate 5 character profiles:`;
                         </div>`;
                 }
                 else if (sectionId === 'outline') {
-                    aiPanelHtml += `
+                    contextualButtonsHtml = `
                         <div>
                             <p class="text-sm font-semibold mb-2 text-gray-200">Generate Chapter Beats</p>
                             <p class="text-xs text-gray-300 mb-2">Let the AI create a detailed outline based on your project's foundation.</p>
                             <button id="generate-outline-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Outline</button>
                         </div>`;
                 } else if (sectionId.startsWith('chapter_')) {
-                    aiPanelHtml += `
+                    contextualButtonsHtml = `
                         <div>
                             <p class="text-sm font-semibold mb-2 text-gray-200">Drafting & Revising</p>
                             <div class="grid grid-cols-2 gap-2">
@@ -1536,7 +1530,7 @@ Generate 5 character profiles:`;
                             </div>
                         </div>`;
                 } else if (sectionId === 'book_cover') {
-                    aiPanelHtml += `
+                    contextualButtonsHtml = `
                         <div>
                             <p class="text-sm font-semibold mb-2 text-gray-200">Generate Image Prompts</p>
                             <p class="text-xs text-gray-300 mb-2">Generate descriptive prompts for an AI image generator based on your synopsis.</p>
@@ -1546,7 +1540,7 @@ Generate 5 character profiles:`;
                      const titleCase = sectionId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                      const isFrontMatter = ['Copyright', 'Dedication', 'Preface', 'Acknowledgments'].includes(titleCase);
                      const matterType = isFrontMatter ? 'front' : 'back';
-                     aiPanelHtml += `
+                     contextualButtonsHtml = `
                         <div>
                             <p class="text-sm font-semibold mb-2 text-gray-200">Generate ${titleCase}</p>
                             <p class="text-xs text-gray-300 mb-2">Get a template for your book's ${titleCase.toLowerCase()} section.</p>
@@ -1554,16 +1548,26 @@ Generate 5 character profiles:`;
                         </div>`;
                 }
 
-                aiPanelHtml += `
-                    <div class="pt-4 border-t border-gray-700 flex-shrink-0">
-                        <p class="text-sm font-semibold mb-2 text-gray-200">Editing & Faith Tools</p>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button id="suggest-alternatives-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Alternative Words</button>
-                            <button id="suggest-scripture-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest Scripture</button>
-                            <button id="suggest-youth-phrases-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest Youth Phrases</button>
+                const aiPanelHtml = `
+                    <h3 class="text-lg font-bold mb-4">AI Co-Author</h3>
+                    <div class="space-y-4 flex-grow flex flex-col">
+                        <div class="pb-4 border-b border-gray-700">
+                            <p class="text-sm font-semibold mb-2 text-gray-200">AI Style Preference</p>
+                            <textarea id="ai-style-preference-input" class="w-full h-20 p-2 bg-gray-700 border border-gray-600 rounded-md text-sm" placeholder="e.g., Write in a formal, encouraging tone."></textarea>
+                            <p class="text-xs text-gray-300 mt-1">Describe the tone or style you'd like the AI to use.</p>
                         </div>
-                    </div>
-                    <div id="ai-output" class="mt-4 text-sm text-gray-300 space-y-2 flex-grow overflow-y-auto"></div>
+                        
+                        ${contextualButtonsHtml}
+
+                        <div class="pt-4 border-t border-gray-700 flex-shrink-0">
+                            <p class="text-sm font-semibold mb-2 text-gray-200">Editing & Faith Tools</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button id="suggest-alternatives-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Alternative Words</button>
+                                <button id="suggest-scripture-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest Scripture</button>
+                                <button id="suggest-youth-phrases-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest Youth Phrases</button>
+                            </div>
+                        </div>
+                        <div id="ai-output" class="mt-4 text-sm text-gray-300 space-y-2 flex-grow overflow-y-auto"></div>
                     </div>`;
 
                 rightSidebar.innerHTML = aiPanelHtml;
