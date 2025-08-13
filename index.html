@@ -775,14 +775,44 @@ Generate 5 character profiles:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function suggestAlternatives(selectedText, context) { 
-            const prompt = `You are an AI thesaurus and editor for Christian literature. Given the following selected word/phrase and its surrounding context, provide a list of alternative words or short phrases that would fit well within a Christian-themed manuscript, considering tone and theological appropriateness.\n\nContext:\n---\n${context}\n---\n\nSelected Text: "${selectedText}"\n\nProvide alternatives as a JSON array of strings.`; 
+            const prompt = `You are an AI thesaurus and editor for Christian literature. The user has selected a sentence and wants alternative phrasing for its key ideas. Analyze the following sentence and provide a list of alternative phrases for the most significant parts. Do not suggest alternatives for the entire sentence, but for its core components.
+            \n\nContext:\n---\n${context}\n---\n\nSelected Text: "${selectedText}"
+            \n\nProvide alternatives as a JSON array of objects, where each object has "original" and "suggestion" keys. For example: [{"original": "a generation to guard their hearts", "suggestion": "a generation to shield their hearts"}].`; 
             const config = {
                 responseMimeType: "application/json",
-                responseSchema: { type: "ARRAY", items: { type: "STRING" } }
+                responseSchema: {
+                    type: "ARRAY",
+                    items: {
+                        type: "OBJECT",
+                        properties: {
+                            original: { type: "STRING" },
+                            suggestion: { type: "STRING" }
+                        },
+                        required: ["original", "suggestion"]
+                    }
+                }
             };
             return callGemini([{ role: "user", parts: [{ text: prompt }] }], config); 
         }
-        async function suggestScripture(selectedText, context) { const prompt = `You are a theological assistant specializing in the NIV Bible. Based on the following selected text, suggest a numbered list of 3 relevant NIV Bible scriptures. For each, provide the reference and the full verse text.\n\nSelected Text for Context:\n---\n${context}\n---\n\nSuggest 3 relevant NIV scriptures:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
+        async function suggestScripture(selectedText, context) { 
+            const prompt = `You are a theological assistant specializing in the NIV Bible. Based on the following selected text, suggest a list of 3 relevant NIV Bible scriptures.
+            \n\nSelected Text for Context:\n---\n${context}\n---\n\nProvide the response as a JSON array of objects, where each object has "reference" and "text" keys.`; 
+            const config = {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: "ARRAY",
+                    items: {
+                        type: "OBJECT",
+                        properties: {
+                            reference: { type: "STRING" },
+                            text: { type: "STRING" }
+                        },
+                        required: ["reference", "text"]
+                    }
+                }
+            };
+            return callGemini([{ role: "user", parts: [{ text: prompt }] }], config); 
+        }
         async function suggestPOVs(context) { const prompt = `You are an AI writing coach for Christian authors. Based on the story's synopsis, generate a numbered list of 3 potential Point of View (POV) & Voice choices (e.g., First Person, Third Person Limited). For each, briefly explain how that choice would shape the narration and affect the reader's experience, particularly in a Christian context.\n\nSynopsis:\n---\n${context}\n-\n\nGenerate 3 POV & Voice options:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function suggestStructures(context) { const prompt = `You are an AI writing coach for Christian authors. Based on the story's synopsis, suggest a numbered list of 3 potential structural templates (e.g., Three-Act Structure, Hero's Journey, Fichtean Curve). For each, briefly explain why that structure would be a good fit for the story, considering its Christian themes.\n\nSynopsis:\n---\n${context}\n---\n\nSuggest 3 structural templates:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function analyzeChapter(chapterText, context) {
@@ -1461,21 +1491,15 @@ Generate 5 character profiles:`;
                             <p class="text-xs text-gray-300 mb-2">Generate descriptive prompts for an AI image generator based on your synopsis.</p>
                             <button id="generate-image-prompts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Image Prompts</button>
                         </div>`;
-                } else if (['copyright', 'dedication', 'preface', 'acknowledgments'].includes(sectionId)) {
+                } else if (['copyright', 'dedication', 'preface', 'acknowledgments', 'about_the_author', 'discussion_questions'].includes(sectionId)) {
                      const titleCase = sectionId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                     aiPanelHtml += `
-                        <div>
-                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate ${titleCase}</p>
-                            <p class="text-xs text-gray-300 mb-2">Get a template for your book's ${titleCase.toLowerCase()} page.</p>
-                            <button data-topic="${titleCase}" class="generate-matter-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate</button>
-                        </div>`;
-                } else if (['about_the_author', 'discussion_questions'].includes(sectionId)) {
-                     const titleCase = sectionId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                     const isFrontMatter = ['Copyright', 'Dedication', 'Preface', 'Acknowledgments'].includes(titleCase);
+                     const matterType = isFrontMatter ? 'front' : 'back';
                      aiPanelHtml += `
                         <div>
                             <p class="text-sm font-semibold mb-2 text-gray-200">Generate ${titleCase}</p>
                             <p class="text-xs text-gray-300 mb-2">Get a template for your book's ${titleCase.toLowerCase()} section.</p>
-                            <button data-topic="${titleCase}" class="generate-matter-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate</button>
+                            <button data-topic="${titleCase}" data-matter-type="${matterType}" class="generate-matter-btn w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate</button>
                         </div>`;
                 }
 
@@ -1556,10 +1580,24 @@ Generate 5 character profiles:`;
                     const suggestionBtn = e.target.closest('.suggestion-replacement');
                     if (suggestionBtn) {
                         const newText = suggestionBtn.dataset.suggestion;
-                        if (currentSelectionRange && editor) {
-                            editor.deleteText(currentSelectionRange.index, currentSelectionRange.length);
-                            editor.insertText(currentSelectionRange.index, newText);
-                            outputDiv.innerHTML = ''; // Clear suggestions after use
+                        const originalText = suggestionBtn.dataset.original;
+
+                        if (editor && currentSelectionRange) {
+                            const selectedText = editor.getText(currentSelectionRange.index, currentSelectionRange.length);
+                            const startIndexInSelection = selectedText.indexOf(originalText);
+
+                            if (startIndexInSelection !== -1) {
+                                const absoluteStartIndex = currentSelectionRange.index + startIndexInSelection;
+                                editor.deleteText(absoluteStartIndex, originalText.length);
+                                editor.insertText(absoluteStartIndex, newText);
+                                // After applying one, clear the suggestions to avoid confusion
+                                outputDiv.innerHTML = ''; 
+                            } else {
+                                // Fallback for when the original text isn't found (e.g., single word replacement)
+                                editor.deleteText(currentSelectionRange.index, currentSelectionRange.length);
+                                editor.insertText(currentSelectionRange.index, newText);
+                                outputDiv.innerHTML = '';
+                            }
                         }
                         return;
                     }
@@ -1765,7 +1803,7 @@ Generate 5 character profiles:`;
                         outputDiv.innerHTML = suggestions.map(s => `
                             <div class="suggestion-item">
                                 <div class="suggestion-original">${escapeHTML(s.original)}</div>
-                                <div class="suggestion-replacement" data-suggestion="${escapeHTML(s.suggestion)}">
+                                <div class="suggestion-replacement" data-original="${escapeHTML(s.original)}" data-suggestion="${escapeHTML(s.suggestion)}">
                                     ${escapeHTML(s.suggestion)}
                                 </div>
                                 <div class="text-xs text-gray-400 mt-1">${escapeHTML(s.reasoning)}</div>
@@ -1781,9 +1819,9 @@ Generate 5 character profiles:`;
                 document.querySelectorAll('.generate-matter-btn').forEach(btn => {
                     btn.addEventListener('click', async (e) => {
                         const topic = e.target.dataset.topic;
-                        const isFrontMatter = ['Title Page', 'Copyright', 'Dedication', 'Foreword', 'Preface', 'Acknowledgments'].includes(topic);
+                        const matterType = e.target.dataset.matterType;
                         const { fullContext } = await getFullProjectContext();
-                        const matterText = isFrontMatter 
+                        const matterText = matterType === 'front'
                             ? await generateFrontMatter(fullContext, topic)
                             : await generateBackMatter(fullContext, topic);
                         showContentInModal(`${topic} Ideas`, matterText, (content) => {
@@ -1812,21 +1850,43 @@ Generate 5 character profiles:`;
                             const results = JSON.parse(resultsJson);
                             outputDiv.innerHTML = results.map(s => `
                                 <div class="suggestion-item">
-                                     <div class="suggestion-replacement" data-suggestion="${escapeHTML(s)}">${escapeHTML(s)}</div>
+                                     <div class="suggestion-original">${escapeHTML(s.original)}</div>
+                                     <div class="suggestion-replacement" data-original="${escapeHTML(s.original)}" data-suggestion="${escapeHTML(s.suggestion)}">${escapeHTML(s.suggestion)}</div>
                                 </div>
                             `).join('');
                         } catch (e) {
                              outputDiv.innerHTML = `<div class="text-red-400">Could not get suggestions.</div>`;
                         }
                     } else if (e.target.id === 'suggest-scripture-btn') {
-                        const resultsText = await suggestScripture(selectedText, fullTextContext);
-                        outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${escapeHTML(resultsText)}</div>`;
+                        const resultsJson = await suggestScripture(selectedText, fullTextContext);
+                        try {
+                            const results = JSON.parse(resultsJson);
+                            let modalContent = results.map(s => `
+                                <div class="p-2 bg-gray-700 rounded-md mb-2">
+                                    <p class="font-bold">${escapeHTML(s.reference)}</p>
+                                    <p class="mb-2">${escapeHTML(s.text)}</p>
+                                    <button data-scripture="${escapeHTML(s.reference + ': ' + s.text)}" class="add-scripture-btn accent-bg accent-bg-hover text-white font-semibold py-1 px-3 rounded-lg text-sm">Add</button>
+                                </div>
+                            `).join('');
+                            showModal('Suggested Scriptures', modalContent, null, 'Close', false);
+
+                            document.getElementById('modal-container').addEventListener('click', e => {
+                                if (e.target.classList.contains('add-scripture-btn')) {
+                                    const scripture = e.target.dataset.scripture;
+                                    editor.insertText(editor.getLength(), '\n\n' + scripture);
+                                    showNotification("Scripture added!", "success");
+                                }
+                            });
+
+                        } catch (e) {
+                             showNotification("Could not parse scripture suggestions.", "error");
+                        }
                     } else { // Youth Phrases
                         const resultsText = await suggestYouthPhrases(selectedText, fullTextContext);
                         const results = parseNumberedAiList(resultsText, false);
                          outputDiv.innerHTML = results.map(s => `
                             <div class="suggestion-item">
-                                 <div class="suggestion-replacement" data-suggestion="${escapeHTML(s)}">${escapeHTML(s)}</div>
+                                 <div class="suggestion-replacement" data-original="${escapeHTML(selectedText)}" data-suggestion="${escapeHTML(s)}">${escapeHTML(s)}</div>
                             </div>
                         `).join('');
                     }
@@ -1922,15 +1982,35 @@ Generate 5 character profiles:`;
                 } else {
                     editorContainer.classList.remove('hidden');
                     if (!editor) {
-                        editor = new Quill('#editor', {
-                            modules: { toolbar: [
+                        const toolbarOptions = {
+                            container: [
                                 [{ 'header': [1, 2, 3, false] }],
                                 ['bold', 'italic', 'underline'],
                                 [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                                ['clean']
-                            ] },
+                                ['clean'],
+                                ['undo', 'redo']
+                            ],
+                            handlers: {
+                                'undo': () => editor.history.undo(),
+                                'redo': () => editor.history.redo()
+                            }
+                        };
+                        editor = new Quill('#editor', {
+                            modules: { 
+                                toolbar: toolbarOptions,
+                                history: {
+                                    delay: 2000,
+                                    maxStack: 500,
+                                    userOnly: true
+                                }
+                            },
                             theme: 'snow'
                         });
+
+                        // Custom Undo/Redo button icons
+                        document.querySelector('.ql-undo').innerHTML = '<i class="fas fa-undo"></i>';
+                        document.querySelector('.ql-redo').innerHTML = '<i class="fas fa-redo"></i>';
+
                         editor.on('text-change', debounce(async () => {
                             const content = JSON.stringify(editor.getContents());
                             await updateSectionContent(userId, projectId, activeSectionId, content);
