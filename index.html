@@ -244,9 +244,13 @@
         <div id="footer-content-editor" class="container mx-auto flex justify-between items-center hidden">
              <!-- Chapter Navigation -->
             <div class="flex items-center space-x-2">
-                <button id="prev-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">&lt; Prev Chapter</button>
+                <button id="prev-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">&lt; Prev</button>
+                <!-- START: Added New Page Buttons -->
+                <button id="add-front-matter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">+ New Front Matter Page</button>
                 <button id="add-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">+ New Chapter</button>
-                <button id="next-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">Next Chapter &gt;</button>
+                <button id="add-back-matter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">+ New Back Matter Page</button>
+                <!-- END: Added New Page Buttons -->
+                <button id="next-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">Next &gt;</button>
             </div>
             <button id="export-project-btn" class="accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Export Project</button>
         </div>
@@ -394,6 +398,29 @@
                 return true;
             } catch (e) { console.error("Error adding chapter:", e); showNotification(`Error adding chapter: ${e.message}`, 'error'); return false; }
         }
+
+        // START: New functions for adding front/back matter pages
+        async function addFrontMatterPage(userId, projectId, pageTitle, order) {
+            try {
+                const sectionsCollection = collection(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`);
+                const newPageId = pageTitle.toLowerCase().replace(/\s+/g, '_') + `_${Date.now()}`;
+                const emptyContent = JSON.stringify({ ops: [{ insert: '\n' }] });
+                await setDoc(doc(sectionsCollection, newPageId), { title: pageTitle, content: emptyContent, order: order });
+                return true;
+            } catch (e) { console.error("Error adding front matter page:", e); showNotification(`Error adding page: ${e.message}`, 'error'); return false; }
+        }
+
+        async function addBackMatterPage(userId, projectId, pageTitle, order) {
+            try {
+                const sectionsCollection = collection(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`);
+                const newPageId = pageTitle.toLowerCase().replace(/\s+/g, '_') + `_${Date.now()}`;
+                const emptyContent = JSON.stringify({ ops: [{ insert: '\n' }] });
+                await setDoc(doc(sectionsCollection, newPageId), { title: pageTitle, content: emptyContent, order: order });
+                return true;
+            } catch (e) { console.error("Error adding back matter page:", e); showNotification(`Error adding page: ${e.message}`, 'error'); return false; }
+        }
+        // END: New functions
+
         async function getProjects(userId) { try { const qSnapshot = await getDocs(getProjectsCollection(userId)); const projects = []; qSnapshot.forEach(d => projects.push({ id: d.id, ...d.data() })); projects.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0)); return projects; } catch (e) { console.error("Error fetching projects:", e); showNotification(`Error fetching projects: ${e.message}`, 'error'); return []; } }
         async function getProject(userId, projectId) { try { const docRef = doc(getProjectsCollection(userId), projectId); const docSnap = await getDoc(docRef); return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null; } catch (e) { console.error("Error fetching project:", e); showNotification(`Error fetching project: ${e.message}`, 'error'); } }
         async function getProjectSections(userId, projectId) { try { const sectionsRef = collection(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`); const q = query(sectionsRef, orderBy("order")); const qSnapshot = await getDocs(q); const sections = []; qSnapshot.forEach(d => sections.push({ id: d.id, ...d.data() })); return sections; } catch (e) { console.error("Error fetching sections:", e); showNotification(`Error fetching sections: ${e.message}`, 'error'); return []; } }
@@ -422,18 +449,26 @@
             }
         }
         
-        // START: New function to auto-populate the copyright page
-        async function populateCopyrightPage(userId, projectId, metadata) {
+        // START: Updated function to auto-populate the copyright page
+        async function populateCopyrightPage(userId, projectId, metadata, projectTitle) {
             if (!metadata.authorName || !metadata.copyrightYear) {
                 return; // Don't run if essential data is missing
             }
-            const copyrightText = `Copyright © ${metadata.copyrightYear} by ${metadata.authorName}\n\nAll rights reserved. No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the publisher, except in the case of brief quotations embodied in critical reviews and certain other noncommercial uses permitted by copyright law.\n\nISBN: ${metadata.isbn || 'Not available'}\nLibrary of Congress Control Number: ${metadata.lccn || 'Not available'}`;
-            
+            let copyrightText = `**${projectTitle}**\n\n`;
+            copyrightText += `Copyright © ${metadata.copyrightYear} by ${metadata.authorName}\n\n`;
+            copyrightText += `All rights reserved. No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the publisher, except in the case of brief quotations embodied in critical reviews and certain other noncommercial uses permitted by copyright law.\n\n`;
+            if(metadata.publisher) copyrightText += `Published by ${metadata.publisher}\n`;
+            if(metadata.publisherWebsite) copyrightText += `${metadata.publisherWebsite}\n\n`;
+            if(metadata.isbn) copyrightText += `ISBN: ${metadata.isbn}\n`;
+            if(metadata.lccn) copyrightText += `Library of Congress Control Number: ${metadata.lccn}\n\n`;
+            if(metadata.coverDesigner) copyrightText += `Cover design by ${metadata.coverDesigner}\n`;
+            if(metadata.interiorDesigner) copyrightText += `Interior design by ${metadata.interiorDesigner}\n`;
+
             const quillContent = JSON.stringify({ ops: [{ insert: copyrightText + '\n' }] });
             await updateSectionContent(userId, projectId, 'copyright', quillContent);
             showNotification('Copyright page auto-updated!', 'info', 2000);
         }
-        // END: New function
+        // END: Updated function
 
         // New function to update project metadata
         async function updateProjectMetadata(userId, projectId, metadata) {
@@ -443,9 +478,8 @@
                 const projectRef = doc(getProjectsCollection(userId), projectId);
                 await updateDoc(projectRef, { lastModified: serverTimestamp() });
                 
-                // START: Call the new function to update copyright page
-                await populateCopyrightPage(userId, projectId, metadata);
-                // END: Call the new function
+                const projectData = await getProject(userId, projectId);
+                await populateCopyrightPage(userId, projectId, metadata, projectData.title);
                 
                 showNotification('Project metadata saved!', 'success');
             } catch (e) {
@@ -1432,6 +1466,36 @@ Generate 5 character profiles:`;
                 }
             });
 
+            // START: Event listeners for new page buttons
+            document.getElementById('add-front-matter-btn').addEventListener('click', async () => {
+                const pageTitle = prompt("Enter a title for the new front matter page (e.g., 'Foreword'):");
+                if (pageTitle) {
+                    const frontMatterSections = sections.filter(s => s.order >= 7 && s.order < 11);
+                    const lastOrder = frontMatterSections.length > 0 ? Math.max(...frontMatterSections.map(s => s.order)) : 6;
+                    const success = await addFrontMatterPage(userId, projectId, pageTitle, lastOrder + 0.1); // Use decimal to insert between
+                    if (success) {
+                        sections = await getProjectSections(userId, projectId);
+                        renderSidebar();
+                        showNotification(`Page "${pageTitle}" added!`, 'success');
+                    }
+                }
+            });
+
+            document.getElementById('add-back-matter-btn').addEventListener('click', async () => {
+                const pageTitle = prompt("Enter a title for the new back matter page (e.g., 'Glossary'):");
+                if (pageTitle) {
+                    const backMatterSections = sections.filter(s => s.order >= 100);
+                    const lastOrder = backMatterSections.length > 0 ? Math.max(...backMatterSections.map(s => s.order)) : 99;
+                    const success = await addBackMatterPage(userId, projectId, pageTitle, lastOrder + 1);
+                    if (success) {
+                        sections = await getProjectSections(userId, projectId);
+                        renderSidebar();
+                        showNotification(`Page "${pageTitle}" added!`, 'success');
+                    }
+                }
+            });
+            // END: Event listeners
+
             document.getElementById('export-project-btn').addEventListener('click', async () => {
                 console.log("Export Project button clicked.");
                 showNotification('Preparing manuscript for export...', 'info');
@@ -2003,37 +2067,47 @@ Generate 5 character profiles:`;
                     } catch(e) { /* Ignore parsing errors */ }
                     
                     metadataFormContainer.innerHTML = `
-                        <div class="bg-gray-900 p-6 rounded-lg border border-gray-700 w-full max-w-md">
+                        <div class="bg-gray-900 p-6 rounded-lg border border-gray-700 w-full max-w-lg">
                             <h3 class="text-xl font-lora font-bold mb-4 text-white">Project Metadata</h3>
                             <div class="space-y-4">
-                                <div>
-                                    <label for="meta-author-name" class="block text-sm font-medium text-gray-300 mb-1">Author Name</label>
-                                    <input type="text" id="meta-author-name" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.authorName || '')}">
-                                </div>
-                                <div>
-                                    <label for="meta-copyright-year" class="block text-sm font-medium text-gray-300 mb-1">Copyright Year</label>
-                                    <input type="number" id="meta-copyright-year" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.copyrightYear || new Date().getFullYear())}">
+                                <!-- START: Added new metadata fields -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="meta-author-name" class="block text-sm font-medium text-gray-300 mb-1">Author Name</label>
+                                        <input type="text" id="meta-author-name" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.authorName || '')}">
+                                    </div>
+                                    <div>
+                                        <label for="meta-copyright-year" class="block text-sm font-medium text-gray-300 mb-1">Copyright Year</label>
+                                        <input type="number" id="meta-copyright-year" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.copyrightYear || new Date().getFullYear())}">
+                                    </div>
                                 </div>
                                 <div>
                                     <label for="meta-publisher" class="block text-sm font-medium text-gray-300 mb-1">Publisher</label>
                                     <input type="text" id="meta-publisher" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.publisher || '')}">
                                 </div>
                                 <div>
+                                    <label for="meta-publisher-website" class="block text-sm font-medium text-gray-300 mb-1">Publisher Website (Optional)</label>
+                                    <input type="url" id="meta-publisher-website" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.publisherWebsite || '')}">
+                                </div>
+                                <div>
                                     <label for="meta-isbn" class="block text-sm font-medium text-gray-300 mb-1">ISBN (Optional)</label>
                                     <input type="text" id="meta-isbn" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.isbn || '')}">
-                                </div>
-                                <div>
-                                    <label for="meta-series-name" class="block text-sm font-medium text-gray-300 mb-1">Series Name (Optional)</label>
-                                    <input type="text" id="meta-series-name" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.seriesName || '')}">
-                                </div>
-                                <div>
-                                    <label for="meta-series-number" class="block text-sm font-medium text-gray-300 mb-1">Series Number (Optional)</label>
-                                    <input type="number" id="meta-series-number" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.seriesNumber || '')}">
                                 </div>
                                 <div>
                                     <label for="meta-lccn" class="block text-sm font-medium text-gray-300 mb-1">Library of Congress Control Number (LCCN)</label>
                                     <input type="text" id="meta-lccn" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.lccn || '')}">
                                 </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="meta-cover-designer" class="block text-sm font-medium text-gray-300 mb-1">Cover Designer (Optional)</label>
+                                        <input type="text" id="meta-cover-designer" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.coverDesigner || '')}">
+                                    </div>
+                                    <div>
+                                        <label for="meta-interior-designer" class="block text-sm font-medium text-gray-300 mb-1">Interior Designer (Optional)</label>
+                                        <input type="text" id="meta-interior-designer" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.interiorDesigner || '')}">
+                                    </div>
+                                </div>
+                                <!-- END: Added new metadata fields -->
                                 <button id="save-metadata-btn" class="w-full mt-4 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Save Metadata</button>
                             </div>
                         </div>
@@ -2043,10 +2117,11 @@ Generate 5 character profiles:`;
                             authorName: document.getElementById('meta-author-name').value,
                             copyrightYear: document.getElementById('meta-copyright-year').value,
                             publisher: document.getElementById('meta-publisher').value,
+                            publisherWebsite: document.getElementById('meta-publisher-website').value,
                             isbn: document.getElementById('meta-isbn').value,
-                            seriesName: document.getElementById('meta-series-name').value,
-                            seriesNumber: document.getElementById('meta-series-number').value,
                             lccn: document.getElementById('meta-lccn').value,
+                            coverDesigner: document.getElementById('meta-cover-designer').value,
+                            interiorDesigner: document.getElementById('meta-interior-designer').value,
                         };
                         await updateProjectMetadata(userId, projectId, newMetadata);
                     });
