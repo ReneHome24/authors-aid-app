@@ -493,10 +493,12 @@
             if (!text) return '';
             let cleanedText = text;
 
-            // Remove Markdown bold (**) and italic (* or _)
-            cleanedText = cleanedText.replace(/\*\*(.*?)\*\*/g, '$1'); // bold
-            cleanedText = cleanedText.replace(/\*(.*?)\*/g, '$1');   // italic (single asterisk)
-            cleanedText = cleanedText.replace(/_(.*?)_/g, '$1');   // italic (underscore)
+            // FIX: More robustly remove Markdown bold/italic markers, including asterisks
+            cleanedText = cleanedText.replace(/\*\*(.*?)\*\*/g, '$1'); // bold with **
+            cleanedText = cleanedText.replace(/__(.*?)__/g, '$1');   // bold with __
+            cleanedText = cleanedText.replace(/\*(.*?)\*/g, '$1');   // italic with *
+            cleanedText = cleanedText.replace(/_(.*?)_/g, '$1');   // italic with _
+            cleanedText = cleanedText.replace(/\*/g, ''); // Remove any remaining single asterisks
 
             // Remove Markdown headings (# at start of line)
             cleanedText = cleanedText.replace(/^#+\s*/gm, ''); // Remove # and leading space at start of line
