@@ -13,11 +13,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
-        html {
+        html, body {
             height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent body scrolling */
         }
         body {
-            min-height: 100%;
             display: flex;
             flex-direction: column;
             font-family: 'Inter', sans-serif;
@@ -25,9 +27,16 @@
             color: #D1D5DB; 
         }
         #app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+        #app-main-content {
             flex-grow: 1;
             display: flex;
             flex-direction: column;
+            overflow: hidden; /* Main content area controls its own scroll */
         }
 
         .font-lora { font-family: 'Lora', serif; }
@@ -264,7 +273,7 @@
 <body>
     
     <!-- Main Application Container -->
-    <div id="app-container" class="h-screen flex flex-col"></div>
+    <div id="app-container"></div>
 
     <!-- Modal Container -->
     <div id="modal-container" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4"></div>
@@ -963,7 +972,6 @@
             const prompt = `Generate a numbered list of 10 potential names for a ${characterType} character in a Christian novel. Do not use markdown formatting.`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        // FIX: Added new "Expand" function
         async function expandOnText(selectedText, fullContext) {
             const prompt = `You are an AI writing assistant. The user has highlighted a piece of text from their chapter and wants to expand on it.
             Based on the highlighted text and the full chapter context, generate a numbered list of 3 distinct and compelling new paragraphs that could be inserted immediately after the highlighted text.
@@ -1664,7 +1672,6 @@
                                 <button id="analyze-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Analyze Chapter</button>
                             </div>
                             <button id="proofread-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg mt-2">Proofread</button>
-                            <!-- FIX: Added Expand button -->
                             <button id="expand-text-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg mt-2">Expand on Selection</button>
                         </div>`;
                 } else if (sectionId === 'book_cover') {
@@ -1995,7 +2002,6 @@
                     }
                 });
                 
-                // FIX: Added listener for the new Expand button
                 addClickListener('expand-text-btn', async () => {
                     currentSelectionRange = editor.getSelection();
                     if (!currentSelectionRange || currentSelectionRange.length === 0) {
@@ -2174,12 +2180,14 @@
             appContainer.innerHTML = `<div class="text-center text-gray-400 p-8">Loading...</div>`;
             const footer = document.getElementById('app-global-footer');
             if (footer) {
-                if (route === 'landing') {
-                    footer.classList.add('hidden');
-                } else {
+                if (route === 'landing' || route === 'dashboard') {
                     footer.classList.remove('hidden');
                     document.getElementById('footer-content-landing-dashboard').classList.remove('hidden');
                     document.getElementById('footer-content-editor').classList.add('hidden');
+                } else { // editor view
+                    footer.classList.remove('hidden');
+                    document.getElementById('footer-content-editor').classList.remove('hidden');
+                    document.getElementById('footer-content-landing-dashboard').classList.add('hidden');
                 }
             }
 
