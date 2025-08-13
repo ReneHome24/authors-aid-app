@@ -198,7 +198,6 @@
             color: #6B7280;
         }
         
-        /* FIX: Made entire suggestion item clickable and improved readability */
         .suggestion-item {
             background-color: #374151;
             border-left: 3px solid #60a5fa;
@@ -224,7 +223,6 @@
             white-space: normal; /* Ensure text wraps */
         }
        
-        /* START: New Toast Notification Styles */
         #toast-notification {
             position: fixed;
             bottom: 20px;
@@ -236,9 +234,7 @@
         #toast-notification.show {
             transform: translate(-50%, 0);
         }
-        /* END: New Toast Notification Styles */
 
-        /* START: Styles for deletable sidebar links */
         .sidebar-link-container {
             display: flex;
             align-items: center;
@@ -263,7 +259,6 @@
         .delete-section-btn:hover {
             color: #EF4444; /* Red on hover */
         }
-        /* END: Styles for deletable sidebar links */
 
 
     </style>
@@ -276,9 +271,7 @@
     <!-- Modal Container -->
     <div id="modal-container" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4"></div>
     
-    <!-- START: New Toast Notification Container -->
     <div id="toast-notification"></div>
-    <!-- END: New Toast Notification Container -->
 
     <!-- Theme Switcher (Global) -->
     <div id="theme-switcher" class="fixed bottom-4 right-4 bg-gray-900/80 backdrop-blur-sm p-3 rounded-xl border border-gray-700 shadow-lg">
@@ -820,7 +813,7 @@
             **Strict Formatting Rules:**
             1.  Start each profile with the character's name, followed immediately by their character type from the taxonomy in parentheses. Example: "1. Elara (Protagonist)".
             2.  Do NOT use any markdown formatting like asterisks (* or **). All text should be plain.
-            3.  Each profile must include: a name, a character type, a brief backstory, core motivations, and personality quirks.
+            3.  Each profile must include: a name, character type, age, a detailed backstory, core motivations, and personality quirks.
             4.  Do not include any introductory text before the first numbered character.
 
             --- Character Taxonomy for Reference ---
@@ -929,6 +922,30 @@
         async function generateBackMatter(context, topic) {
             const prompt = `You are an AI publishing assistant for Christian authors. For a book with the following details, generate content for the "${topic}" section of the back matter. Do not include a title or any template-like explanations.
             \n\nProject Details:\n---\n${context}\n---\n\nGenerate content for the ${topic}:`;
+            return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+        }
+
+        // --- NEW CHARACTER DEVELOPMENT FUNCTIONS ---
+        async function identifyNeededCharacters(context) {
+            const prompt = `Based on the following story context, what characters are needed to move the story forward? Provide a list of character roles and a brief explanation for each.
+            \n\nStory Context:\n---\n${context}\n---`;
+            return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+        }
+
+        async function generateCharacterBackstory(characterName, context) {
+            const prompt = `Write a detailed backstory for the character named "${characterName}". Use the provided story context to ensure the backstory is relevant and compelling.
+            \n\nStory Context:\n---\n${context}\n---`;
+            return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+        }
+
+        async function generateCharacterArc(characterName, context) {
+            const prompt = `Write a compelling character arc for "${characterName}". Describe their journey and transformation from the beginning to the end of the story, based on the provided context.
+            \n\nStory Context:\n---\n${context}\n---`;
+            return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+        }
+
+        async function generateCharacterName(characterType) {
+            const prompt = `Generate a numbered list of 10 potential names for a ${characterType} character in a Christian novel.`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
 
@@ -1538,7 +1555,39 @@
                 } else if (sectionId === 'book_titles') {
                      contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Book Titles</p><button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button></div>`;
                 } else if (sectionId === 'character_development') {
-                     contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Character Profiles</p><button id="generate-characters-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Characters</button></div>`;
+                     // FIX: Updated character development panel
+                    contextualButtonsHtml = `
+                        <div>
+                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Full Profiles</p>
+                            <button id="generate-characters-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate 5 Profiles</button>
+                        </div>
+                        <div class="pt-4 mt-4 border-t border-gray-700 space-y-4">
+                            <div>
+                                <p class="text-sm font-semibold mb-2 text-gray-200">Targeted Generation</p>
+                                <input type="text" id="character-name-input" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white text-sm" placeholder="Enter Character Name">
+                                <div class="grid grid-cols-2 gap-2 mt-2">
+                                    <button id="generate-backstory-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Backstory</button>
+                                    <button id="generate-arc-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Character Arc</button>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold mb-2 text-gray-200">Name Generation</p>
+                                <select id="character-type-select" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white text-sm">
+                                    <option>Protagonist</option>
+                                    <option>Antagonist</option>
+                                    <option>Love Interest</option>
+                                    <option>Mentor</option>
+                                    <option>Sidekick</option>
+                                    <option>Supporting Character</option>
+                                </select>
+                                <button id="generate-name-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Get Names</button>
+                            </div>
+                             <div>
+                                <p class="text-sm font-semibold mb-2 text-gray-200">Story Needs</p>
+                                <button id="identify-needed-characters-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Needed Characters</button>
+                            </div>
+                        </div>
+                    `;
                 } else if (sectionId === 'world_building') {
                      contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate World Prompts</p><button id="generate-world-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate World Ideas</button></div>`;
                 } else if (sectionId === 'outline') {
@@ -1765,7 +1814,6 @@
                     const titlesText = await generateTitles(context);
                     const titles = parseNumberedAiList(titlesText, true); // Keep numbers for display
                     outputDiv.innerHTML = titles.map((title) => {
-                        // Remove the number for the data attribute
                         const cleanTitle = title.replace(/^\d+\.\s*/, '');
                         return `<button data-title="${escapeHTML(cleanTitle)}" class="title-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHTML(title)}</button>`;
                     }).join('');
@@ -1776,27 +1824,54 @@
                     const authorCtx = await getAuthorContext();
                     if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
                     const charactersText = await generateCharacterProfiles(context, authorCtx);
-                    const profiles = parseNumberedAiList(charactersText, false).map(c => c.trim());
-                    const roleOrder = ['Protagonist', 'Antagonist', 'Mentor', 'Deuteragonist', 'Love Interest', 'Confidant', 'Foil', 'Sidekick'];
-                    const getRole = (profileText) => {
-                        const match = profileText.match(/By Role:\s*([^\n,]+)/i);
-                        return match ? match[1].trim() : 'zzzz';
-                    };
-                    profiles.sort((a, b) => {
-                        const roleA = getRole(a); const roleB = getRole(b);
-                        const indexA = roleOrder.indexOf(roleA); const indexB = roleOrder.indexOf(roleB);
-                        if (indexA === -1 && indexB === -1) return 0; if (indexA === -1) return 1; if (indexB === -1) return -1;
-                        return indexA - indexB;
-                    });
-                    let modalContent = profiles.map(profile => `<div class="p-2 bg-gray-700 rounded-md mb-2"><p class="whitespace-pre-wrap">${escapeHTML(profile)}</p></div>`).join('');
-                    showModal('Generated Character Profiles', modalContent, () => {
-                        const fullText = profiles.join('\n\n---\n\n');
-                        if (editor) {
-                            editor.insertText(editor.getLength(), '\n\n' + fullText);
+                    showContentInModal('Generated Character Profiles', charactersText, (content) => {
+                        if(editor) {
+                            editor.insertText(editor.getLength(), '\n\n' + content);
                             showNotification("Characters added to editor!", "success");
                         }
-                    }, 'Add All to Editor');
+                    });
                 });
+                
+                // --- NEW EVENT LISTENERS FOR CHARACTER DEVELOPMENT ---
+                addClickListener('identify-needed-characters-btn', async () => {
+                    const context = await getFullProjectContext();
+                    if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
+                    const resultText = await identifyNeededCharacters(context);
+                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${escapeHTML(resultText)}</div>`;
+                });
+
+                addClickListener('generate-backstory-btn', async () => {
+                    const name = document.getElementById('character-name-input').value.trim();
+                    if (!name) { showNotification("Please enter a character name.", "error"); return; }
+                    const context = await getFullProjectContext();
+                    const resultText = await generateCharacterBackstory(name, context);
+                    showContentInModal(`Backstory for ${name}`, resultText, (content) => {
+                         if(editor) {
+                            editor.insertText(editor.getLength(), `\n\n--- BACKSTORY: ${name} ---\n\n` + content);
+                            showNotification("Backstory added to editor!", "success");
+                        }
+                    });
+                });
+
+                addClickListener('generate-arc-btn', async () => {
+                    const name = document.getElementById('character-name-input').value.trim();
+                    if (!name) { showNotification("Please enter a character name.", "error"); return; }
+                    const context = await getFullProjectContext();
+                    const resultText = await generateCharacterArc(name, context);
+                    showContentInModal(`Character Arc for ${name}`, resultText, (content) => {
+                         if(editor) {
+                            editor.insertText(editor.getLength(), `\n\n--- CHARACTER ARC: ${name} ---\n\n` + content);
+                            showNotification("Character arc added to editor!", "success");
+                        }
+                    });
+                });
+
+                addClickListener('generate-name-btn', async () => {
+                    const type = document.getElementById('character-type-select').value;
+                    const resultText = await generateCharacterName(type);
+                    outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${escapeHTML(resultText)}</div>`;
+                });
+
 
                 addClickListener('generate-outline-btn', async () => {
                     const context = await getFullProjectContext();
