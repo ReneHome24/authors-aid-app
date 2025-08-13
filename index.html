@@ -221,7 +221,6 @@
             white-space: normal; /* Ensure text wraps */
         }
        
-        /* FIX: Relocated Toast Notification to top-right */
         #toast-notification {
             position: fixed;
             top: 20px;
@@ -264,25 +263,8 @@
 </head>
 <body>
     
-    <div id="app-container">
-        <div id="app-main-content" class="flex-grow flex flex-col"></div>
-        
-        <footer id="app-global-footer" class="ui-bg p-4 border-t border-gray-700 flex-shrink-0 hidden">
-            <div id="footer-content-landing-dashboard" class="container mx-auto text-center text-gray-500 hidden">
-                <p>&copy; 2025 Author's Aid. All Rights Reserved.</p>
-            </div>
-            <div id="footer-content-editor" class="container mx-auto flex justify-between items-center hidden">
-                <div class="flex items-center space-x-2">
-                    <button id="prev-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">&lt; Prev</button>
-                    <button id="add-front-matter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">+ New Front Matter Page</button>
-                    <button id="add-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">+ New Chapter</button>
-                    <button id="add-back-matter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">+ New Back Matter Page</button>
-                    <button id="next-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">Next &gt;</button>
-                </div>
-                <button id="export-project-btn" class="accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Export Project</button>
-            </div>
-        </footer>
-    </div>
+    <!-- Main Application Container -->
+    <div id="app-container" class="h-screen flex flex-col"></div>
 
     <!-- Modal Container -->
     <div id="modal-container" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4"></div>
@@ -299,6 +281,24 @@
             <button data-theme="theme-purple" class="theme-button w-6 h-6 rounded-full bg-violet-500" title="Royal Purple"></button>
         </div>
     </div>
+
+    <!-- Global Footer for all views -->
+    <footer id="app-global-footer" class="ui-bg p-4 border-t border-gray-700 flex-shrink-0 hidden">
+        <div id="footer-content-landing-dashboard" class="container mx-auto text-center text-gray-500 hidden">
+            <p>&copy; 2025 Author's Aid. All Rights Reserved.</p>
+        </div>
+        <div id="footer-content-editor" class="container mx-auto flex justify-between items-center hidden">
+             <!-- Chapter Navigation -->
+            <div class="flex items-center space-x-2">
+                <button id="prev-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">&lt; Prev</button>
+                <button id="add-front-matter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">+ New Front Matter Page</button>
+                <button id="add-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">+ New Chapter</button>
+                <button id="add-back-matter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">+ New Back Matter Page</button>
+                <button id="next-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">Next &gt;</button>
+            </div>
+            <button id="export-project-btn" class="accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Export Project</button>
+        </div>
+    </footer>
 
     <!-- ALL APPLICATION JAVASCRIPT -->
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
@@ -966,7 +966,7 @@
 
 
         // --- views.js content ---
-        const appContainer = document.getElementById('app-main-content');
+        const appContainer = document.getElementById('app-container');
         let currentUserId = null;
         let currentSelectionRange = null;
         let currentTheme = 'theme-default';
@@ -1126,9 +1126,8 @@
             document.body.style.overflow = 'auto';
             document.getElementById('theme-switcher').style.display = 'block';
             appContainer.innerHTML = `
-                <div class="gradient-bg flex flex-col min-h-screen">
-                    <!-- FIX: Added sticky top-0 to keep header visible on scroll -->
-                    <header class="sticky top-0 left-0 w-full z-10 p-4 bg-black/30 backdrop-blur-sm">
+                <div class="gradient-bg">
+                    <header class="absolute top-0 left-0 w-full z-10 p-4">
                         <div class="container mx-auto flex justify-between items-center">
                             <h1 class="text-2xl font-bold font-lora text-white">Author's Aid</h1>
                             <nav class="hidden md:flex space-x-6 items-center">
@@ -1138,7 +1137,7 @@
                             </nav>
                         </div>
                     </header>
-                    <main class="relative pt-20 pb-20 md:pt-32 md:pb-32 flex-grow">
+                    <main class="relative pt-32 pb-20 md:pt-48 md:pb-32">
                         <div class="container mx-auto text-center px-4">
                             <h2 class="text-4xl md:text-6xl font-bold font-lora text-white leading-tight mb-4">Your AI Co-Author, Guided by Faith</h2>
                             <p class="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto mb-8">
@@ -1183,14 +1182,12 @@
 
         async function renderDashboard(userId) {
             currentUserId = userId;
-            document.body.style.overflow = 'hidden'; // Prevent body scroll on dashboard
+            document.body.style.overflow = 'auto';
             document.getElementById('theme-switcher').style.display = 'block';
             appContainer.innerHTML = '';
             appContainer.appendChild(renderHeader(true, false, userId));
-            
-            // FIX: Added overflow-y-auto to allow scrolling of the project list
             const mainContent = document.createElement('main');
-            mainContent.className = "container mx-auto p-8 flex-grow overflow-y-auto";
+            mainContent.className = "container mx-auto p-8 flex-grow";
             mainContent.innerHTML = `<div class="text-center text-gray-400">Loading projects...</div>`;
             appContainer.appendChild(mainContent);
 
@@ -1848,6 +1845,7 @@
                                                 const uploadResult = await uploadString(storageRef, base64Url, 'data_url');
                                                 const downloadUrl = await getDownloadURL(uploadResult.ref);
                                                 await updateProjectCover(userId, projectId, downloadUrl);
+                                                project.bookCoverUrl = downloadUrl; // FIX: Manually update local project object
                                                 coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(w => w.classList.remove('selected'));
                                                 selectedWrapper.classList.add('selected');
                                                 renderSidebar();
@@ -2124,8 +2122,8 @@
         }
 
         const navigateTo = (route, params = {}) => {
-            const appMainContent = document.getElementById('app-main-content');
-            appMainContent.innerHTML = `<div class="text-center text-gray-400 p-8">Loading...</div>`;
+            const appContainer = document.getElementById('app-container');
+            appContainer.innerHTML = `<div class="text-center text-gray-400 p-8">Loading...</div>`;
             const footer = document.getElementById('app-global-footer');
             if (footer) {
                 if (route === 'landing') {
@@ -2148,7 +2146,6 @@
 
         // --- Main App Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
-            const appMainContent = document.getElementById('app-main-content');
             initializeAuth(firebaseConfig);
             initializeDb(firebaseConfig);
 
