@@ -963,6 +963,27 @@
             const prompt = `Generate a numbered list of 10 potential names for a ${characterType} character in a Christian novel. Do not use markdown formatting.`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
+        // FIX: Added new "Expand" function
+        async function expandOnText(selectedText, fullContext) {
+            const prompt = `You are an AI writing assistant. The user has highlighted a piece of text from their chapter and wants to expand on it.
+            Based on the highlighted text and the full chapter context, generate a numbered list of 3 distinct and compelling new paragraphs that could be inserted immediately after the highlighted text.
+            The new paragraphs should logically follow the highlighted text, add depth or detail, and maintain the existing tone and style.
+
+            **Strict Formatting Rules:**
+            - Do NOT use any markdown formatting like asterisks (* or **). All text should be plain.
+            - Do NOT include any introductory text or conversational filler before the list.
+
+            --- Full Chapter Context ---
+            ${fullContext}
+            --- End Context ---
+
+            --- Highlighted Text to Expand On ---
+            "${selectedText}"
+            --- End Highlighted Text ---
+
+            Generate 3 new paragraph options:`;
+            return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+        }
 
 
         // --- views.js content ---
@@ -1641,8 +1662,10 @@
                             <div class="grid grid-cols-2 gap-2">
                                 <button id="continue-writing-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Continue Writing</button>
                                 <button id="analyze-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Analyze Chapter</button>
-                                <button id="proofread-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Proofread</button>
                             </div>
+                            <button id="proofread-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg mt-2">Proofread</button>
+                            <!-- FIX: Added Expand button -->
+                            <button id="expand-text-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg mt-2">Expand on Selection</button>
                         </div>`;
                 } else if (sectionId === 'book_cover') {
                     contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Image Prompts</p><button id="generate-image-prompts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Image Prompts</button></div>`;
@@ -1753,7 +1776,7 @@
                     if (btn) btn.addEventListener('click', handler);
                 };
                 
-                const handleBrainstormingChoice = async (generatorFunction, title, idea = null) => {
+                const handleBrainstormingChoice = async (generatorFunction, title, idea = null, insertionCallback = null) => {
                     const context = await getFullProjectContext();
                     if (!context && !idea) { showNotification("Please write a synopsis first.", "error"); return; }
                     const resultsText = await generatorFunction(idea || context);
@@ -1772,7 +1795,9 @@
                         const target = e.target.closest('.brainstorm-choice-btn');
                         if (target) {
                             const content = target.dataset.content;
-                            if (editor) {
+                            if (insertionCallback) {
+                                insertionCallback(content);
+                            } else if (editor) {
                                 editor.insertText(editor.getLength(), '\n\n' + content);
                                 const newEditorContent = JSON.stringify(editor.getContents());
                                 await updateSectionContent(currentUserId, projectId, activeSectionId, newEditorContent);
@@ -1845,7 +1870,7 @@
                                                 const uploadResult = await uploadString(storageRef, base64Url, 'data_url');
                                                 const downloadUrl = await getDownloadURL(uploadResult.ref);
                                                 await updateProjectCover(userId, projectId, downloadUrl);
-                                                project.bookCoverUrl = downloadUrl; // FIX: Manually update local project object
+                                                project.bookCoverUrl = downloadUrl;
                                                 coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(w => w.classList.remove('selected'));
                                                 selectedWrapper.classList.add('selected');
                                                 renderSidebar();
@@ -1969,6 +1994,29 @@
                         outputDiv.innerHTML = `<div class="text-red-400">Could not get suggestions.</div>`;
                     }
                 });
+                
+                // FIX: Added listener for the new Expand button
+                addClickListener('expand-text-btn', async () => {
+                    currentSelectionRange = editor.getSelection();
+                    if (!currentSelectionRange || currentSelectionRange.length === 0) {
+                        showNotification("Please select text to expand on.", "error"); return;
+                    }
+                    const selectedText = editor.getText(currentSelectionRange.index, currentSelectionRange.length);
+                    const fullTextContext = editor.getText();
+                    
+                    const insertionCallback = async (content) => {
+                        if (editor && currentSelectionRange) {
+                            const insertPosition = currentSelectionRange.index + currentSelectionRange.length;
+                            editor.insertText(insertPosition, '\n\n' + content);
+                            const newEditorContent = JSON.stringify(editor.getContents());
+                            await updateSectionContent(currentUserId, projectId, activeSectionId, newEditorContent);
+                            showNotification("Expansion saved!", "success");
+                        }
+                    };
+                    
+                    handleBrainstormingChoice(() => expandOnText(selectedText, fullTextContext), 'Choose an Expansion', null, insertionCallback);
+                });
+
 
                 document.querySelectorAll('.generate-matter-btn').forEach(btn => {
                     btn.addEventListener('click', async (e) => {
