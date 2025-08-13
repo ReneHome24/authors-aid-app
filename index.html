@@ -1733,6 +1733,8 @@
                                 editor.deleteText(currentSelectionRange.index, currentSelectionRange.length);
                                 editor.insertText(currentSelectionRange.index, newText);
                             }
+                            const newEditorContent = JSON.stringify(editor.getContents());
+                            await updateSectionContent(currentUserId, projectId, activeSectionId, newEditorContent);
                             outputDiv.innerHTML = ''; 
                         }
                         return;
@@ -1753,6 +1755,7 @@
                     if (btn) btn.addEventListener('click', handler);
                 };
                 
+                // FIX: Refactored this function to handle saving automatically
                 const handleBrainstormingChoice = async (generatorFunction, title, idea = null) => {
                     const context = await getFullProjectContext();
                     if (!context && !idea) { showNotification("Please write a synopsis first.", "error"); return; }
@@ -1768,13 +1771,15 @@
                     showModal(title, modalContent, null, '', false);
 
                     const modalContainer = document.getElementById('modal-container');
-                    const choiceHandler = (e) => {
+                    const choiceHandler = async (e) => {
                         const target = e.target.closest('.brainstorm-choice-btn');
                         if (target) {
                             const content = target.dataset.content;
                             if (editor) {
                                 editor.insertText(editor.getLength(), '\n\n' + content);
-                                showNotification("Content added to editor!", "success");
+                                const newEditorContent = JSON.stringify(editor.getContents());
+                                await updateSectionContent(currentUserId, projectId, activeSectionId, newEditorContent);
+                                showNotification("Content saved!", "success");
                             }
                             modalContainer.querySelector('#modal-close-btn')?.click();
                             modalContainer.removeEventListener('click', choiceHandler);
@@ -1783,10 +1788,25 @@
                     modalContainer.addEventListener('click', choiceHandler);
                 };
 
+                // FIX: Refactored this function to handle saving automatically
+                const showContentInModalAndSave = (title, contentPromise, prefix = '') => {
+                    contentPromise.then(content => {
+                        showModal(title, `<div class="whitespace-pre-wrap text-gray-300 text-sm">${escapeHTML(content)}</div>`, async () => {
+                            if (editor) {
+                                editor.insertText(editor.getLength(), `\n\n${prefix}` + content);
+                                const newEditorContent = JSON.stringify(editor.getContents());
+                                await updateSectionContent(currentUserId, projectId, activeSectionId, newEditorContent);
+                                showNotification("Content saved!", "success");
+                            }
+                        }, 'Accept & Add to Editor');
+                    });
+                };
+
+
                 addClickListener('generate-synopsis-concepts-btn', async () => {
                     const idea = document.getElementById('ai-idea-input').value.trim();
                     if (!idea) { showNotification("Please enter a basic idea.", "error"); return; }
-                    handleBrainstormingChoice(generateSynopsisIdeas, 'Choose a Synopsis Idea', idea);
+                    handleBrainstormingChoice( () => generateSynopsisIdeas(idea), 'Choose a Synopsis Idea');
                 });
                 addClickListener('generate-pov-btn', () => handleBrainstormingChoice(suggestPOVs, 'Choose a Point of View'));
                 
@@ -1848,7 +1868,7 @@
                     const context = await getFullProjectContext();
                     if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
                     const titlesText = await generateTitles(context);
-                    const titles = parseNumberedAiList(titlesText, true); // Keep numbers for display
+                    const titles = parseNumberedAiList(titlesText, true); 
                     outputDiv.innerHTML = titles.map((title) => {
                         const cleanTitle = title.replace(/^\d+\.\s*/, '');
                         return `<button data-title="${escapeHTML(cleanTitle)}" class="title-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHTML(title)}</button>`;
@@ -1859,51 +1879,27 @@
                     const context = await getFullProjectContext();
                     const authorCtx = await getAuthorContext();
                     if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
-                    const charactersText = await generateCharacterProfiles(context, authorCtx);
-                    showContentInModal('Generated Character Profiles', charactersText, (content) => {
-                        if(editor) {
-                            editor.insertText(editor.getLength(), '\n\n' + content);
-                            showNotification("Characters added to editor!", "success");
-                        }
-                    });
+                    showContentInModalAndSave('Generated Character Profiles', generateCharacterProfiles(context, authorCtx));
                 });
                 
                 addClickListener('identify-needed-characters-btn', async () => {
                     const context = await getFullProjectContext();
                     if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
-                    const resultText = await identifyNeededCharacters(context);
-                    showContentInModal('Needed Characters', resultText, (content) => {
-                        if(editor) {
-                            editor.insertText(editor.getLength(), '\n\n' + content);
-                            showNotification("Content added to editor!", "success");
-                        }
-                    });
+                    showContentInModalAndSave('Needed Characters', identifyNeededCharacters(context));
                 });
 
                 addClickListener('generate-backstory-btn', async () => {
                     const name = document.getElementById('character-name-input').value.trim();
                     if (!name) { showNotification("Please enter a character name.", "error"); return; }
                     const context = await getFullProjectContext();
-                    const resultText = await generateCharacterBackstory(name, context);
-                    showContentInModal(`Backstory for ${name}`, resultText, (content) => {
-                         if(editor) {
-                            editor.insertText(editor.getLength(), `\n\n--- BACKSTORY: ${name} ---\n\n` + content);
-                            showNotification("Backstory added to editor!", "success");
-                        }
-                    });
+                    showContentInModalAndSave(`Backstory for ${name}`, generateCharacterBackstory(name, context), `--- BACKSTORY: ${name} ---\n\n`);
                 });
 
                 addClickListener('generate-arc-btn', async () => {
                     const name = document.getElementById('character-name-input').value.trim();
                     if (!name) { showNotification("Please enter a character name.", "error"); return; }
                     const context = await getFullProjectContext();
-                    const resultText = await generateCharacterArc(name, context);
-                    showContentInModal(`Character Arc for ${name}`, resultText, (content) => {
-                         if(editor) {
-                            editor.insertText(editor.getLength(), `\n\n--- CHARACTER ARC: ${name} ---\n\n` + content);
-                            showNotification("Character arc added to editor!", "success");
-                        }
-                    });
+                    showContentInModalAndSave(`Character Arc for ${name}`, generateCharacterArc(name, context), `--- CHARACTER ARC: ${name} ---\n\n`);
                 });
 
                 addClickListener('generate-name-btn', async () => {
@@ -1911,19 +1907,13 @@
                     handleBrainstormingChoice( () => generateCharacterName(type), `Names for ${type}`);
                 });
 
-                // --- WORLD-BUILDING LISTENERS (REFACTORED) ---
+                // --- WORLD-BUILDING LISTENERS ---
                 addClickListener('generate-setting-desc-btn', async () => {
                     const location = document.getElementById('wb-location-input').value.trim();
                     const setting = document.getElementById('wb-setting-input').value.trim();
                     if(!location || !setting) { showNotification("Please provide a location and setting.", "error"); return; }
                     const context = await getFullProjectContext();
-                    const resultText = await generateSettingDescription(location, setting, context);
-                    showContentInModal('Setting Description', resultText, (content) => {
-                        if(editor) {
-                            editor.insertText(editor.getLength(), '\n\n' + content);
-                            showNotification("Description added to editor!", "success");
-                        }
-                    });
+                    showContentInModalAndSave('Setting Description', generateSettingDescription(location, setting, context));
                 });
                 addClickListener('generate-location-ideas-btn', () => handleBrainstormingChoice(generateLocationIdeas, 'Location Ideas'));
                 addClickListener('generate-tech-ideas-btn', () => handleBrainstormingChoice(generateTechnologyIdeas, 'Technology Ideas'));
@@ -1931,24 +1921,12 @@
                 addClickListener('develop-power-system-btn', async () => {
                     const context = await getFullProjectContext();
                     if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
-                    const resultText = await developPowerSystem(context);
-                     showContentInModal('Power System Idea', resultText, (content) => {
-                        if(editor) {
-                            editor.insertText(editor.getLength(), '\n\n' + content);
-                            showNotification("Power System added to editor!", "success");
-                        }
-                    });
+                    showContentInModalAndSave('Power System Idea', developPowerSystem(context));
                 });
                 addClickListener('describe-weapons-btn', async () => {
                      const context = await getFullProjectContext();
                     if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
-                    const resultText = await describeFuturisticWeapons(context);
-                     showContentInModal('Weapon Descriptions', resultText, (content) => {
-                        if(editor) {
-                            editor.insertText(editor.getLength(), '\n\n' + content);
-                            showNotification("Descriptions added to editor!", "success");
-                        }
-                    });
+                    showContentInModalAndSave('Weapon Descriptions', describeFuturisticWeapons(context));
                 });
                 addClickListener('generate-weapon-list-btn', () => handleBrainstormingChoice(generateWeaponList, 'Weapon Ideas'));
                 addClickListener('create-transport-ideas-btn', () => handleBrainstormingChoice(createTransportationIdeas, 'Transportation Ideas'));
@@ -1957,26 +1935,14 @@
                 addClickListener('generate-outline-btn', async () => {
                     const context = await getFullProjectContext();
                     if (!context) { showNotification("Please fill out your synopsis, characters, and world-building sections first.", "error"); return; }
-                    const outlineText = await generateOutlineBeats(context);
-                     showContentInModal('Generated Outline', outlineText, (content) => {
-                        if (editor) {
-                            editor.setText(content);
-                            showNotification("Outline added to editor!", "success");
-                        }
-                    });
+                    showContentInModalAndSave('Generated Outline', generateOutlineBeats(context));
                 });
 
                 addClickListener('continue-writing-btn', async () => {
                     const currentText = editor.getText();
                     const context = await getFullProjectContext();
                     if (!context) { showNotification("Please ensure you have project details.", "error"); return; }
-                    const nextText = await generateNext(currentText, context);
-                    showContentInModal('Suggested Continuation', nextText, (content) => {
-                        if (editor) {
-                            editor.insertText(editor.getLength(), '\n\n' + content);
-                            showNotification("Content added to editor!", "success");
-                        }
-                    });
+                    showContentInModalAndSave('Suggested Continuation', generateNext(currentText, context));
                 });
 
                 addClickListener('analyze-chapter-btn', async () => {
@@ -2012,15 +1978,7 @@
                         const topic = e.target.dataset.topic;
                         const matterType = e.target.dataset.matterType;
                         const context = await getFullProjectContext();
-                        const matterText = matterType === 'front'
-                            ? await generateFrontMatter(context, topic)
-                            : await generateBackMatter(context, topic);
-                        showContentInModal(`${topic} Ideas`, matterText, (content) => {
-                            if (editor) {
-                                editor.insertText(editor.getLength(), `\n\n--- ${topic.toUpperCase()} ---\n\n` + content);
-                                showNotification("Content added to editor!", "success");
-                            }
-                        });
+                        showContentInModalAndSave(`${topic} Ideas`, matterType === 'front' ? generateFrontMatter(context, topic) : generateBackMatter(context, topic), `--- ${topic.toUpperCase()} ---\n\n`);
                     });
                 });
 
@@ -2049,7 +2007,9 @@
                                 if (e.target.classList.contains('add-scripture-btn')) {
                                     const scripture = e.target.dataset.scripture;
                                     editor.insertText(editor.getLength(), '\n\n' + scripture);
-                                    showNotification("Scripture added!", "success");
+                                    const newEditorContent = JSON.stringify(editor.getContents());
+                                    updateSectionContent(currentUserId, projectId, activeSectionId, newEditorContent);
+                                    showNotification("Scripture saved!", "success");
                                 }
                             });
                         } catch (e) { showNotification("Could not parse scripture suggestions.", "error"); }
