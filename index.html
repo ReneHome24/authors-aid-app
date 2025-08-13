@@ -13,12 +13,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
-        html, body {
+        /* FIX: Reverted to a more stable layout structure */
+        html {
             height: 100%;
-            margin: 0;
-            padding: 0;
         }
         body {
+            min-height: 100%;
             display: flex;
             flex-direction: column;
             font-family: 'Inter', sans-serif;
@@ -26,16 +26,9 @@
             color: #D1D5DB; 
         }
         #app-container {
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-            overflow: hidden;
-        }
-        #app-main-content {
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            overflow-y: auto; /* Allow this container to scroll */
         }
 
         .font-lora { font-family: 'Lora', serif; }
@@ -1151,6 +1144,7 @@
         }
 
         function renderLandingPage() {
+            document.body.className = 'theme-default'; // Reset body classes
             document.body.style.overflow = 'auto';
             document.getElementById('theme-switcher').style.display = 'block';
             appContainer.innerHTML = `
@@ -1210,12 +1204,13 @@
 
         async function renderDashboard(userId) {
             currentUserId = userId;
-            document.body.style.overflow = 'auto';
+            document.body.className = `theme-${currentTheme} view-app`; // Add view-app class
             document.getElementById('theme-switcher').style.display = 'block';
             appContainer.innerHTML = '';
             appContainer.appendChild(renderHeader(true, false, userId));
             const mainContent = document.createElement('main');
-            mainContent.className = "container mx-auto p-8 flex-grow";
+            mainContent.id = 'app-main-content';
+            mainContent.className = "container mx-auto p-8 flex-grow overflow-y-auto";
             mainContent.innerHTML = `<div class="text-center text-gray-400">Loading projects...</div>`;
             appContainer.appendChild(mainContent);
 
@@ -1335,12 +1330,13 @@
         async function renderEditor(userId, projectId) {
             console.log("renderEditor: Rendering editor for projectId:", projectId);
             currentUserId = userId;
-            document.body.style.overflow = 'hidden';
+            document.body.className = `theme-${currentTheme} view-app view-editor`;
             document.getElementById('theme-switcher').style.display = 'none';
             appContainer.innerHTML = '';
 
             appContainer.appendChild(renderHeader(true, true, userId));
             const mainContent = document.createElement('main');
+            mainContent.id = 'app-main-content';
             mainContent.className = "flex flex-grow flex-col h-full min-h-0";
             mainContent.innerHTML = `<div class="text-center text-gray-400">Loading project...</div>`;
             appContainer.appendChild(mainContent);
@@ -2176,26 +2172,37 @@
 
         const navigateTo = (route, params = {}) => {
             const appContainer = document.getElementById('app-container');
-            appContainer.innerHTML = `<div class="text-center text-gray-400 p-8">Loading...</div>`;
+            appContainer.innerHTML = ''; // Clear previous view
             const footer = document.getElementById('app-global-footer');
-            if (footer) {
-                if (route === 'landing' || route === 'dashboard') {
-                    footer.classList.remove('hidden');
-                    document.getElementById('footer-content-landing-dashboard').classList.remove('hidden');
-                    document.getElementById('footer-content-editor').classList.add('hidden');
-                } else { // editor view
-                    footer.classList.remove('hidden');
-                    document.getElementById('footer-content-editor').classList.remove('hidden');
-                    document.getElementById('footer-content-landing-dashboard').classList.add('hidden');
-                }
-            }
 
             if (route === 'landing') {
+                document.body.style.overflow = 'auto';
+                if(footer) footer.classList.add('hidden');
                 renderLandingPage();
-            } else if (route === 'dashboard') {
-                renderDashboard(currentUserId);
-            } else if (route === 'editor') {
-                renderEditor(currentUserId, params.projectId);
+            } else {
+                document.body.style.overflow = 'hidden';
+                const mainContent = document.createElement('div');
+                mainContent.id = 'app-main-content';
+                mainContent.innerHTML = `<div class="text-center text-gray-400 p-8">Loading...</div>`;
+                appContainer.appendChild(mainContent);
+                
+                if (route === 'dashboard') {
+                    renderDashboard(currentUserId);
+                } else if (route === 'editor') {
+                    renderEditor(currentUserId, params.projectId);
+                }
+                
+                if (footer) {
+                    appContainer.appendChild(footer);
+                    footer.classList.remove('hidden');
+                    if(route === 'editor'){
+                        document.getElementById('footer-content-editor').classList.remove('hidden');
+                        document.getElementById('footer-content-landing-dashboard').classList.add('hidden');
+                    } else {
+                        document.getElementById('footer-content-landing-dashboard').classList.remove('hidden');
+                        document.getElementById('footer-content-editor').classList.add('hidden');
+                    }
+                }
             }
         };
 
