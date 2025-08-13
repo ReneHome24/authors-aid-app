@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 2.2 - Editor Footer Fix -->
+<!-- Version 2.3 - Automated Author Bio -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -391,6 +391,11 @@
         // --- firestore.js content ---
         let dbInstance;
         let storageInstance;
+        // *** FIX START ***
+        // Default author bio is now a constant for reuse.
+        const defaultAuthorBio = "Rene' brings a uniquely contemplative voice to her writing, shaped by a life rich in diverse experiences. Born and raised amid the historic streets of Washington, D.C., she absorbed the capital's vibrant culture before spending her formative teenage years in Maryland, where she experienced the dynamic contrast of urban and suburban life.\\nKnown in her youth for her quiet observance, Rene' developed an early appreciation for the power of listening and learning from others. She found particular connection with older generations, whose stories and wisdom would later influence her storytelling. This natural inclination toward intergenerational dialogue fostered a deep understanding of human experience across different eras, a theme that resonates throughout her work.\\nA defining chapter in Rene' 's life came with her service in the U.S. Army during Desert Storm. Her military experience not only instilled discipline and resilience but also provided profound insights into human nature and teamwork - elements that now form the backbone of her narrative style. As a veteran-turned-author, she brings an authentic perspective to her storytelling, infusing her work with both sensitivity and strength.\\nThrough her writing, Rene' aims to illuminate the positive aspects of life's journey, drawing from her varied experiences to create stories that resonate with readers of all backgrounds.";
+        // *** FIX END ***
+
         function initializeDb(config) {
             if (!dbInstance) {
                 const app = initializeApp(config);
@@ -406,10 +411,15 @@
                 const sectionsCollection = collection(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectRef.id}/sections`);
                 const emptyContent = JSON.stringify({ ops: [{ insert: '\n' }] });
                 
+                // *** FIX START ***
+                // The author bio from the metadata field now includes the default bio text.
                 const metadataContent = JSON.stringify({ 
                     authorName: '', copyrightYear: '', publisher: '', isbn: '', seriesName: '', seriesNumber: '', lccn: '', 
-                    coverDesigner: '', interiorDesigner: '', publisherWebsite: '', authorBio: '', authorWorks: '' 
+                    coverDesigner: '', interiorDesigner: '', publisherWebsite: '', authorBio: defaultAuthorBio.replace(/\\n/g, '\n'), authorWorks: '' 
                 });
+                // The "About the Author" section is pre-populated with the default bio.
+                const aboutTheAuthorContent = JSON.stringify({ ops: [{ insert: defaultAuthorBio.replace(/\\n/g, '\n') + '\n' }] });
+                // *** FIX END ***
 
                 const sectionsToAdd = [
                     { id: 'metadata', title: 'Project Metadata', content: metadataContent, order: 0 },
@@ -425,7 +435,7 @@
                     { id: 'preface', title: 'Preface', content: emptyContent, order: 10 },
                     { id: 'acknowledgments', title: 'Acknowledgments', content: emptyContent, order: 10.5 },
                     { id: 'chapter_1', title: 'Chapter 1', content: emptyContent, order: 11 },
-                    { id: 'about_the_author', title: 'About the Author', content: emptyContent, order: 100 },
+                    { id: 'about_the_author', title: 'About the Author', content: aboutTheAuthorContent, order: 100 },
                     { id: 'discussion_questions', title: 'Discussion Questions', content: emptyContent, order: 101 },
                 ];
 
@@ -533,6 +543,33 @@
             showNotification('Copyright page auto-updated!', 'info', 2000);
         }
 
+        // *** FIX START ***
+        // This new function updates the 'About the Author' page whenever the metadata is saved.
+        async function populateAboutAuthorPage(userId, projectId) {
+            const metadataSection = await getSection(userId, projectId, 'metadata');
+            if (!metadataSection) return;
+
+            let metadata = {};
+            try {
+                metadata = JSON.parse(metadataSection.content);
+            } catch(e) {
+                console.error("Could not parse metadata for about author page", e);
+                return;
+            }
+            
+            // Use the bio from metadata if it exists and is not empty, otherwise use the default.
+            const authorBio = metadata.authorBio?.trim() ? metadata.authorBio : defaultAuthorBio.replace(/\\n/g, '\n');
+
+            if (!authorBio.trim()) {
+                return; // Don't update if the bio is empty
+            }
+
+            const quillContent = JSON.stringify({ ops: [{ insert: authorBio + '\n' }] });
+            await updateSectionContent(userId, projectId, 'about_the_author', quillContent);
+            showNotification('About the Author page auto-updated!', 'info', 2000);
+        }
+        // *** FIX END ***
+
         async function updateProjectMetadata(userId, projectId, metadata) {
             try {
                 const sectionRef = doc(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`, 'metadata');
@@ -541,6 +578,10 @@
                 await updateDoc(projectRef, { lastModified: serverTimestamp() });
                 
                 await populateCopyrightPage(userId, projectId);
+                // *** FIX START ***
+                // Call the new function to update the author bio page.
+                await populateAboutAuthorPage(userId, projectId);
+                // *** FIX END ***
                 
                 showNotification('Project metadata saved!', 'success');
             } catch (e) {
@@ -1362,12 +1403,6 @@
                 </div>
             `;
             
-            // *** FIX START ***
-            // The redundant footer logic that was here has been removed.
-            // The `navigateTo` function is now the single source of truth for managing footer visibility,
-            // preventing conflicts and ensuring the footer appears correctly.
-            // *** FIX END ***
-
             await setupEditorFunctionality(userId, projectId);
         }
 
@@ -2182,10 +2217,7 @@
                 renderEditor(currentUserId, params.projectId);
             }
 
-            // *** FIX START ***
             // Centralized and simplified footer visibility logic.
-            // This now runs *after* the view is rendered and correctly
-            // shows or hides the footer and its specific content based on the route.
             if (footer) {
                 if (route === 'landing') {
                     footer.classList.add('hidden');
@@ -2206,7 +2238,6 @@
                     }
                 }
             }
-            // *** FIX END ***
         };
 
 
