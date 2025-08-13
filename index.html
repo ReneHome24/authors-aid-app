@@ -264,7 +264,7 @@
 <body>
     
     <!-- Main Application Container -->
-    <div id="app-container"></div>
+    <div id="app-container" class="h-screen flex flex-col"></div>
 
     <!-- Modal Container -->
     <div id="modal-container" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4"></div>
@@ -1143,7 +1143,6 @@
         }
 
         function renderLandingPage() {
-            document.body.className = 'theme-default'; // Reset body classes
             document.body.style.overflow = 'auto';
             document.getElementById('theme-switcher').style.display = 'block';
             appContainer.innerHTML = `
@@ -1203,13 +1202,12 @@
 
         async function renderDashboard(userId) {
             currentUserId = userId;
-            document.body.className = `theme-${currentTheme} view-app`; // Add view-app class
+            document.body.style.overflow = 'auto';
             document.getElementById('theme-switcher').style.display = 'block';
             appContainer.innerHTML = '';
             appContainer.appendChild(renderHeader(true, false, userId));
             const mainContent = document.createElement('main');
-            mainContent.id = 'app-main-content';
-            mainContent.className = "container mx-auto p-8 flex-grow overflow-y-auto";
+            mainContent.className = "container mx-auto p-8 flex-grow";
             mainContent.innerHTML = `<div class="text-center text-gray-400">Loading projects...</div>`;
             appContainer.appendChild(mainContent);
 
@@ -1329,13 +1327,12 @@
         async function renderEditor(userId, projectId) {
             console.log("renderEditor: Rendering editor for projectId:", projectId);
             currentUserId = userId;
-            document.body.className = `theme-${currentTheme} view-app view-editor`;
+            document.body.style.overflow = 'hidden';
             document.getElementById('theme-switcher').style.display = 'none';
             appContainer.innerHTML = '';
 
             appContainer.appendChild(renderHeader(true, true, userId));
             const mainContent = document.createElement('main');
-            mainContent.id = 'app-main-content';
             mainContent.className = "flex flex-grow flex-col h-full min-h-0";
             mainContent.innerHTML = `<div class="text-center text-gray-400">Loading project...</div>`;
             appContainer.appendChild(mainContent);
