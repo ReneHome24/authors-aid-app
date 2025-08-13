@@ -17,7 +17,6 @@
             height: 100%;
             margin: 0;
             padding: 0;
-            overflow: hidden; /* Prevent body scrolling */
         }
         body {
             display: flex;
@@ -29,14 +28,14 @@
         #app-container {
             display: flex;
             flex-direction: column;
-            height: 100%;
+            flex-grow: 1;
             overflow: hidden;
         }
         #app-main-content {
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Main content area controls its own scroll */
+            overflow-y: auto; /* Allow this container to scroll */
         }
 
         .font-lora { font-family: 'Lora', serif; }
