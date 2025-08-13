@@ -15,12 +15,11 @@
     <style>
         html, body {
             height: 100%;
-            /* FIX: Removed overflow: hidden; from the body to allow for the new flex layout */
         }
         body {
             font-family: 'Inter', sans-serif;
             background-color: #000000;
-            color: #D1D5DB; /* Set a light default text color for the whole body */
+            color: #D1D5DB; 
         }
         .font-lora { font-family: 'Lora', serif; }
 
@@ -69,19 +68,18 @@
         /* Quill Editor specific styles */
         .ql-container { border: none !important; display: flex; flex-direction: column; height: 100%; }
         .ql-editor {
-            flex-grow: 1; /* Allow editor to take available height */
+            flex-grow: 1;
             font-family: 'Lora', serif;
             font-size: 1.125rem;
             line-height: 1.75;
             background-color: #111827;
-            color: #D1D5DB !important; /* FIX: Added !important to ensure text is always light */
+            color: #D1D5DB !important;
             border-radius: 8px;
             padding: 1rem;
-            overflow-y: auto; /* Ensure Quill editor content scrolls */
+            overflow-y: auto;
             padding-top: 0 !important; 
             padding-bottom: 1rem; 
         }
-        /* Adjust the first line of content within Quill to start immediately */
         .ql-editor p:first-child,
         .ql-editor h1:first-child,
         .ql-editor h2:first-child,
@@ -129,17 +127,17 @@
             border-radius: 8px;
             transition: all 0.2s ease-in-out;
             position: relative;
-            overflow: hidden; /* Ensure border-radius clips content */
+            overflow: hidden;
         }
         .cover-image-wrapper:hover {
-            border-color: #60a5fa; /* Accent color on hover */
+            border-color: #60a5fa;
         }
         .cover-image-wrapper.selected {
-            border-color: #3b82f6; /* Stronger accent color when selected */
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); /* Glowing effect */
+            border-color: #3b82f6;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
         }
         .cover-image-wrapper img {
-            display: block; /* Remove extra space below image */
+            display: block;
         }
         .cover-selection-overlay {
             position: absolute;
@@ -185,12 +183,10 @@
         .project-card.theme-border-green { border-color: #059669; }
         .project-card.theme-border-purple { border-color: #7c3aed; }
 
-        /* FIX: Style for placeholder text */
         textarea::placeholder, input::placeholder {
-            color: #6B7280; /* A light gray */
+            color: #6B7280;
         }
         
-        /* Styles for interactive suggestions */
         .suggestion-item {
             background-color: #374151;
             border-left: 3px solid #60a5fa;
@@ -212,6 +208,19 @@
             background-color: #4B5563;
         }
 
+        /* START: New Toast Notification Styles */
+        #toast-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translate(-50%, 100%);
+            transition: transform 0.5s ease-in-out;
+            z-index: 100;
+        }
+        #toast-notification.show {
+            transform: translate(-50%, 0);
+        }
+        /* END: New Toast Notification Styles */
 
     </style>
 </head>
@@ -220,9 +229,12 @@
     <!-- Main Application Container -->
     <div id="app-container" class="h-screen flex flex-col"></div>
 
-    <!-- Notification & Modal Containers -->
-    <div id="notification-container" class="fixed bottom-20 right-5 z-50"></div>
+    <!-- Modal Container -->
     <div id="modal-container" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4"></div>
+    
+    <!-- START: New Toast Notification Container -->
+    <div id="toast-notification"></div>
+    <!-- END: New Toast Notification Container -->
 
     <!-- Theme Switcher (Global) -->
     <div id="theme-switcher" class="fixed bottom-4 right-4 bg-gray-900/80 backdrop-blur-sm p-3 rounded-xl border border-gray-700 shadow-lg">
@@ -239,17 +251,14 @@
     <footer id="app-global-footer" class="ui-bg p-4 border-t border-gray-700 flex-shrink-0 hidden">
         <div id="footer-content-landing-dashboard" class="container mx-auto text-center text-gray-500 hidden">
             <p>&copy; 2025 Author's Aid. All Rights Reserved.</p>
-            <p class="mt-2 text-sm">Created with faith for Rene' Stanley.</p>
         </div>
         <div id="footer-content-editor" class="container mx-auto flex justify-between items-center hidden">
              <!-- Chapter Navigation -->
             <div class="flex items-center space-x-2">
                 <button id="prev-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">&lt; Prev</button>
-                <!-- START: Added New Page Buttons -->
                 <button id="add-front-matter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">+ New Front Matter Page</button>
                 <button id="add-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">+ New Chapter</button>
                 <button id="add-back-matter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">+ New Back Matter Page</button>
-                <!-- END: Added New Page Buttons -->
                 <button id="next-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">Next &gt;</button>
             </div>
             <button id="export-project-btn" class="accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Export Project</button>
@@ -271,7 +280,6 @@
             apiKey: "AIzaSyCVsziM6I1QEU22YNPGTwLvN0EuW4k2SiY",
             authDomain: "christian-author-app-54c4d.firebaseapp.com",
             projectId: "christian-author-app-54c4d",
-            // FIX: Corrected the storage bucket URL to match your project's actual address
             storageBucket: "christian-author-app-54c4d.firebasestorage.app",
             messagingSenderId: "386312831448",
             appId: "1:386312831448:web:80999eae638bbed28572ad"
@@ -307,7 +315,6 @@
             }
         }
 
-        // New authentication functions
         async function signUpWithEmail(email, password) {
             try {
                 const userCredential = await createUserWithEmailAndPassword(authInstance, email, password);
@@ -334,7 +341,7 @@
 
         async function linkGuestAccount(email, password) {
             try {
-                const credential = EmailAuthProvider.credential(authInstance.currentUser.email, password); // Use current user's email if available
+                const credential = EmailAuthProvider.credential(authInstance.currentUser.email, password);
                 await linkWithCredential(authInstance.currentUser, credential);
                 showNotification('Guest account linked successfully!', 'success');
                 return true;
@@ -347,12 +354,12 @@
 
         // --- firestore.js content ---
         let dbInstance;
-        let storageInstance; // Declare storage instance globally for access
+        let storageInstance;
         function initializeDb(config) {
             if (!dbInstance) {
                 const app = initializeApp(config);
                 dbInstance = getFirestore(app);
-                storageInstance = getStorage(app); // Initialize Storage
+                storageInstance = getStorage(app);
             }
             return dbInstance;
         }
@@ -363,8 +370,9 @@
                 const sectionsCollection = collection(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectRef.id}/sections`);
                 const emptyContent = JSON.stringify({ ops: [{ insert: '\n' }] });
                 
+                // START: Re-ordered and added Foreword
                 const sectionsToAdd = [
-                    { id: 'metadata', title: 'Project Metadata', content: JSON.stringify({ authorName: '', copyrightYear: '', publisher: '', isbn: '', seriesName: '', seriesNumber: '', lccn: '' }), order: 0 },
+                    { id: 'metadata', title: 'Project Metadata', content: JSON.stringify({ authorName: '', copyrightYear: '', publisher: '', isbn: '', seriesName: '', seriesNumber: '', lccn: '', coverDesigner: '', interiorDesigner: '', publisherWebsite: '' }), order: 0 },
                     { id: 'brainstorming', title: 'Synopsis & Brainstorming', content: emptyContent, order: 1 },
                     { id: 'book_titles', title: 'Book Titles', content: emptyContent, order: 2 },
                     { id: 'character_development', title: 'Character Development', content: emptyContent, order: 3 },
@@ -373,12 +381,14 @@
                     { id: 'book_cover', title: 'Book Cover', content: '', order: 6 },
                     { id: 'copyright', title: 'Copyright', content: emptyContent, order: 7 },
                     { id: 'dedication', title: 'Dedication', content: emptyContent, order: 8 },
-                    { id: 'preface', title: 'Preface', content: emptyContent, order: 9 },
-                    { id: 'acknowledgments', title: 'Acknowledgments', content: emptyContent, order: 10 },
+                    { id: 'foreword', title: 'Foreword', content: emptyContent, order: 9 },
+                    { id: 'preface', title: 'Preface', content: emptyContent, order: 10 },
+                    { id: 'acknowledgments', title: 'Acknowledgments', content: emptyContent, order: 10.5 },
                     { id: 'chapter_1', title: 'Chapter 1', content: emptyContent, order: 11 },
                     { id: 'about_the_author', title: 'About the Author', content: emptyContent, order: 100 },
                     { id: 'discussion_questions', title: 'Discussion Questions', content: emptyContent, order: 101 },
                 ];
+                // END: Re-ordered and added Foreword
 
                 for (const section of sectionsToAdd) {
                     await setDoc(doc(sectionsCollection, section.id), { title: section.title, content: section.content, order: section.order });
@@ -392,14 +402,12 @@
                 const sectionsCollection = collection(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`);
                 const newChapterId = `chapter_${chapterNumber}`;
                 const emptyContent = JSON.stringify({ ops: [{ insert: '\n' }] });
-                // Base order for chapters starts after the initial front matter.
                 const baseOrder = 11;
                 await setDoc(doc(sectionsCollection, newChapterId), { title: `Chapter ${chapterNumber}`, content: emptyContent, order: baseOrder + chapterNumber - 1 });
                 return true;
             } catch (e) { console.error("Error adding chapter:", e); showNotification(`Error adding chapter: ${e.message}`, 'error'); return false; }
         }
 
-        // START: New functions for adding front/back matter pages
         async function addFrontMatterPage(userId, projectId, pageTitle, order) {
             try {
                 const sectionsCollection = collection(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`);
@@ -419,14 +427,13 @@
                 return true;
             } catch (e) { console.error("Error adding back matter page:", e); showNotification(`Error adding page: ${e.message}`, 'error'); return false; }
         }
-        // END: New functions
 
         async function getProjects(userId) { try { const qSnapshot = await getDocs(getProjectsCollection(userId)); const projects = []; qSnapshot.forEach(d => projects.push({ id: d.id, ...d.data() })); projects.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0)); return projects; } catch (e) { console.error("Error fetching projects:", e); showNotification(`Error fetching projects: ${e.message}`, 'error'); return []; } }
         async function getProject(userId, projectId) { try { const docRef = doc(getProjectsCollection(userId), projectId); const docSnap = await getDoc(docRef); return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null; } catch (e) { console.error("Error fetching project:", e); showNotification(`Error fetching project: ${e.message}`, 'error'); } }
         async function getProjectSections(userId, projectId) { try { const sectionsRef = collection(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`); const q = query(sectionsRef, orderBy("order")); const qSnapshot = await getDocs(q); const sections = []; qSnapshot.forEach(d => sections.push({ id: d.id, ...d.data() })); return sections; } catch (e) { console.error("Error fetching sections:", e); showNotification(`Error fetching sections: ${e.message}`, 'error'); return []; } }
         async function getSection(userId, projectId, sectionId) { try { const sectionRef = doc(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`, sectionId); const docSnap = await getDoc(sectionRef); return docSnap.exists() ? docSnap.data() : null; } catch (e) { console.error("Error getting section:", e); showNotification(`Error getting section: ${e.message}`, 'error'); return null; } }
         async function updateSectionContent(userId, projectId, sectionId, content) { try { const sectionRef = doc(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`, sectionId); await updateDoc(sectionRef, { content }); const projectRef = doc(getProjectsCollection(userId), projectId); await updateDoc(projectRef, { lastModified: serverTimestamp() }); } catch (e) { console.error("Error updating section:", e); showNotification(`Error updating section: ${e.message}`, 'error'); } }
-        async function updateProjectCover(userId, projectId, coverUrl) { // New function to update project cover
+        async function updateProjectCover(userId, projectId, coverUrl) { 
             try {
                 const projectRef = doc(getProjectsCollection(userId), projectId);
                 await updateDoc(projectRef, { bookCoverUrl: coverUrl, lastModified: serverTimestamp() });
@@ -436,10 +443,9 @@
                 showNotification(`Error saving cover: ${e.message}`, 'error');
             }
         }
-        // New function to update project title
         async function updateProjectTitle(userId, projectId, newTitle) {
             try {
-                const cleanedTitle = stripMarkdownAndHtml(newTitle); // Strip markdown before saving
+                const cleanedTitle = stripMarkdownAndHtml(newTitle);
                 const projectRef = doc(getProjectsCollection(userId), projectId);
                 await updateDoc(projectRef, { title: cleanedTitle, lastModified: serverTimestamp() });
                 showNotification('Project title updated!', 'success');
@@ -449,10 +455,9 @@
             }
         }
         
-        // START: Updated function to auto-populate the copyright page
         async function populateCopyrightPage(userId, projectId, metadata, projectTitle) {
             if (!metadata.authorName || !metadata.copyrightYear) {
-                return; // Don't run if essential data is missing
+                return;
             }
             let copyrightText = `**${projectTitle}**\n\n`;
             copyrightText += `Copyright © ${metadata.copyrightYear} by ${metadata.authorName}\n\n`;
@@ -468,9 +473,7 @@
             await updateSectionContent(userId, projectId, 'copyright', quillContent);
             showNotification('Copyright page auto-updated!', 'info', 2000);
         }
-        // END: Updated function
 
-        // New function to update project metadata
         async function updateProjectMetadata(userId, projectId, metadata) {
             try {
                 const sectionRef = doc(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`, 'metadata');
@@ -500,7 +503,31 @@
 
         // --- utils.js content ---
         function debounce(func, wait) { let timeout; return function(...args) { const later = () => { clearTimeout(timeout); func(...args); args = null; }; clearTimeout(timeout); timeout = setTimeout(later, wait); }; }
-        function showNotification(message, type = 'info', duration = 3000) { const container = document.getElementById('notification-container'); if (!container) return; const notification = document.createElement('div'); let bgColor; switch(type){ case 'success': bgColor='bg-green-500/90 border-green-400'; break; case 'error': bgColor='bg-red-500/90 border-red-400'; break; default: bgColor='bg-blue-500/90 border-blue-400'; break; } notification.className = `p-4 rounded-lg shadow-xl text-white ${bgColor} border mb-4 opacity-0 transition-all duration-500`; notification.innerHTML = message; container.appendChild(notification); setTimeout(() => notification.classList.remove('opacity-0'), 10); setTimeout(() => { notification.classList.add('opacity-0'); notification.addEventListener('transitionend', () => notification.remove()); }, duration); }
+        
+        // START: New Toast Notification System
+        let toastTimeout;
+        function showNotification(message, type = 'info', duration = 3000) {
+            const container = document.getElementById('toast-notification');
+            if (!container) return;
+
+            clearTimeout(toastTimeout);
+
+            let bgColor, icon;
+            switch(type){ 
+                case 'success': bgColor='bg-green-500/90 border-green-400'; icon='<i class="fas fa-check-circle mr-2"></i>'; break; 
+                case 'error': bgColor='bg-red-500/90 border-red-400'; icon='<i class="fas fa-exclamation-circle mr-2"></i>'; break; 
+                default: bgColor='bg-blue-500/90 border-blue-400'; icon='<i class="fas fa-info-circle mr-2"></i>'; break; 
+            }
+            container.innerHTML = `<div class="p-4 rounded-lg shadow-xl text-white ${bgColor} border flex items-center">${icon} ${message}</div>`;
+            
+            container.classList.add('show');
+            
+            toastTimeout = setTimeout(() => {
+                container.classList.remove('show');
+            }, duration);
+        }
+        // END: New Toast Notification System
+
         function showModal(title, contentHtml, onConfirm, confirmText = 'Confirm', showCancel = true) {
             const modalContainer = document.getElementById('modal-container');
             if (!modalContainer) return;
@@ -512,8 +539,6 @@
             if (showCancel) {
                 document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
             }
-            // Reverted: Attach onConfirm directly to the button click for simplicity,
-            // as the form submit listener was causing issues.
             const confirmBtn = document.getElementById('modal-confirm-btn');
             if(onConfirm) {
                  confirmBtn.addEventListener('click', async () => {
@@ -522,18 +547,17 @@
                         form.reportValidity();
                         return;
                     }
-                    await onConfirm();
+                    // Pass the modal element to the confirm function so it can extract values
+                    await onConfirm(modalContainer); 
                     closeModal();
                 });
             } else {
                 confirmBtn.addEventListener('click', closeModal);
             }
             
-
-            // Add password toggle functionality after modal content is rendered
             modalContainer.querySelectorAll('.password-toggle').forEach(toggle => {
                 toggle.addEventListener('click', () => {
-                    const passwordInput = toggle.previousElementSibling; // The input field is the previous sibling
+                    const passwordInput = toggle.previousElementSibling;
                     const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
                     passwordInput.setAttribute('type', type);
                     toggle.querySelector('i').classList.toggle('fa-eye');
@@ -542,40 +566,26 @@
             });
         }
 
-        // Helper function to strip common Markdown bold/italic markers, HTML tags, and leading numbers/hashes
         function stripMarkdownAndHtml(text) {
             if (!text) return '';
             let cleanedText = text;
-
-            // FIX: More robustly remove Markdown bold/italic markers, including asterisks
-            cleanedText = cleanedText.replace(/\*\*(.*?)\*\*/g, '$1'); // bold with **
-            cleanedText = cleanedText.replace(/__(.*?)__/g, '$1');   // bold with __
-            cleanedText = cleanedText.replace(/\*(.*?)\*/g, '$1');   // italic with *
-            cleanedText = cleanedText.replace(/_(.*?)_/g, '$1');   // italic with _
-            cleanedText = cleanedText.replace(/\*/g, ''); // Remove any remaining single asterisks
-
-            // Remove Markdown headings (# at start of line)
-            cleanedText = cleanedText.replace(/^#+\s*/gm, ''); // Remove # and leading space at start of line
-
-            // Remove common HTML tags (basic approach, not for complex HTML)
+            cleanedText = cleanedText.replace(/\*\*(.*?)\*\*/g, '$1');
+            cleanedText = cleanedText.replace(/__(.*?)__/g, '$1');
+            cleanedText = cleanedText.replace(/\*(.*?)\*/g, '$1');
+            cleanedText = cleanedText.replace(/_(.*?)_/g, '$1');
+            cleanedText = cleanedText.replace(/\*/g, '');
+            cleanedText = cleanedText.replace(/^#+\s*/gm, '');
             cleanedText = cleanedText.replace(/<[^>]*>/g, '');
-
             return cleanedText.trim();
         }
 
-        // New helper to parse numbered lists from AI, removing intros and numbers
         function parseNumberedAiList(aiText, keepNumbers = false) {
             if (!aiText) return [];
             const results = [];
-
-            // First, try to split by numbered list format (e.g., "1. Text")
             let lines = aiText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-            
-            // Remove any intro line that doesn't start with a number.
             if (lines.length > 0 && !lines[0].match(/^(\d+)\.\s*(.*)/) && !lines[0].toLowerCase().includes('name:')) {
                 lines.shift();
             }
-
             let hasNumberedItems = false;
             for (const line of lines) {
                 if (line.match(/^(\d+)\.\s*(.*)/)) {
@@ -583,7 +593,6 @@
                     break;
                 }
             }
-
             if (hasNumberedItems) {
                 let currentItem = '';
                 for (const line of lines) {
@@ -598,7 +607,6 @@
                 }
                 if(currentItem) results.push(currentItem.trim());
             } else {
-                // If no numbered list is found, assume it's paragraphs separated by double newlines or just newlines for characters
                 const paragraphs = aiText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
                 for (const paragraph of paragraphs) {
                     results.push(paragraph);
@@ -608,7 +616,6 @@
         }
 
         function escapeHTML(unsafe) {
-            // FIX: Handle non-string inputs by converting them to strings first
             const toStr = String(unsafe);
             return toStr
                 .replace(/&/g, "&amp;")
@@ -620,183 +627,84 @@
 
 
         // --- aiService.js content ---
-        const API_KEY = "AIzaSyCVsziM6I1QEU22YNPGTwLvN0EuW4k2SiY"; // User's provided API Key
+        const API_KEY = "AIzaSyCVsziM6I1QEU22YNPGTwLvN0EuW4k2SiY"; 
         const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
         const IMAGEN_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`;
-
-        // Global variable to store AI style preference
         let aiStylePreference = "";
-
-        // Knowledge base for character types
-        const characterTypesKnowledge = `
-Characters are the lifeblood of fiction, driving the plot and engaging readers. While every character should feel unique and real, they often fall into certain categories or roles within a manuscript. Here's a breakdown of different types of characters, often considered in terms of their role, dynamism, and archetypal qualities:
-I. By Role in the Narrative:
-Protagonist: The central character of the story. The plot usually revolves around their journey, goals, and development. Readers are meant to invest in and care about them. There can be multiple protagonists in a story.
-Examples: Katniss Everdeen (The Hunger Games), Harry Potter (Harry Potter series), Elizabeth Bennet (Pride and Prejudice).
-Antagonist: The character or force that opposes the protagonist and creates conflict. They don't always have to be "evil"; sometimes they simply represent an opposing viewpoint or obstacle.
-Examples: Lord Voldemort (Harry Potter series), President Coriolanus Snow (The Hunger Games), Mr. Darcy (initially, in Pride and Prejudice). An antagonist can also be an inanimate force like nature or society.
-Deuteragonist: The second most important character, often serving as a close ally or companion to the protagonist. They might offer a different perspective or have their own subplot.
-Examples: Dr. John Watson (Sherlock Holmes), Samwise Gamgee (Lord of the Rings).
-Confidant(e): A character in whom the protagonist trusts and shares their thoughts and feelings. This allows the author to reveal the protagonist's inner world to the reader without relying solely on internal monologue.
-Examples: Hermione Granger (Harry Potter series), Albus Dumbledore (Harry Potter series).
-Love Interest: The romantic counterpart to the protagonist. Their relationship often impacts the protagonist's development and the overall plot.
-Examples: Peeta Mellark (The Hunger Games), Mr. Darcy (later, in Pride and Prejudice).
-Mentor: A wise and experienced character who guides, advises, and supports the protagonist. They often provide knowledge, training, or a moral compass.
-Examples: Obi-Wan Kenobi (Star Wars), Albus Dumbledore (Harry Potter series).
-Foil: A character who highlights the qualities (often contrasting ones) of another character, usually the protagonist, through comparison. They aren't necessarily antagonists.
-Examples: Draco Malfoy to Harry Potter (highlighting Harry's inherent goodness), Effie Trinket to Katniss Everdeen (highlighting Katniss's grounded nature).
-Sidekick: A character who supports the protagonist, often offering comic relief, practical assistance, or a loyal friendship.
-Examples: Ron Weasley (Harry Potter series), Samwise Gamgee (Lord of Lord of the Rings).
-Tertiary/Minor Characters (or Extras): Background characters who populate the story's world and add realism. They may have brief appearances and serve specific, often limited, functions.
-II. By Dynamism and Complexity:
-Dynamic Character: A character who undergoes significant internal change, growth, or transformation throughout the story due to the events they experience.
-Examples: Ebenezer Scrooge (A Christmas Carol), Harry Potter (as he matures throughout the series).
-Static Character: A character who remains largely the same throughout the story, without significant internal change. They often serve to highlight the changes in dynamic characters or maintain consistency in the narrative.
-Examples: Many side characters or minor antagonists who have a fixed role.
-Round Character: A complex and well-developed character with multiple personality traits, motivations, and sometimes contradictions, making them feel realistic and multifaceted. Dynamic characters are usually round.
-Flat Character: A less developed character, often defined by one or two dominant traits. They typically serve a specific purpose in the plot or to represent a stereotype, rather than undergoing deep personal change. Stock characters (see below) are often flat.
-Stock Character: A stereotypical character that is instantly recognizable due to recurring traits in various stories and genres (e.g., the "mad scientist," the "tough detective," the "damsel in distress"). While they can be clichés if not handled well, they can also be useful for quickly establishing a type of character.
-Symbolic Character: A character who represents a larger idea, theme, or concept within the story, often beyond their literal role.
-Example: Boo Radley in To Kill a Mockingbird can symbolize the hidden goodness in society or the innocence destroyed by prejudice.
-III. By Archetype (based on Jungian psychology and recurring patterns in storytelling):
-Archetypes are universally recognizable character types that resonate across cultures and time periods. While a character's role might be "protagonist," their archetype might be "The Hero."
-Some common archetypes include:
-The Hero: Embarks on a journey, faces challenges, and undergoes transformation to achieve a goal. (Often the protagonist).
-The Innocent: Pure, optimistic, and seeks happiness. Vulnerable but can inspire others.
-The Sage/Mentor: Possesses wisdom, knowledge, and guides others.
-The Explorer: Driven by curiosity and a desire to push boundaries, seeking discovery and self-improvement.
-The Ruler: Seeks control and power, often responsible for order or chaos.
-The Creator: A visionary who brings new things into existence (art, ideas, structures).
-The Caregiver: Nurturing, selfless, and protective of others.
-The Everyman/Everywoman: Relatable and ordinary, representing the common person.
-The Lover: Guided by the heart, valuing connection, passion, and sensuality.
-The Jester/Trickster: Provides comic relief, challenges the status quo, and can be mischievous or insightful.
-The Rebel/Outlaw: Defies societal norms and seeks revolution or freedom.
-The Magician: Possesses special knowledge or abilities, often transforming things.
-The Shadow: Represents the dark side of human nature, often the antagonist or an internal struggle within the protagonist.
-Understanding these different types of characters can help authors create a diverse and compelling cast, ensuring that each character serves a purpose in advancing the plot, exploring themes, and engaging the reader.
-`;
-        // Function to call Imagen API for image generation
+        
         async function generateImage(prompt) {
             console.log("generateImage: Starting image generation for prompt:", prompt);
             try {
-                // Show loading spinner for image generation
-                // Moved loading spinner to coverDisplayContainer
                 document.getElementById('cover-display-container').innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading-spinner"></div><span class="ml-2">Generating images...</span></div>`;
-
-                const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 3 } }; // Request 3 images
-                console.log("generateImage: Sending payload to Imagen API:", payload);
+                const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 3 } };
                 const response = await fetch(IMAGEN_API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-
                 if (!response.ok) {
                     const errorData = await response.json();
-                    console.error("Imagen API Error Response:", errorData);
                     let errorMessage = `Image generation failed with status ${response.status}.`;
-                    if (errorData && errorData.error && errorData.error.message) {
-                        errorMessage += ` Details: ${errorData.error.message}`;
-                    }
+                    if (errorData?.error?.message) errorMessage += ` Details: ${errorData.error.message}`;
                     throw new Error(errorMessage);
                 }
-
                 const result = await response.json();
-                console.log("generateImage: Received Imagen API response:", result);
-                if (result.predictions && result.predictions.length > 0) {
-                    const imageUrls = result.predictions.map(p => `data:image/png;base64,${p.bytesBase64Encoded}`);
-                    console.log("generateImage: Generated image URLs:", imageUrls);
-                    return imageUrls;
+                if (result.predictions?.length > 0) {
+                    return result.predictions.map(p => `data:image/png;base64,${p.bytesBase64Encoded}`);
                 } else {
-                    console.error("Imagen Error: Unexpected response structure or no predictions:", result);
                     return [];
                 }
             } catch (e) {
                 console.error("Error calling Imagen API:", e);
                 showNotification(`Image generation failed: ${e.message}`, 'error');
                 return [];
-            } finally {
-                // The outputDiv will be managed by the calling function (ai-cover-concept-btn handler)
-                // coverDisplayContainer will be updated by the calling function
             }
         }
-
 
         async function callGemini(contents, generationConfig = {}) {
             console.log("callGemini: Starting Gemini call with contents:", contents);
             try {
-                // Show loading spinner for Gemini calls
                 document.getElementById('ai-output').innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading-spinner"></div><span class="ml-2">Generating...</span></div>`;
-
-                // Prepend style preference to the prompt
                 const finalContents = contents.map(item => {
-                    if (item.parts && item.parts.length > 0 && item.parts[0].text) {
-                        return {
-                            ...item,
-                            parts: [{ text: `AI Style Preference: ${aiStylePreference}\n\n${item.parts[0].text}` }]
-                        };
+                    if (item.parts?.[0]?.text) {
+                        return { ...item, parts: [{ text: `AI Style Preference: ${aiStylePreference}\n\n${item.parts[0].text}` }] };
                     }
                     return item;
                 });
-                console.log("callGemini: Final contents sent to Gemini:", finalContents);
-
                 const response = await fetch(GEMINI_API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: finalContents, generationConfig })
                 });
-
                 if (!response.ok) {
                     const errorData = await response.json();
-                    console.error("AI API Error Response:", errorData);
                     let errorMessage = `API request failed with status ${response.status}.`;
-                    if (response.status === 403) {
-                        errorMessage += " This usually means the API is not enabled for your Google Cloud project or your API key has insufficient permissions.";
-                    } else if (response.status === 429) {
-                        errorMessage += " You've exceeded your API quota. Please try again later.";
-                    } else if (errorData && errorData.error && errorData.error.message) {
-                        errorMessage += ` Details: ${errorData.error.message}`;
-                    } else {
-                        errorMessage += ` Details: ${JSON.stringify(errorData.error || errorData)}`;
-                    }
+                     if (errorData?.error?.message) errorMessage += ` Details: ${errorData.error.message}`;
                     throw new Error(errorMessage);
                 }
-
                 const result = await response.json();
-                console.log("callGemini: Received Gemini API response:", result);
                 if (result.candidates?.[0]?.content?.parts?.[0]) {
-                    const textResult = result.candidates[0].content.parts[0].text;
-                    console.log("callGemini: Extracted text result:", textResult);
-                    return textResult;
+                    return result.candidates[0].content.parts[0].text;
                 } else {
-                    console.error("AI Error: Unexpected response structure or no content in Gemini response:", result);
                     return "Error: Could not generate content (unexpected AI response).";
                 }
             } catch (e) {
                 console.error("Error calling Gemini API:", e);
                 showNotification(`AI call failed: ${e.message}`, 'error');
                 return `Error: API call failed: ${e.message}`;
-            } finally {
-                // The outputDiv will be managed by the calling function
             }
         }
 
-
         async function generateSynopsisIdeas(idea) {
-            // Updated prompt to be more specific about Christian literature and explicitly exclude titles.
-            const prompt = `You are an AI story consultant for Christian literature. Based on the user's basic idea, generate a numbered list of 5 distinct core concept ideas for a new Christian book. Each concept should be a single, concise paragraph describing the core idea, without suggesting a title. The tone should be encouraging and creative.\n\nBasic Idea: "${idea}"`;
+            const prompt = `You are an AI story consultant for Christian literature. Based on the user's basic idea, generate a numbered list of 5 distinct core concept ideas for a new Christian book. Each concept should be a single, concise paragraph describing the core idea. The tone should be encouraging and creative.\n\nBasic Idea: "${idea}"`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        async function generateOutlineBeats(context, bookTitle) { // Added bookTitle parameter
-            // Ensure outline generation uses all relevant context
-            const prompt = `You are an AI outliner for a Christian author. Based on the provided project details (synopsis, characters, world-building, and desired book title), generate a detailed chapter-by-chapter outline with key beats for each chapter. Ensure the outline aligns with Christian themes and values established in the context.
-            **IMPORTANT:** When referring to characters in the outline beats, ALWAYS use their specific character names (e.g., "Amara," "Nana Elena") instead of their roles (e.g., "protagonist," "mentor"). This is especially crucial for the protagonist.
+        // FIX: Removed bookTitle from prompt
+        async function generateOutlineBeats(context) { 
+            const prompt = `You are an AI outliner for a Christian author. Based on the provided project details (synopsis, characters, world-building), generate a detailed chapter-by-chapter outline with key beats for each chapter. Ensure the outline aligns with Christian themes and values established in the context.
+            **IMPORTANT:** When referring to characters in the outline beats, ALWAYS use their specific character names (e.g., "Amara," "Nana Elena") instead of their roles (e.g., "protagonist," "mentor").
 
-            Start the outline with the book title:
-            ${bookTitle}
-
-            For each chapter, list the chapter title (without asterisks or bold formatting), and then provide a numbered list of key beats for that chapter. For example:
+            For each chapter, list the chapter title, and then provide a numbered list of key beats for that chapter. For example:
             Chapter 1: The Beginning
             1. Beat 1 of Chapter 1: Introduce protagonist and their core conflict.
             2. Beat 2 of Chapter 1: Character meets mentor.
@@ -811,99 +719,53 @@ Understanding these different types of characters can help authors create a dive
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateCharacterProfiles(context) {
-            // Ensure character generation uses synopsis and title context
-            const prompt = `You are an AI character developer for Christian fiction. Based on the provided project details (synopsis, book title), generate a numbered list of 5 distinct character profile ideas. Each profile should include a name, a brief backstory, core motivations, personality quirks, and **explicitly identify what type of character they are based on the following taxonomy (By Role, By Dynamism and Complexity, and By Archetype).** Ensure characters are suitable for a Christian narrative, exploring themes of faith, redemption, struggle, or virtue. Do not include any introductory text before the first character.
+            const prompt = `You are an AI character developer for Christian fiction. Based on the provided project details, generate a numbered list of 5 distinct character profile ideas. Each profile should include a name, a brief backstory, core motivations, personality quirks, and **explicitly identify what type of character they are based on the provided taxonomy.** Ensure characters are suitable for a Christian narrative. Do not include any introductory text before the first character.
 
-${characterTypesKnowledge}
+            ${characterTypesKnowledge}
 
-Project Details:
----
-${context}
----
+            Project Details:
+            ---
+            ${context}
+            ---
 
-Generate 5 character profiles:`;
+            Generate 5 character profiles:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateWorldPrompts(context) {
-            // FIX: Updated prompt to explicitly exclude titles and focus only on world-building elements.
-            const prompt = `You are an AI world-builder for Christian narratives. Based on the provided project details (synopsis, book title, characters), generate a numbered list of 5 distinct world-building element ideas. These could include unique faith-based societal structures, spiritual challenges, miraculous phenomena, or historical events relevant to a Christian story. Provide ONLY the descriptive world-building idea, without suggesting a title for the idea itself.
-            \n\nProject Details:\n---\n${context}\n---\n\nGenerate 5 world-building prompts:`;
+            const prompt = `You are an AI world-builder for Christian narratives. Based on the provided project details, generate a numbered list of 5 distinct world-building element ideas. These could include unique faith-based societal structures, spiritual challenges, or historical events relevant to a Christian story. Provide ONLY the descriptive world-building idea.\n\nProject Details:\n---\n${context}\n---\n\nGenerate 5 world-building prompts:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function suggestAlternatives(selectedText, context) { 
-            const prompt = `You are an AI thesaurus and editor for Christian literature. The user has selected a sentence and wants alternative phrasing for its key ideas. Analyze the following sentence and provide a list of alternative phrases for the most significant parts. Do not suggest alternatives for the entire sentence, but for its core components.
+            const prompt = `You are an AI thesaurus and editor for Christian literature. The user has selected a sentence and wants alternative phrasing for its key ideas. Analyze the following sentence and provide a list of alternative phrases for its most significant parts. Do not suggest alternatives for the entire sentence, but for its core components.
             \n\nContext:\n---\n${context}\n---\n\nSelected Text: "${selectedText}"
             \n\nProvide alternatives as a JSON array of objects, where each object has "original" and "suggestion" keys. For example: [{"original": "a generation to guard their hearts", "suggestion": "a generation to shield their hearts"}].`; 
-            const config = {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: "ARRAY",
-                    items: {
-                        type: "OBJECT",
-                        properties: {
-                            original: { type: "STRING" },
-                            suggestion: { type: "STRING" }
-                        },
-                        required: ["original", "suggestion"]
-                    }
-                }
-            };
+            const config = { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { original: { type: "STRING" }, suggestion: { type: "STRING" } }, required: ["original", "suggestion"] } } };
             return callGemini([{ role: "user", parts: [{ text: prompt }] }], config); 
         }
         async function suggestScripture(selectedText, context) { 
             const prompt = `You are a theological assistant specializing in the NIV Bible. Based on the following selected text, suggest a list of 3 relevant NIV Bible scriptures.
             \n\nSelected Text for Context:\n---\n${context}\n---\n\nProvide the response as a JSON array of objects, where each object has "reference" and "text" keys.`; 
-            const config = {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: "ARRAY",
-                    items: {
-                        type: "OBJECT",
-                        properties: {
-                            reference: { type: "STRING" },
-                            text: { type: "STRING" }
-                        },
-                        required: ["reference", "text"]
-                    }
-                }
-            };
+            const config = { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { reference: { type: "STRING" }, text: { type: "STRING" } }, required: ["reference", "text"] } } };
             return callGemini([{ role: "user", parts: [{ text: prompt }] }], config); 
         }
-        async function suggestPOVs(context) { const prompt = `You are an AI writing coach for Christian authors. Based on the story's synopsis, generate a numbered list of 3 potential Point of View (POV) & Voice choices (e.g., First Person, Third Person Limited). For each, briefly explain how that choice would shape the narration and affect the reader's experience, particularly in a Christian context.\n\nSynopsis:\n---\n${context}\n-\n\nGenerate 3 POV & Voice options:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
-        async function suggestStructures(context) { const prompt = `You are an AI writing coach for Christian authors. Based on the story's synopsis, suggest a numbered list of 3 potential structural templates (e.g., Three-Act Structure, Hero's Journey, Fichtean Curve). For each, briefly explain why that structure would be a good fit for the story, considering its Christian themes.\n\nSynopsis:\n---\n${context}\n---\n\nSuggest 3 structural templates:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
+        async function suggestPOVs(context) { const prompt = `You are an AI writing coach for Christian authors. Based on the story's synopsis, generate a numbered list of 3 potential Point of View (POV) & Voice choices. For each, briefly explain how that choice would shape the narration and affect the reader's experience, particularly in a Christian context.\n\nSynopsis:\n---\n${context}\n-\n\nGenerate 3 POV & Voice options:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
+        async function suggestStructures(context) { const prompt = `You are an AI writing coach for Christian authors. Based on the story's synopsis, suggest a numbered list of 3 potential structural templates. For each, briefly explain why that structure would be a good fit for the story, considering its Christian themes.\n\nSynopsis:\n---\n${context}\n---\n\nSuggest 3 structural templates:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function analyzeChapter(chapterText, context) {
-            // Ensure chapter analysis uses full project context
-            const prompt = `You are an AI developmental editor for Christian manuscripts. Review the following book chapter in the context of the provided project details (synopsis, characters, world-building, outline, and book title). Provide high-level feedback on Pacing, Plot Progression, and Character Consistency, specifically noting how well it integrates Christian themes or moral lessons. The feedback should be constructive and encouraging.\n\nProject Details:\n---\n${context}\n---\n\nChapter Text to Analyze:\n---\n${chapterText}\n---\n\nProvide your analysis:`;
+            const prompt = `You are an AI developmental editor for Christian manuscripts. Review the following book chapter in the context of the provided project details. Provide high-level feedback on Pacing, Plot Progression, and Character Consistency, specifically noting how well it integrates Christian themes or moral lessons. The feedback should be constructive and encouraging.\n\nProject Details:\n---\n${context}\n---\n\nChapter Text to Analyze:\n---\n${chapterText}\n---\n\nProvide your analysis:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function proofreadChapter(chapterText) { 
             const prompt = `You are an AI proofreader. Review the following text for grammatical errors, spelling mistakes, or punctuation issues. For each suggestion, provide the original text, the proposed change, and a brief reasoning.\n\nText to Proofread:\n---\n${chapterText}\n---\n\nProvide suggestions as a JSON array of objects with keys "original", "suggestion", and "reasoning".`; 
-            const config = {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: "ARRAY",
-                    items: {
-                        type: "OBJECT",
-                        properties: {
-                            original: { type: "STRING" },
-                            suggestion: { type: "STRING" },
-                            reasoning: { type: "STRING" }
-                        },
-                        required: ["original", "suggestion", "reasoning"]
-                    }
-                }
-            };
+            const config = { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { original: { type: "STRING" }, suggestion: { type: "STRING" }, reasoning: { type: "STRING" } }, required: ["original", "suggestion", "reasoning"] } } };
             return callGemini([{ role: "user", parts: [{ text: prompt }] }], config);
         }
-        async function suggestYouthPhrases(selectedText, context) { const prompt = `You are an AI dialogue coach. Given the following selected text (likely dialogue) and its surrounding context, provide a numbered list of 5 alternative phrases that sound more contemporary or like common youth slang. Ensure suggestions are appropriate and fit a Christian context if possible.\n\nContext:\n---\n${context}\n---\n\nSelected Text: "${selectedText}"\n\nProvide 5 youth phrase alternatives:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); } // New AI function
+        async function suggestYouthPhrases(selectedText, context) { const prompt = `You are an AI dialogue coach. Given the following selected text (likely dialogue) and its surrounding context, provide a numbered list of 5 alternative phrases that sound more contemporary or like common youth slang. Ensure suggestions are appropriate and fit a Christian context if possible.\n\nContext:\n---\n${context}\n---\n\nSelected Text: "${selectedText}"\n\nProvide 5 youth phrase alternatives:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function generateCoverConcepts(context) {
-            // CORRECTED PROMPT: Explicitly tell AI to generate ONLY the descriptive prompt, no "Concept: " prefix.
-            // Emphasize Christian themes for cover concepts
-            const prompt = `You are an AI art director for Christian book covers. Based on the provided book synopsis, generate 3 distinct and compelling visual concepts for a book cover. Each concept should be a short, descriptive paragraph that could be used as a prompt for an AI image generator. Focus on imagery that reflects Christian themes, symbolism, or the spiritual journey of the characters. Provide ONLY the descriptive image prompt text. Do NOT include any "Concept X:" prefixes or introductory sentences like "Here are 3 distinct and compelling visual concepts...".\n\nSynopsis:\n---\n${context}\n---\n\nGenerate 3 book cover concepts:`;
+            const prompt = `You are an AI art director for Christian book covers. Based on the provided book synopsis, generate 3 distinct and compelling visual concepts for a book cover. Each concept should be a short, descriptive paragraph that could be used as a prompt for an AI image generator. Focus on imagery that reflects Christian themes, symbolism, or the spiritual journey of the characters. Provide ONLY the descriptive image prompt text.\n\nSynopsis:\n---\n${context}\n---\n\nGenerate 3 book cover concepts:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        async function generateNext(currentText, projectTitle, outlineContent) { // Simplified context parameters
-            const prompt = `You are a Christian ghostwriter. Your task is to continue the narrative for a book titled "${projectTitle}".
+        async function generateNext(currentText, outlineContent) {
+            const prompt = `You are a Christian ghostwriter. Your task is to continue the narrative.
             Based on the following outline and the current text, write the next logical section of the story, focusing on advancing the plot according to the next relevant beat in the outline.
             Ensure the tone, style, and Christian themes are consistent with the overall manuscript.
 
@@ -920,19 +782,15 @@ Generate 5 character profiles:`;
             Continue the story, adhering to the outline's progression:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        // New AI function to generate titles
         async function generateTitles(context) {
-            // Ensure title generation uses synopsis context and asks for Christian titles
-            const prompt = `You are an AI creative assistant for Christian authors. Based on the following synopsis or brainstorming content, generate 5 distinct and compelling title suggestions for a Christian book. Provide ONLY the title and optional subtitle. Do NOT include any descriptive sentences or explanations after the title.\n\nContent:\n---\n${context}\n---\n\nGenerate 5 title suggestions:`;
+            const prompt = `You are an AI creative assistant for Christian authors. Based on the following synopsis or brainstorming content, generate 5 distinct and compelling title suggestions for a Christian book. Provide ONLY the title and optional subtitle.\n\nContent:\n---\n${context}\n---\n\nGenerate 5 title suggestions:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        // New AI functions for Front and Back Matter
         async function generateFrontMatter(context, topic) {
             const prompt = `You are an AI publishing assistant for Christian authors. For a book with the following details, generate a template or example content for the "${topic}" section of the front matter.
             \n\nProject Details:\n---\n${context}\n---\n\nGenerate content for the ${topic}:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-
         async function generateBackMatter(context, topic) {
             const prompt = `You are an AI publishing assistant for Christian authors. For a book with the following details, generate a template or example content for the "${topic}" section of the back matter.
             \n\nProject Details:\n---\n${context}\n---\n\nGenerate content for the ${topic}:`;
@@ -943,24 +801,20 @@ Generate 5 character profiles:`;
         // --- views.js content ---
         const appContainer = document.getElementById('app-container');
         let currentUserId = null;
-        // This variable will store the current selection range for 'Alternative Words' and 'Suggested Youth Phrases'
         let currentSelectionRange = null;
-        let currentTheme = 'theme-default'; // Track current theme for dynamic borders
+        let currentTheme = 'theme-default';
 
-        // Function to render the Help modal
         function renderHelpModal() {
             const helpContent = `
                 <div class="space-y-4 text-gray-300 overflow-y-auto max-h-[70vh] pr-4">
                     <p class="text-lg font-semibold text-white">Welcome to Author's Aid!</p>
                     <p>Your AI Co-author is here to assist you through every step of your manuscript writing journey, grounded in Christian values.</p>
-
                     <h4 class="text-md font-semibold text-white mt-4">Getting Started:</h4>
                     <ul class="list-disc list-inside space-y-1">
                         <li><strong>Sign Up/Login:</strong> Create an account to save your projects permanently across sessions. You can also continue as a guest, but guest data may not persist.</li>
                         <li><strong>New Project:</strong> From the Dashboard, click "+ New Project" to start a new book. Provide a title and select its type, genre, and target audience.</li>
                         <li><strong>Dashboard:</strong> View all your existing projects, open them, or delete them.</li>
                     </ul>
-
                     <h4 class="text-md font-semibold text-white mt-4">Using the Editor:</h4>
                     <p>The main editor screen is where your writing and AI tools come together. It's divided into three main panels:</p>
                     <ul class="list-disc list-inside space-y-1">
@@ -968,7 +822,6 @@ Generate 5 character profiles:`;
                         <li><strong>Center Panel:</strong> This is your primary writing area, powered by Quill.js. Type directly here, and your progress is automatically saved.</li>
                         <li><strong>Right Sidebar (AI Co-Author):</strong> This is where you interact with the AI tools.</li>
                     </ul>
-
                     <h4 class="text-md font-semibold text-white mt-4">AI Co-Author Features:</h4>
                     <ul class="list-disc list-inside space-y-1">
                         <li><strong>AI Style Preference:</strong> Use the text area at the top to describe the writing style or tone you'd like the AI to adopt (e.g., "Write in a formal, encouraging tone," "Use concise, impactful language"). This preference is applied to all AI-generated content.</li>
@@ -984,16 +837,14 @@ Generate 5 character profiles:`;
                         <li><strong>Generate Image Prompts (Book Cover):</strong> Get descriptive prompts for an AI image generator based on your book's synopsis. Click a concept to generate a visual book cover.</li>
                         <li><strong>Select Book Cover (Book Cover):</strong> After generating images, click on your preferred cover to highlight it and save its URL to your project.</li>
                     </ul>
-
                     <h4 class="text-md font-semibold text-white mt-4">Exporting Your Work:</h4>
                     <ul class="list-disc list-inside space-y-1">
                         <li><strong>Export Project:</strong> Use the "Export Project" button in the footer to download your entire manuscript as a clean HTML file. This file is suitable for importing into professional book formatting software for eBook and print preparation.</li>
                     </ul>
-
                     <p class="text-sm text-gray-400 mt-4">Remember that AI generation relies on external services. If you encounter "API call failed" errors, please check your Google Cloud Project settings for API enablement and quotas.</p>
                 </div>
             `;
-            showModal('How to Use Author\'s Aid', helpContent, null, 'Close', false); // No confirm button, just close
+            showModal('How to Use Author\'s Aid', helpContent, null, 'Close', false);
         }
 
 
@@ -1001,7 +852,6 @@ Generate 5 character profiles:`;
             let navLinksHtml = '';
             let userDisplay = '';
             if (isLoggedIn) {
-                // FIX: Changed text color for better visibility
                 userDisplay = `<span class="text-gray-300 text-sm">${userId.substring(0, 8)}...</span>`; 
                 navLinksHtml = `
                     <a href="#" id="help-link" class="text-gray-300 hover:text-white transition-colors text-sm">Help</a>
@@ -1009,7 +859,6 @@ Generate 5 character profiles:`;
                     <button id="sign-out-btn" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">Logout</button>
                 `;
             }
-             // FIX: Changed text color for better visibility
              const dashboardLink = inEditor ? `<a href="#" data-route="dashboard" class="nav-button text-sm text-gray-300 hover:text-white flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Dashboard</a>` : '';
 
             const headerHtml = `
@@ -1036,7 +885,6 @@ Generate 5 character profiles:`;
                     navigateTo('landing');
                 });
             }
-            // Add event listener for the Help link
             const helpLink = headerElement.querySelector('#help-link');
             if (helpLink) {
                 helpLink.addEventListener('click', (e) => {
@@ -1071,17 +919,11 @@ Generate 5 character profiles:`;
                 if (email && password) {
                     const user = authInstance.currentUser;
                     if (user && user.isAnonymous) {
-                        // Link anonymous account
                         const success = await linkGuestAccount(email, password);
-                        if (success) {
-                            navigateTo('dashboard');
-                        }
+                        if (success) navigateTo('dashboard');
                     } else {
-                        // Create new account
                         const newUser = await signUpWithEmail(email, password);
-                        if (newUser) {
-                            navigateTo('dashboard');
-                        }
+                        if (newUser) navigateTo('dashboard');
                     }
                 }
             }, 'Sign Up');
@@ -1108,9 +950,7 @@ Generate 5 character profiles:`;
                 const password = document.getElementById('login-password').value;
                 if (email && password) {
                     const user = await signInWithEmail(email, password);
-                    if (user) {
-                        navigateTo('dashboard');
-                    }
+                    if (user) navigateTo('dashboard');
                 }
             }, 'Login');
         }
@@ -1118,8 +958,6 @@ Generate 5 character profiles:`;
         function renderLandingPage() {
             document.body.style.overflow = 'auto';
             document.getElementById('theme-switcher').style.display = 'block';
-            // The appContainer.innerHTML is now responsible for the entire content of the view,
-            // so we remove the footer HTML from here to avoid duplication.
             appContainer.innerHTML = `
                 <div class="gradient-bg">
                     <header class="absolute top-0 left-0 w-full z-10 p-4">
@@ -1136,7 +974,7 @@ Generate 5 character profiles:`;
                         <div class="container mx-auto text-center px-4">
                             <h2 class="text-4xl md:text-6xl font-bold font-lora text-white leading-tight mb-4">Your AI Co-Author, Guided by Faith</h2>
                             <p class="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto mb-8">
-                                Welcome, Rene' Stanley. Author's Aid is your personalized writing partner, trained on your unique style and grounded in Christian values. From manuscript to cover, let's bring your next masterpiece to life.
+                                Your personalized writing partner, trained on your unique style and grounded in Christian values. From manuscript to cover, let's bring your next masterpiece to life.
                             </p>
                             <button id="guest-btn" class="accent-bg accent-bg-hover text-white font-bold py-3 px-8 rounded-lg text-lg transition-transform transform hover:scale-105 inline-block">Continue as Guest</button>
                         </div>
@@ -1171,7 +1009,7 @@ Generate 5 character profiles:`;
                 await signInAnon();
             });
             document.getElementById('signup-free-btn').addEventListener('click', handleSignUpClick);
-            document.getElementById('login-link').addEventListener('click', handleLoginClick); // Changed to call handleLoginClick
+            document.getElementById('login-link').addEventListener('click', handleLoginClick);
             document.getElementById('sign-up-link').addEventListener('click', handleSignUpClick);
         }
 
@@ -1180,7 +1018,7 @@ Generate 5 character profiles:`;
             document.body.style.overflow = 'auto';
             document.getElementById('theme-switcher').style.display = 'block';
             appContainer.innerHTML = '';
-            appContainer.appendChild(renderHeader(true, false, userId)); // Pass userId to header
+            appContainer.appendChild(renderHeader(true, false, userId));
             const mainContent = document.createElement('main');
             mainContent.className = "container mx-auto p-8 flex-grow";
             mainContent.innerHTML = `<div class="text-center text-gray-400">Loading projects...</div>`;
@@ -1188,9 +1026,7 @@ Generate 5 character profiles:`;
 
             const projects = await getProjects(userId);
             let listHtml = projects.map(p => {
-                // Determine the border color class based on the current theme
                 const themeBorderClass = `theme-border-${currentTheme.replace('theme-', '')}`;
-
                 return `
                 <div class="project-card bg-gray-800 p-4 rounded-lg border-2 ${themeBorderClass} flex flex-col items-center text-center">
                     <div class="mb-2">
@@ -1290,9 +1126,7 @@ Generate 5 character profiles:`;
                 const targetAudience = document.getElementById('targetAudience').value;
                 const projectData = { title, bookType, genre, targetAudience };
                 const newId = await createProject(currentUserId, projectData);
-                if (newId) {
-                    navigateTo('editor', { projectId: newId });
-                }
+                if (newId) navigateTo('editor', { projectId: newId });
             }, 'Create Project');
         }
 
@@ -1306,29 +1140,26 @@ Generate 5 character profiles:`;
         async function renderEditor(userId, projectId) {
             console.log("renderEditor: Rendering editor for projectId:", projectId);
             currentUserId = userId;
-            document.body.style.overflow = 'hidden'; /* Prevent global scrollbar on editor page */
-            document.getElementById('theme-switcher').style.display = 'none'; /* Hide global switcher */
-            appContainer.innerHTML = ''; // Clear existing content
+            document.body.style.overflow = 'hidden';
+            document.getElementById('theme-switcher').style.display = 'none';
+            appContainer.innerHTML = '';
 
-            appContainer.appendChild(renderHeader(true, true, userId)); // Pass userId to header
+            appContainer.appendChild(renderHeader(true, true, userId));
             const mainContent = document.createElement('main');
-            mainContent.className = "flex flex-grow flex-col h-full min-h-0"; /* Added min-h-0 */
+            mainContent.className = "flex flex-grow flex-col h-full min-h-0";
             mainContent.innerHTML = `<div class="text-center text-gray-400">Loading project...</div>`;
             appContainer.appendChild(mainContent);
 
             const project = await getProject(userId, projectId);
             if (!project) {
-                console.error("renderEditor: Project not found for projectId:", projectId);
                 mainContent.innerHTML = `<div class="text-center text-red-400 p-8">Error: Project not found.</div>`;
                 return;
             }
-            console.log("renderEditor: Project data loaded:", project);
 
             mainContent.innerHTML = `
-                <div class="flex flex-grow overflow-hidden"> <!-- Changed to overflow-hidden to contain internal scrolling -->
+                <div class="flex flex-grow overflow-hidden">
                     <div id="left-sidebar" class="w-2/12 bg-gray-800 p-4 border-r border-gray-700 flex flex-col overflow-y-auto"></div>
                     <div id="center-panel" class="w-7/12 p-8 flex flex-col overflow-y-auto bg-[#111827]">
-                        <!-- Project title is outside editor-container and above the toolbar -->
                         <h3 id="project-main-title" class="text-3xl font-lora font-bold mb-4 text-white">${stripMarkdownAndHtml(project.title || 'Untitled Page')}</h3>
                         <div id="editor-container" class="flex-grow relative flex flex-col">
                            <div id="editor-toolbar"></div>
@@ -1341,19 +1172,17 @@ Generate 5 character profiles:`;
                 </div>
             `;
 
-            // Make the editor footer visible
-            const editorFooter = document.getElementById('app-global-footer'); // Reference the global footer
+            const editorFooter = document.getElementById('app-global-footer');
             if (editorFooter) {
                 editorFooter.classList.remove('hidden');
-                document.getElementById('footer-content-editor').classList.remove('hidden'); // Show editor specific content
-                document.getElementById('footer-content-landing-dashboard').classList.add('hidden'); // Hide other content
+                document.getElementById('footer-content-editor').classList.remove('hidden');
+                document.getElementById('footer-content-landing-dashboard').classList.add('hidden');
             }
             
             await setupEditorFunctionality(userId, projectId, project);
         }
 
         async function setupEditorFunctionality(userId, projectId, project) {
-            console.log("setupEditorFunctionality: Setting up editor for project:", projectId);
             const projectMainTitle = document.getElementById('project-main-title');
             const leftSidebar = document.getElementById('left-sidebar');
             const rightSidebar = document.getElementById('right-sidebar');
@@ -1361,18 +1190,16 @@ Generate 5 character profiles:`;
             const coverDisplayContainer = document.getElementById('cover-display-container');
             const metadataFormContainer = document.getElementById('metadata-form-container');
 
-            let activeSectionId = 'brainstorming'; // Default to brainstorming
+            let activeSectionId = 'brainstorming';
             let editor;
             let sections = [];
 
             const renderSidebar = () => {
-                console.log("renderSidebar: Updating sidebar with project data.");
                 getProject(userId, projectId).then(updatedProject => {
                     if (updatedProject) {
                         project.bookCoverUrl = updatedProject.bookCoverUrl;
                         project.title = updatedProject.title;
                         projectMainTitle.textContent = stripMarkdownAndHtml(project.title || 'Untitled Page');
-                        console.log("renderSidebar: Updated project data for sidebar:", project);
                     }
 
                     const sidebarHeader = `
@@ -1380,12 +1207,8 @@ Generate 5 character profiles:`;
                             ${project.bookCoverUrl ? `<img src="${project.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/120x180/1F2937/D1D5DB?text=Cover';" class="w-30 h-45 object-cover rounded-md shadow-md mb-2" alt="Book Cover Thumbnail"/>` : `<img src="https://placehold.co/120x180/1F2937/D1D5DB?text=No+Cover" class="w-30 h-45 object-cover rounded-md shadow-md mb-2" alt="Placeholder Cover"/>`}
                         </div>`;
                     
-                    // START: Logic to group sections under headings
                     const sectionGroups = {
-                        project: [],
-                        frontMatter: [],
-                        chapters: [],
-                        backMatter: []
+                        project: [], frontMatter: [], chapters: [], backMatter: []
                     };
 
                     sections.forEach(s => {
@@ -1400,21 +1223,16 @@ Generate 5 character profiles:`;
                     const sidebarNav = `
                         <nav id="project-sections" class="flex flex-col space-y-2 flex-grow overflow-y-auto">
                             ${createSectionLinks(sectionGroups.project)}
-                            
                             ${sectionGroups.frontMatter.length > 0 ? `<div class="pt-4 mt-2 border-t border-gray-700"><h4 class="text-xs font-bold uppercase text-gray-500 px-2 mb-2">Front Matter</h4></div>` : ''}
                             ${createSectionLinks(sectionGroups.frontMatter)}
-
                             ${sectionGroups.chapters.length > 0 ? `<div class="pt-4 mt-2 border-t border-gray-700"><h4 class="text-xs font-bold uppercase text-gray-500 px-2 mb-2">Chapters</h4></div>` : ''}
                             ${createSectionLinks(sectionGroups.chapters)}
-                            
                             ${sectionGroups.backMatter.length > 0 ? `<div class="pt-4 mt-2 border-t border-gray-700"><h4 class="text-xs font-bold uppercase text-gray-500 px-2 mb-2">Back Matter</h4></div>` : ''}
                             ${createSectionLinks(sectionGroups.backMatter)}
                         </nav>
                     `;
-                    // END: Logic to group sections
 
                     leftSidebar.innerHTML = sidebarHeader + sidebarNav;
-
                     leftSidebar.querySelectorAll('.section-link').forEach(link => {
                         link.addEventListener('click', (e) => {
                             e.preventDefault();
@@ -1425,13 +1243,11 @@ Generate 5 character profiles:`;
                 });
             };
             
-            // Chapter Navigation Logic
             const updateChapterNavButtons = () => {
                 const chapterSections = sections.filter(s => s.id.startsWith('chapter_'));
                 const currentIndex = chapterSections.findIndex(s => s.id === activeSectionId);
                 const prevBtn = document.getElementById('prev-chapter-btn');
                 const nextBtn = document.getElementById('next-chapter-btn');
-
                 if (prevBtn && nextBtn) {
                     prevBtn.disabled = currentIndex <= 0;
                     nextBtn.disabled = currentIndex < 0 || currentIndex >= chapterSections.length - 1;
@@ -1441,22 +1257,16 @@ Generate 5 character profiles:`;
             document.getElementById('prev-chapter-btn').addEventListener('click', () => {
                 const chapterSections = sections.filter(s => s.id.startsWith('chapter_'));
                 const currentIndex = chapterSections.findIndex(s => s.id === activeSectionId);
-                if (currentIndex > 0) {
-                    loadSection(chapterSections[currentIndex - 1].id);
-                }
+                if (currentIndex > 0) loadSection(chapterSections[currentIndex - 1].id);
             });
 
             document.getElementById('next-chapter-btn').addEventListener('click', () => {
                 const chapterSections = sections.filter(s => s.id.startsWith('chapter_'));
                 const currentIndex = chapterSections.findIndex(s => s.id === activeSectionId);
-                if (currentIndex >= 0 && currentIndex < chapterSections.length - 1) {
-                    loadSection(chapterSections[currentIndex + 1].id);
-                }
+                if (currentIndex >= 0 && currentIndex < chapterSections.length - 1) loadSection(chapterSections[currentIndex + 1].id);
             });
 
-
             document.getElementById('add-chapter-btn').addEventListener('click', async () => {
-                console.log("Add Chapter button clicked.");
                 const chapterCount = sections.filter(s => s.id.startsWith('chapter_')).length;
                 const success = await addChapter(userId, projectId, chapterCount + 1);
                 if(success) {
@@ -1466,38 +1276,43 @@ Generate 5 character profiles:`;
                 }
             });
 
-            // START: Event listeners for new page buttons
-            document.getElementById('add-front-matter-btn').addEventListener('click', async () => {
-                const pageTitle = prompt("Enter a title for the new front matter page (e.g., 'Foreword'):");
-                if (pageTitle) {
-                    const frontMatterSections = sections.filter(s => s.order >= 7 && s.order < 11);
-                    const lastOrder = frontMatterSections.length > 0 ? Math.max(...frontMatterSections.map(s => s.order)) : 6;
-                    const success = await addFrontMatterPage(userId, projectId, pageTitle, lastOrder + 0.1); // Use decimal to insert between
-                    if (success) {
-                        sections = await getProjectSections(userId, projectId);
-                        renderSidebar();
-                        showNotification(`Page "${pageTitle}" added!`, 'success');
+            // START: Updated event listeners for new page buttons using modals
+            document.getElementById('add-front-matter-btn').addEventListener('click', () => {
+                const content = `<form><label for="page-title" class="block text-sm font-medium text-gray-300 mb-1">Page Title</label><input type="text" id="page-title" name="title" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required></form>`;
+                showModal('Add Front Matter Page', content, async (modal) => {
+                    const pageTitle = modal.querySelector('#page-title').value;
+                    if (pageTitle) {
+                        const frontMatterSections = sections.filter(s => s.order >= 7 && s.order < 11);
+                        const lastOrder = frontMatterSections.length > 0 ? Math.max(...frontMatterSections.map(s => s.order)) : 6.9;
+                        const success = await addFrontMatterPage(userId, projectId, pageTitle, lastOrder + 0.1);
+                        if (success) {
+                            sections = await getProjectSections(userId, projectId);
+                            renderSidebar();
+                            showNotification(`Page "${pageTitle}" added!`, 'success');
+                        }
                     }
-                }
+                }, 'Add Page');
             });
 
-            document.getElementById('add-back-matter-btn').addEventListener('click', async () => {
-                const pageTitle = prompt("Enter a title for the new back matter page (e.g., 'Glossary'):");
-                if (pageTitle) {
-                    const backMatterSections = sections.filter(s => s.order >= 100);
-                    const lastOrder = backMatterSections.length > 0 ? Math.max(...backMatterSections.map(s => s.order)) : 99;
-                    const success = await addBackMatterPage(userId, projectId, pageTitle, lastOrder + 1);
-                    if (success) {
-                        sections = await getProjectSections(userId, projectId);
-                        renderSidebar();
-                        showNotification(`Page "${pageTitle}" added!`, 'success');
+            document.getElementById('add-back-matter-btn').addEventListener('click', () => {
+                const content = `<form><label for="page-title" class="block text-sm font-medium text-gray-300 mb-1">Page Title</label><input type="text" id="page-title" name="title" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required></form>`;
+                showModal('Add Back Matter Page', content, async (modal) => {
+                    const pageTitle = modal.querySelector('#page-title').value;
+                    if (pageTitle) {
+                        const backMatterSections = sections.filter(s => s.order >= 100);
+                        const lastOrder = backMatterSections.length > 0 ? Math.max(...backMatterSections.map(s => s.order)) : 99;
+                        const success = await addBackMatterPage(userId, projectId, pageTitle, lastOrder + 1);
+                        if (success) {
+                            sections = await getProjectSections(userId, projectId);
+                            renderSidebar();
+                            showNotification(`Page "${pageTitle}" added!`, 'success');
+                        }
                     }
-                }
+                }, 'Add Page');
             });
-            // END: Event listeners
+            // END: Updated event listeners
 
             document.getElementById('export-project-btn').addEventListener('click', async () => {
-                console.log("Export Project button clicked.");
                 showNotification('Preparing manuscript for export...', 'info');
                 try {
                     const allSections = await getProjectSections(userId, projectId);
@@ -1509,11 +1324,8 @@ Generate 5 character profiles:`;
                         fullHtmlContent += `<h2>${section.title}</h2>\n`;
                         const tempDiv = document.createElement('div');
                         const tempQuill = new Quill(tempDiv, { readOnly: true });
-                        try {
-                            tempQuill.setContents(JSON.parse(section.content));
-                        } catch (e) {
-                            tempQuill.setText(section.content || '');
-                        }
+                        try { tempQuill.setContents(JSON.parse(section.content)); } 
+                        catch (e) { tempQuill.setText(section.content || ''); }
                         fullHtmlContent += tempDiv.querySelector('.ql-editor').innerHTML + '\n\n';
                     }
                     fullHtmlContent += '</body></html>';
@@ -1533,20 +1345,17 @@ Generate 5 character profiles:`;
                 }
             });
 
-            // FIX: Refactored this function to be more reliable
             const renderAiPanel = (sectionId) => {
-                console.log("renderAiPanel: Rendering AI panel for section:", sectionId);
-                
                 let contextualButtonsHtml = '';
-                let pageGeneratorButtonsHtml = '';
-
-                // This block defines buttons that are ALWAYS available, unless on a special page.
-                const commonPageGenerators = `
+                
+                // START: Simplified AI Panel with Page Generators
+                const pageGenerators = `
                     <div class="pt-4 mt-4 border-t border-gray-700">
                         <p class="text-sm font-semibold mb-2 text-gray-200">Page Generators</p>
                         <div class="grid grid-cols-2 gap-2">
                             <button data-topic="Copyright" data-matter-type="front" class="generate-matter-btn w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Copyright</button>
                             <button data-topic="Dedication" data-matter-type="front" class="generate-matter-btn w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Dedication</button>
+                            <button data-topic="Foreword" data-matter-type="front" class="generate-matter-btn w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Foreword</button>
                             <button data-topic="Preface" data-matter-type="front" class="generate-matter-btn w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Preface</button>
                             <button data-topic="Acknowledgments" data-matter-type="front" class="generate-matter-btn w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Acknowledgments</button>
                             <button data-topic="About the Author" data-matter-type="back" class="generate-matter-btn w-full col-span-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">About the Author</button>
@@ -1567,41 +1376,14 @@ Generate 5 character profiles:`;
                                 <button id="generate-structure-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Structural Template</button>
                             </div>
                         </div>`;
-                    pageGeneratorButtonsHtml = commonPageGenerators;
                 } else if (sectionId === 'book_titles') {
-                     contextualButtonsHtml = `
-                        <div>
-                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Book Titles</p>
-                            <p class="text-xs text-gray-300 mb-2">Generate title suggestions based on your synopsis.</p>
-                            <button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button>
-                        </div>`;
-                     pageGeneratorButtonsHtml = commonPageGenerators;
-                }
-                else if (sectionId === 'character_development') {
-                     contextualButtonsHtml = `
-                        <div>
-                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Character Profiles</p>
-                            <p class="text-xs text-gray-300 mb-2">Let the AI create character ideas based on your story's concept.</p>
-                            <button id="generate-characters-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Characters</button>
-                        </div>`;
-                     pageGeneratorButtonsHtml = commonPageGenerators;
+                     contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Book Titles</p><button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button></div>`;
+                } else if (sectionId === 'character_development') {
+                     contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Character Profiles</p><button id="generate-characters-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Characters</button></div>`;
                 } else if (sectionId === 'world_building') {
-                     contextualButtonsHtml = `
-                        <div>
-                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate World Prompts</p>
-                            <p class="text-xs text-gray-300 mb-2">Brainstorm elements for your story's universe.</p>
-                            <button id="generate-world-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate World Ideas</button>
-                        </div>`;
-                     pageGeneratorButtonsHtml = commonPageGenerators;
-                }
-                else if (sectionId === 'outline') {
-                    contextualButtonsHtml = `
-                        <div>
-                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Chapter Beats</p>
-                            <p class="text-xs text-gray-300 mb-2">Let the AI create a detailed outline based on your project's foundation.</p>
-                            <button id="generate-outline-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Outline</button>
-                        </div>`;
-                    pageGeneratorButtonsHtml = commonPageGenerators;
+                     contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate World Prompts</p><button id="generate-world-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate World Ideas</button></div>`;
+                } else if (sectionId === 'outline') {
+                    contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Chapter Beats</p><button id="generate-outline-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Outline</button></div>`;
                 } else if (sectionId.startsWith('chapter_')) {
                     contextualButtonsHtml = `
                         <div>
@@ -1609,20 +1391,11 @@ Generate 5 character profiles:`;
                             <div class="grid grid-cols-2 gap-2">
                                 <button id="continue-writing-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Continue Writing</button>
                                 <button id="analyze-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Analyze Chapter</button>
-                                <button id="proofread-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Proofread Chapter</button>
+                                <button id="proofread-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Proofread</button>
                             </div>
                         </div>`;
-                    pageGeneratorButtonsHtml = commonPageGenerators;
                 } else if (sectionId === 'book_cover') {
-                    contextualButtonsHtml = `
-                        <div>
-                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Image Prompts</p>
-                            <p class="text-xs text-gray-300 mb-2">Generate descriptive prompts for an AI image generator based on your synopsis.</p>
-                            <button id="generate-image-prompts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Image Prompts</button>
-                        </div>`;
-                } else {
-                    // For pages like Dedication, Preface, etc., show the page generators
-                    pageGeneratorButtonsHtml = commonPageGenerators;
+                    contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Image Prompts</p><button id="generate-image-prompts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Image Prompts</button></div>`;
                 }
 
                 const aiPanelHtml = `
@@ -1631,24 +1404,20 @@ Generate 5 character profiles:`;
                         <div class="pb-4 border-b border-gray-700">
                             <p class="text-sm font-semibold mb-2 text-gray-200">AI Style Preference</p>
                             <textarea id="ai-style-preference-input" class="w-full h-20 p-2 bg-gray-700 border border-gray-600 rounded-md text-sm" placeholder="e.g., Write in a formal, encouraging tone."></textarea>
-                            <p class="text-xs text-gray-300 mt-1">Describe the tone or style you'd like the AI to use.</p>
                         </div>
-                        
                         ${contextualButtonsHtml}
-
                         <div class="pt-4 border-t border-gray-700 flex-shrink-0">
                             <p class="text-sm font-semibold mb-2 text-gray-200">Editing & Faith Tools</p>
                             <div class="grid grid-cols-2 gap-2">
                                 <button id="suggest-alternatives-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Alternative Words</button>
                                 <button id="suggest-scripture-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest Scripture</button>
-                                <button id="suggest-youth-phrases-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest Youth Phrases</button>
+                                <button id="suggest-youth-phrases-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Youth Phrases</button>
                             </div>
                         </div>
-
-                        ${pageGeneratorButtonsHtml}
-
+                        ${pageGenerators}
                         <div id="ai-output" class="mt-4 text-sm text-gray-300 space-y-2 flex-grow overflow-y-auto"></div>
                     </div>`;
+                // END: Simplified AI Panel
 
                 rightSidebar.innerHTML = aiPanelHtml;
                 setupAiPanelListeners(userId, projectId, editor);
@@ -1672,67 +1441,37 @@ Generate 5 character profiles:`;
                     }, 500));
                 }
                 
-                // Helper to get full project context for AI prompts
                 const getFullProjectContext = async () => {
                     const projectData = await getProject(userId, projectId);
                     const allSections = await getProjectSections(userId, projectId);
-                    
                     const tempDiv = document.createElement('div');
                     const tempQuill = new Quill(tempDiv);
-
                     const getQuillText = (sectionId) => {
                         const section = allSections.find(s => s.id === sectionId);
                         if (!section || !section.content) return '';
-                        try {
-                            tempQuill.setContents(JSON.parse(section.content));
-                            return tempQuill.getText().trim();
-                        } catch (e) {
-                            return section.content; // Fallback for plain text
-                        }
+                        try { tempQuill.setContents(JSON.parse(section.content)); return tempQuill.getText().trim(); } 
+                        catch (e) { return section.content; }
                     };
-
-                    const synopsisText = getQuillText('brainstorming');
-                    const charactersText = getQuillText('character_development');
-                    const worldText = getQuillText('world_building');
-                    const outlineText = getQuillText('outline');
-
-                    return {
-                        fullContext: `
-                            Book Title: ${projectData.title || 'Untitled'}
-                            Synopsis: ${synopsisText}
-                            Characters: ${charactersText}
-                            World-building: ${worldText}
-                            Outline: ${outlineText}
-                        `.trim(),
-                        synopsis: synopsisText,
-                        outline: outlineText,
-                        title: projectData.title || 'Untitled'
-                    };
+                    return `Synopsis: ${getQuillText('brainstorming')}\nCharacters: ${getQuillText('character_development')}\nWorld-building: ${getQuillText('world_building')}\nOutline: ${getQuillText('outline')}`.trim();
                 };
 
-                // Delegated event listener for dynamically generated buttons
                 outputDiv.addEventListener('click', async (e) => {
                     const suggestionBtn = e.target.closest('.suggestion-replacement');
                     if (suggestionBtn) {
                         const newText = suggestionBtn.dataset.suggestion;
                         const originalText = suggestionBtn.dataset.original;
-
                         if (editor && currentSelectionRange) {
                             const selectedText = editor.getText(currentSelectionRange.index, currentSelectionRange.length);
                             const startIndexInSelection = selectedText.indexOf(originalText);
-
                             if (startIndexInSelection !== -1) {
                                 const absoluteStartIndex = currentSelectionRange.index + startIndexInSelection;
                                 editor.deleteText(absoluteStartIndex, originalText.length);
                                 editor.insertText(absoluteStartIndex, newText);
-                                // After applying one, clear the suggestions to avoid confusion
-                                outputDiv.innerHTML = ''; 
                             } else {
-                                // Fallback for when the original text isn't found (e.g., single word replacement)
                                 editor.deleteText(currentSelectionRange.index, currentSelectionRange.length);
                                 editor.insertText(currentSelectionRange.index, newText);
-                                outputDiv.innerHTML = '';
                             }
+                            outputDiv.innerHTML = ''; 
                         }
                         return;
                     }
@@ -1742,12 +1481,11 @@ Generate 5 character profiles:`;
                         const newTitle = titleBtn.dataset.title;
                         await updateProjectTitle(userId, projectId, newTitle);
                         projectMainTitle.textContent = newTitle;
-                        outputDiv.innerHTML = ''; // Clear suggestions
+                        outputDiv.innerHTML = '';
                         return;
                     }
                 });
 
-                // Individual listeners for each button
                 const addClickListener = (id, handler) => {
                     const btn = document.getElementById(id);
                     if (btn) btn.addEventListener('click', handler);
@@ -1755,24 +1493,24 @@ Generate 5 character profiles:`;
 
                 addClickListener('generate-synopsis-concepts-btn', async () => {
                     const idea = document.getElementById('ai-idea-input').value.trim();
-                    if (!idea) { showNotification("Please enter a basic idea in the text box.", "error"); return; }
+                    if (!idea) { showNotification("Please enter a basic idea.", "error"); return; }
                     const conceptsText = await generateSynopsisIdeas(idea);
                     const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
                     outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHTML(concept)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHTML(concept.substring(0, 80))}...</button>`).join('');
                 });
 
                 addClickListener('generate-world-btn', async () => {
-                    const { synopsis } = await getFullProjectContext();
-                    if (!synopsis) { showNotification("Please write a synopsis first.", "error"); return; }
-                    const worldText = await generateWorldPrompts(synopsis);
+                    const context = await getFullProjectContext();
+                    if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
+                    const worldText = await generateWorldPrompts(context);
                     const prompts = parseNumberedAiList(worldText, false).map(p => stripMarkdownAndHtml(p.trim()));
                     outputDiv.innerHTML = prompts.map((prompt, index) => `<button data-content="${escapeHTML(prompt)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Idea ${index + 1}:</strong> ${escapeHTML(prompt.substring(0, 80))}...</button>`).join('');
                 });
 
                 addClickListener('generate-image-prompts-btn', async () => {
-                    const { synopsis } = await getFullProjectContext();
-                    if (!synopsis) { showNotification("Please write a synopsis in the 'Synopsis & Brainstorming' section first.", "error"); return; }
-                    const conceptsText = await generateCoverConcepts(synopsis);
+                    const context = await getFullProjectContext();
+                    if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
+                    const conceptsText = await generateCoverConcepts(context);
                     const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
                     let modalContent = concepts.map((concept, index) => `
                         <div class="p-2 bg-gray-700 rounded-md mb-2">
@@ -1784,9 +1522,8 @@ Generate 5 character profiles:`;
                     
                     document.getElementById('modal-container').addEventListener('click', e => {
                         if (e.target.classList.contains('ai-image-prompt-btn')) {
-                            const promptIndex = e.target.dataset.promptIndex;
                             const prompt = e.target.previousElementSibling.value;
-                            document.getElementById('modal-close-btn').click(); // Close the modal
+                            document.getElementById('modal-close-btn').click();
                             generateImage(prompt).then(imageUrls => {
                                 if (imageUrls.length > 0) {
                                     coverDisplayContainer.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">${imageUrls.map(url => `
@@ -1800,18 +1537,16 @@ Generate 5 character profiles:`;
                                         wrapper.addEventListener('click', async (e) => {
                                             const selectedWrapper = e.currentTarget;
                                             const base64Url = selectedWrapper.dataset.imageUrl;
-                                            showNotification('Saving cover... please wait.', 'info');
+                                            showNotification('Saving cover...', 'info');
                                             try {
                                                 const storagePath = `artifacts/${appId}/users/${userId}/projects/${projectId}/project_covers/${Date.now()}.png`;
                                                 const storageRef = ref(storageInstance, storagePath);
                                                 const uploadResult = await uploadString(storageRef, base64Url, 'data_url');
                                                 const downloadUrl = await getDownloadURL(uploadResult.ref);
-                                                
                                                 await updateProjectCover(userId, projectId, downloadUrl);
-                                                
                                                 coverDisplayContainer.querySelectorAll('.cover-image-wrapper').forEach(w => w.classList.remove('selected'));
                                                 selectedWrapper.classList.add('selected');
-                                                renderSidebar(); // Refresh sidebar to show new cover
+                                                renderSidebar();
                                             } catch (error) {
                                                 console.error("Error uploading image and updating cover:", error);
                                                 showNotification(`Error saving cover: ${error.message}`, 'error');
@@ -1824,63 +1559,47 @@ Generate 5 character profiles:`;
                     });
                 });
                 
-                // Brainstorming Tools
                 addClickListener('generate-pov-btn', async () => {
-                    const { synopsis } = await getFullProjectContext();
-                    if (!synopsis) { showNotification("Please write a synopsis first.", "error"); return; }
-                    const resultsText = await suggestPOVs(synopsis);
+                    const context = await getFullProjectContext();
+                    if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
+                    const resultsText = await suggestPOVs(context);
                     const results = parseNumberedAiList(resultsText, false).map(c => c.trim());
                     outputDiv.innerHTML = results.map((result, index) => `<button data-content="${escapeHTML(result)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHTML(result.substring(0, 80))}...</button>`).join('');
                 });
 
                 addClickListener('generate-structure-btn', async () => {
-                    const { synopsis } = await getFullProjectContext();
-                    if (!synopsis) { showNotification("Please write a synopsis first.", "error"); return; }
-                    const resultsText = await suggestStructures(synopsis);
+                    const context = await getFullProjectContext();
+                    if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
+                    const resultsText = await suggestStructures(context);
                     const results = parseNumberedAiList(resultsText, false).map(c => c.trim());
                     outputDiv.innerHTML = results.map((result, index) => `<button data-content="${escapeHTML(result)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Template ${index + 1}:</strong> ${escapeHTML(result.substring(0, 80))}...</button>`).join('');
                 });
                 
-                // Book Titles
                 addClickListener('generate-titles-btn', async () => {
-                    const { synopsis } = await getFullProjectContext();
-                    if (!synopsis) { showNotification("Please write a synopsis or some brainstorming notes first.", "error"); return; }
-                    const titlesText = await generateTitles(synopsis);
+                    const context = await getFullProjectContext();
+                    if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
+                    const titlesText = await generateTitles(context);
                     const titles = parseNumberedAiList(titlesText, false).map(c => stripMarkdownAndHtml(c.trim()));
                     outputDiv.innerHTML = titles.map((title) => `<button data-title="${escapeHTML(title)}" class="title-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHTML(title)}</button>`).join('');
                 });
 
-                // Character Development
                 addClickListener('generate-characters-btn', async () => {
-                    const { fullContext } = await getFullProjectContext();
-                    if (!fullContext.trim()) { showNotification("Please write a synopsis first.", "error"); return; }
-                    const charactersText = await generateCharacterProfiles(fullContext);
+                    const context = await getFullProjectContext();
+                    if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
+                    const charactersText = await generateCharacterProfiles(context);
                     const profiles = parseNumberedAiList(charactersText, false).map(c => c.trim());
-
-                    // Sort profiles based on role
                     const roleOrder = ['Protagonist', 'Antagonist', 'Mentor', 'Deuteragonist', 'Love Interest', 'Confidant', 'Foil', 'Sidekick'];
                     const getRole = (profileText) => {
                         const match = profileText.match(/By Role:\s*([^\n,]+)/i);
-                        return match ? match[1].trim() : 'zzzz'; // 'zzzz' to push unknown to the end
+                        return match ? match[1].trim() : 'zzzz';
                     };
-
                     profiles.sort((a, b) => {
-                        const roleA = getRole(a);
-                        const roleB = getRole(b);
-                        const indexA = roleOrder.indexOf(roleA);
-                        const indexB = roleOrder.indexOf(roleB);
-                        if (indexA === -1 && indexB === -1) return 0;
-                        if (indexA === -1) return 1;
-                        if (indexB === -1) return -1;
+                        const roleA = getRole(a); const roleB = getRole(b);
+                        const indexA = roleOrder.indexOf(roleA); const indexB = roleOrder.indexOf(roleB);
+                        if (indexA === -1 && indexB === -1) return 0; if (indexA === -1) return 1; if (indexB === -1) return -1;
                         return indexA - indexB;
                     });
-                    
-                    let modalContent = profiles.map(profile => `
-                        <div class="p-2 bg-gray-700 rounded-md mb-2">
-                            <p class="whitespace-pre-wrap">${escapeHTML(profile)}</p>
-                        </div>`
-                    ).join('');
-                    
+                    let modalContent = profiles.map(profile => `<div class="p-2 bg-gray-700 rounded-md mb-2"><p class="whitespace-pre-wrap">${escapeHTML(profile)}</p></div>`).join('');
                     showModal('Generated Character Profiles', modalContent, () => {
                         const fullText = profiles.join('\n\n---\n\n');
                         if (editor) {
@@ -1890,11 +1609,10 @@ Generate 5 character profiles:`;
                     }, 'Add All to Editor');
                 });
 
-                // Outline
                 addClickListener('generate-outline-btn', async () => {
-                    const { fullContext, title } = await getFullProjectContext();
-                    if (!fullContext.trim()) { showNotification("Please fill out your synopsis, characters, and world-building sections first.", "error"); return; }
-                    const outlineText = await generateOutlineBeats(fullContext, title);
+                    const context = await getFullProjectContext();
+                    if (!context) { showNotification("Please fill out your synopsis, characters, and world-building sections first.", "error"); return; }
+                    const outlineText = await generateOutlineBeats(context);
                      showContentInModal('Generated Outline', outlineText, (content) => {
                         if (editor) {
                             editor.setText(content);
@@ -1903,12 +1621,11 @@ Generate 5 character profiles:`;
                     });
                 });
 
-                // Chapter Tools
                 addClickListener('continue-writing-btn', async () => {
                     const currentText = editor.getText();
-                    const { title, outline } = await getFullProjectContext();
-                    if (!outline.trim()) { showNotification("Please ensure you have a generated outline.", "error"); return; }
-                    const nextText = await generateNext(currentText, title, outline);
+                    const context = await getFullProjectContext();
+                    if (!context) { showNotification("Please ensure you have project details.", "error"); return; }
+                    const nextText = await generateNext(currentText, context);
                     showContentInModal('Suggested Continuation', nextText, (content) => {
                         if (editor) {
                             editor.insertText(editor.getLength(), '\n\n' + content);
@@ -1919,17 +1636,16 @@ Generate 5 character profiles:`;
 
                 addClickListener('analyze-chapter-btn', async () => {
                     const chapterText = editor.getText();
-                    if (!chapterText.trim()) { showNotification("Please write something in the chapter to analyze.", "error"); return; }
-                    const { fullContext } = await getFullProjectContext();
-                    const analysis = await analyzeChapter(chapterText, fullContext);
+                    if (!chapterText.trim()) { showNotification("Please write something to analyze.", "error"); return; }
+                    const context = await getFullProjectContext();
+                    const analysis = await analyzeChapter(chapterText, context);
                     outputDiv.innerHTML = `<div class="whitespace-pre-wrap p-2 bg-gray-900 rounded-md">${escapeHTML(analysis)}</div>`;
                 });
 
                 addClickListener('proofread-chapter-btn', async () => {
                     currentSelectionRange = editor.getSelection();
                     if (!currentSelectionRange || currentSelectionRange.length === 0) {
-                        showNotification("Please select the text you want to proofread.", "error");
-                        return;
+                        showNotification("Please select text to proofread.", "error"); return;
                     }
                     const chapterText = editor.getText(currentSelectionRange.index, currentSelectionRange.length);
                     const suggestionsJson = await proofreadChapter(chapterText);
@@ -1938,27 +1654,22 @@ Generate 5 character profiles:`;
                         outputDiv.innerHTML = suggestions.map(s => `
                             <div class="suggestion-item">
                                 <div class="suggestion-original">${escapeHTML(s.original)}</div>
-                                <div class="suggestion-replacement" data-original="${escapeHTML(s.original)}" data-suggestion="${escapeHTML(s.suggestion)}">
-                                    ${escapeHTML(s.suggestion)}
-                                </div>
+                                <div class="suggestion-replacement" data-original="${escapeHTML(s.original)}" data-suggestion="${escapeHTML(s.suggestion)}">${escapeHTML(s.suggestion)}</div>
                                 <div class="text-xs text-gray-400 mt-1">${escapeHTML(s.reasoning)}</div>
-                            </div>
-                        `).join('');
+                            </div>`).join('');
                     } catch (e) {
-                        console.error("Failed to parse proofreading suggestions:", e);
                         outputDiv.innerHTML = `<div class="text-red-400">Could not get suggestions.</div>`;
                     }
                 });
 
-                // Front & Back Matter
                 document.querySelectorAll('.generate-matter-btn').forEach(btn => {
                     btn.addEventListener('click', async (e) => {
                         const topic = e.target.dataset.topic;
                         const matterType = e.target.dataset.matterType;
-                        const { fullContext } = await getFullProjectContext();
+                        const context = await getFullProjectContext();
                         const matterText = matterType === 'front'
-                            ? await generateFrontMatter(fullContext, topic)
-                            : await generateBackMatter(fullContext, topic);
+                            ? await generateFrontMatter(context, topic)
+                            : await generateBackMatter(context, topic);
                         showContentInModal(`${topic} Ideas`, matterText, (content) => {
                             if (editor) {
                                 editor.insertText(editor.getLength(), `\n\n--- ${topic.toUpperCase()} ---\n\n` + content);
@@ -1968,13 +1679,11 @@ Generate 5 character profiles:`;
                     });
                 });
 
-
                 const handleSelectionTools = async (e) => {
                     if (!editor) return;
                     currentSelectionRange = editor.getSelection();
                     if (!currentSelectionRange || currentSelectionRange.length === 0) {
-                        showNotification("Please select some text in the editor first.", "error");
-                        return;
+                        showNotification("Please select some text first.", "error"); return;
                     }
                     const selectedText = editor.getText(currentSelectionRange.index, currentSelectionRange.length);
                     const fullTextContext = editor.getText();
@@ -1983,28 +1692,14 @@ Generate 5 character profiles:`;
                         const resultsJson = await suggestAlternatives(selectedText, fullTextContext);
                         try {
                             const results = JSON.parse(resultsJson);
-                            outputDiv.innerHTML = results.map(s => `
-                                <div class="suggestion-item">
-                                     <div class="suggestion-original">${escapeHTML(s.original)}</div>
-                                     <div class="suggestion-replacement" data-original="${escapeHTML(s.original)}" data-suggestion="${escapeHTML(s.suggestion)}">${escapeHTML(s.suggestion)}</div>
-                                </div>
-                            `).join('');
-                        } catch (e) {
-                             outputDiv.innerHTML = `<div class="text-red-400">Could not get suggestions.</div>`;
-                        }
+                            outputDiv.innerHTML = results.map(s => `<div class="suggestion-item"><div class="suggestion-original">${escapeHTML(s.original)}</div><div class="suggestion-replacement" data-original="${escapeHTML(s.original)}" data-suggestion="${escapeHTML(s.suggestion)}">${escapeHTML(s.suggestion)}</div></div>`).join('');
+                        } catch (e) { outputDiv.innerHTML = `<div class="text-red-400">Could not get suggestions.</div>`; }
                     } else if (e.target.id === 'suggest-scripture-btn') {
                         const resultsJson = await suggestScripture(selectedText, fullTextContext);
                         try {
                             const results = JSON.parse(resultsJson);
-                            let modalContent = results.map(s => `
-                                <div class="p-2 bg-gray-700 rounded-md mb-2">
-                                    <p class="font-bold">${escapeHTML(s.reference)}</p>
-                                    <p class="mb-2">${escapeHTML(s.text)}</p>
-                                    <button data-scripture="${escapeHTML(s.reference + ': ' + s.text)}" class="add-scripture-btn accent-bg accent-bg-hover text-white font-semibold py-1 px-3 rounded-lg text-sm">Add</button>
-                                </div>
-                            `).join('');
+                            let modalContent = results.map(s => `<div class="p-2 bg-gray-700 rounded-md mb-2"><p class="font-bold">${escapeHTML(s.reference)}</p><p class="mb-2">${escapeHTML(s.text)}</p><button data-scripture="${escapeHTML(s.reference + ': ' + s.text)}" class="add-scripture-btn accent-bg accent-bg-hover text-white font-semibold py-1 px-3 rounded-lg text-sm">Add</button></div>`).join('');
                             showModal('Suggested Scriptures', modalContent, null, 'Close', false);
-
                             document.getElementById('modal-container').addEventListener('click', e => {
                                 if (e.target.classList.contains('add-scripture-btn')) {
                                     const scripture = e.target.dataset.scripture;
@@ -2012,18 +1707,11 @@ Generate 5 character profiles:`;
                                     showNotification("Scripture added!", "success");
                                 }
                             });
-
-                        } catch (e) {
-                             showNotification("Could not parse scripture suggestions.", "error");
-                        }
+                        } catch (e) { showNotification("Could not parse scripture suggestions.", "error"); }
                     } else { // Youth Phrases
                         const resultsText = await suggestYouthPhrases(selectedText, fullTextContext);
                         const results = parseNumberedAiList(resultsText, false);
-                         outputDiv.innerHTML = results.map(s => `
-                            <div class="suggestion-item">
-                                 <div class="suggestion-replacement" data-original="${escapeHTML(selectedText)}" data-suggestion="${escapeHTML(s)}">${escapeHTML(s)}</div>
-                            </div>
-                        `).join('');
+                         outputDiv.innerHTML = results.map(s => `<div class="suggestion-item"><div class="suggestion-replacement" data-original="${escapeHTML(selectedText)}" data-suggestion="${escapeHTML(s)}">${escapeHTML(s)}</div></div>`).join('');
                     }
                 };
 
@@ -2033,13 +1721,9 @@ Generate 5 character profiles:`;
             };
             
             const loadSection = async (sectionId) => {
-                console.log("loadSection: Loading section:", sectionId);
                 const sectionData = await getSection(userId, projectId, sectionId);
                 const projectData = await getProject(userId, projectId);
-                if (projectMainTitle) {
-                    projectMainTitle.textContent = stripMarkdownAndHtml(projectData.title || 'Untitled Page');
-                }
-
+                if (projectMainTitle) projectMainTitle.textContent = stripMarkdownAndHtml(projectData.title || 'Untitled Page');
                 activeSectionId = sectionId;
 
                 editorContainer.classList.add('hidden');
@@ -2048,70 +1732,35 @@ Generate 5 character profiles:`;
 
                 if (sectionId === 'book_cover') {
                     coverDisplayContainer.classList.remove('hidden');
-                    if (projectData && projectData.bookCoverUrl) {
-                        coverDisplayContainer.innerHTML = `
-                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
-                                <div class="cover-image-wrapper selected" data-image-url="${escapeHTML(projectData.bookCoverUrl)}">
-                                    <img src="${projectData.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/400x600/FF0000/FFFFFF?text=Image+Load+Error';" class="w-full h-auto rounded-lg shadow-lg" alt="Selected Book Cover"/>
-                                    <div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div>
-                                </div>
-                            </div>`;
+                    if (projectData?.bookCoverUrl) {
+                        coverDisplayContainer.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4"><div class="cover-image-wrapper selected" data-image-url="${escapeHTML(projectData.bookCoverUrl)}"><img src="${projectData.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/400x600/FF0000/FFFFFF?text=Image+Load+Error';" class="w-full h-auto rounded-lg shadow-lg" alt="Selected Book Cover"/><div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div></div></div>`;
                     } else {
                         coverDisplayContainer.innerHTML = `<div class="text-center text-gray-400">Your generated book cover will appear here.</div>`;
                     }
                 } else if (sectionId === 'metadata') {
                     metadataFormContainer.classList.remove('hidden');
                     let metadata = {};
-                    try {
-                        metadata = JSON.parse(sectionData.content);
-                    } catch(e) { /* Ignore parsing errors */ }
+                    try { metadata = JSON.parse(sectionData.content); } catch(e) {}
                     
                     metadataFormContainer.innerHTML = `
                         <div class="bg-gray-900 p-6 rounded-lg border border-gray-700 w-full max-w-lg">
                             <h3 class="text-xl font-lora font-bold mb-4 text-white">Project Metadata</h3>
                             <div class="space-y-4">
-                                <!-- START: Added new metadata fields -->
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label for="meta-author-name" class="block text-sm font-medium text-gray-300 mb-1">Author Name</label>
-                                        <input type="text" id="meta-author-name" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.authorName || '')}">
-                                    </div>
-                                    <div>
-                                        <label for="meta-copyright-year" class="block text-sm font-medium text-gray-300 mb-1">Copyright Year</label>
-                                        <input type="number" id="meta-copyright-year" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.copyrightYear || new Date().getFullYear())}">
-                                    </div>
+                                    <div><label for="meta-author-name" class="block text-sm font-medium text-gray-300 mb-1">Author Name</label><input type="text" id="meta-author-name" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.authorName || '')}"></div>
+                                    <div><label for="meta-copyright-year" class="block text-sm font-medium text-gray-300 mb-1">Copyright Year</label><input type="number" id="meta-copyright-year" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.copyrightYear || new Date().getFullYear())}"></div>
                                 </div>
-                                <div>
-                                    <label for="meta-publisher" class="block text-sm font-medium text-gray-300 mb-1">Publisher</label>
-                                    <input type="text" id="meta-publisher" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.publisher || '')}">
-                                </div>
-                                <div>
-                                    <label for="meta-publisher-website" class="block text-sm font-medium text-gray-300 mb-1">Publisher Website (Optional)</label>
-                                    <input type="url" id="meta-publisher-website" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.publisherWebsite || '')}">
-                                </div>
-                                <div>
-                                    <label for="meta-isbn" class="block text-sm font-medium text-gray-300 mb-1">ISBN (Optional)</label>
-                                    <input type="text" id="meta-isbn" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.isbn || '')}">
-                                </div>
-                                <div>
-                                    <label for="meta-lccn" class="block text-sm font-medium text-gray-300 mb-1">Library of Congress Control Number (LCCN)</label>
-                                    <input type="text" id="meta-lccn" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.lccn || '')}">
-                                </div>
+                                <div><label for="meta-publisher" class="block text-sm font-medium text-gray-300 mb-1">Publisher</label><input type="text" id="meta-publisher" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.publisher || '')}"></div>
+                                <div><label for="meta-publisher-website" class="block text-sm font-medium text-gray-300 mb-1">Publisher Website (Optional)</label><input type="url" id="meta-publisher-website" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.publisherWebsite || '')}"></div>
+                                <div><label for="meta-isbn" class="block text-sm font-medium text-gray-300 mb-1">ISBN (Optional)</label><input type="text" id="meta-isbn" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.isbn || '')}"></div>
+                                <div><label for="meta-lccn" class="block text-sm font-medium text-gray-300 mb-1">LCCN</label><input type="text" id="meta-lccn" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.lccn || '')}"></div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label for="meta-cover-designer" class="block text-sm font-medium text-gray-300 mb-1">Cover Designer (Optional)</label>
-                                        <input type="text" id="meta-cover-designer" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.coverDesigner || '')}">
-                                    </div>
-                                    <div>
-                                        <label for="meta-interior-designer" class="block text-sm font-medium text-gray-300 mb-1">Interior Designer (Optional)</label>
-                                        <input type="text" id="meta-interior-designer" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.interiorDesigner || '')}">
-                                    </div>
+                                    <div><label for="meta-cover-designer" class="block text-sm font-medium text-gray-300 mb-1">Cover Designer (Optional)</label><input type="text" id="meta-cover-designer" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.coverDesigner || '')}"></div>
+                                    <div><label for="meta-interior-designer" class="block text-sm font-medium text-gray-300 mb-1">Interior Designer (Optional)</label><input type="text" id="meta-interior-designer" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" value="${escapeHTML(metadata.interiorDesigner || '')}"></div>
                                 </div>
-                                <!-- END: Added new metadata fields -->
                                 <button id="save-metadata-btn" class="w-full mt-4 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Save Metadata</button>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                     document.getElementById('save-metadata-btn').addEventListener('click', async () => {
                         const newMetadata = {
                             authorName: document.getElementById('meta-author-name').value,
@@ -2128,46 +1777,20 @@ Generate 5 character profiles:`;
                 } else {
                     editorContainer.classList.remove('hidden');
                     if (!editor) {
-                        const toolbarOptions = {
-                            container: [
-                                [{ 'header': [1, 2, 3, false] }],
-                                ['bold', 'italic', 'underline'],
-                                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                                ['clean'],
-                                ['undo', 'redo']
-                            ],
-                            handlers: {
-                                'undo': () => editor.history.undo(),
-                                'redo': () => editor.history.redo()
-                            }
-                        };
                         editor = new Quill('#editor', {
-                            modules: { 
-                                toolbar: toolbarOptions,
-                                history: {
-                                    delay: 2000,
-                                    maxStack: 500,
-                                    userOnly: true
-                                }
-                            },
+                            modules: { toolbar: [ [{ 'header': [1, 2, 3, false] }], ['bold', 'italic', 'underline'], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['clean'], ['undo', 'redo'] ], history: { delay: 2000, maxStack: 500, userOnly: true } },
                             theme: 'snow'
                         });
-
-                        // Custom Undo/Redo button icons
                         document.querySelector('.ql-undo').innerHTML = '<i class="fas fa-undo"></i>';
                         document.querySelector('.ql-redo').innerHTML = '<i class="fas fa-redo"></i>';
-
                         editor.on('text-change', debounce(async () => {
                             const content = JSON.stringify(editor.getContents());
                             await updateSectionContent(userId, projectId, activeSectionId, content);
                             showNotification('Progress Saved', 'success', 1500);
                         }, 1500));
                     }
-                    try {
-                        editor.setContents(JSON.parse(sectionData.content));
-                    } catch(e) {
-                        editor.setText(sectionData.content || '');
-                    }
+                    try { editor.setContents(JSON.parse(sectionData.content)); } 
+                    catch(e) { editor.setText(sectionData.content || ''); }
                 }
 
                 renderSidebar();
@@ -2186,10 +1809,7 @@ Generate 5 character profiles:`;
         let mainCurrentUserId = null;
 
         function navigateTo(viewName, data = {}) {
-            console.log("navigateTo: Navigating to view:", viewName, "with data:", data);
-            appContainer.innerHTML = ''; // Clear existing content
-            
-            // FIX: Added logic to manage body and app-container classes for proper layout
+            appContainer.innerHTML = '';
             if (viewName === 'editor') {
                 document.body.classList.add('flex', 'flex-col', 'h-screen');
                 appContainer.classList.add('flex-grow', 'min-h-0');
@@ -2199,18 +1819,14 @@ Generate 5 character profiles:`;
                 appContainer.classList.remove('flex-grow', 'min-h-0');
                 appContainer.classList.add('h-screen');
             }
-            
             document.body.style.overflow = (viewName === 'landing' || viewName === 'dashboard') ? 'auto' : 'hidden';
-
+            
             const themeSwitcher = document.getElementById('theme-switcher');
-            if (themeSwitcher) {
-                themeSwitcher.style.display = (viewName === 'landing' || viewName === 'dashboard') ? 'block' : 'none';
-            }
+            if (themeSwitcher) themeSwitcher.style.display = (viewName === 'landing' || viewName === 'dashboard') ? 'block' : 'none';
 
             const globalFooter = document.getElementById('app-global-footer');
             const footerContentLandingDashboard = document.getElementById('footer-content-landing-dashboard');
             const footerContentEditor = document.getElementById('footer-content-editor');
-
             if (globalFooter && footerContentLandingDashboard && footerContentEditor) {
                 if (viewName === 'editor' && data.projectId) {
                     globalFooter.classList.remove('hidden');
@@ -2225,14 +1841,7 @@ Generate 5 character profiles:`;
                 }
             }
 
-
-            if (viewName === 'editor' && data.projectId) {
-                document.location.hash = `editor/${data.projectId}`;
-            } else if (viewName === 'dashboard') {
-                document.location.hash = 'dashboard';
-            } else {
-                document.location.hash = '';
-            }
+            document.location.hash = viewName === 'editor' && data.projectId ? `editor/${data.projectId}` : (viewName === 'dashboard' ? 'dashboard' : '');
 
             switch (viewName) {
                 case 'landing': renderLandingPage(); break;
@@ -2242,7 +1851,6 @@ Generate 5 character profiles:`;
             }
         }
 
-        // --- App Startup ---
         document.addEventListener('DOMContentLoaded', () => {
             const auth = initializeAuth(firebaseConfig);
             initializeDb(firebaseConfig);
