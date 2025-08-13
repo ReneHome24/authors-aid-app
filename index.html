@@ -15,7 +15,7 @@
     <style>
         html, body {
             height: 100%;
-            overflow: hidden; /* Prevent global scrollbar on editor pages */
+            /* FIX: Removed overflow: hidden; from the body to allow for the new flex layout */
         }
         body {
             font-family: 'Inter', sans-serif;
@@ -2042,6 +2042,18 @@ Generate 5 character profiles:`;
         function navigateTo(viewName, data = {}) {
             console.log("navigateTo: Navigating to view:", viewName, "with data:", data);
             appContainer.innerHTML = ''; // Clear existing content
+            
+            // FIX: Added logic to manage body and app-container classes for proper layout
+            if (viewName === 'editor') {
+                document.body.classList.add('flex', 'flex-col', 'h-screen');
+                appContainer.classList.add('flex-grow', 'min-h-0');
+                appContainer.classList.remove('h-screen');
+            } else {
+                document.body.classList.remove('flex', 'flex-col', 'h-screen');
+                appContainer.classList.remove('flex-grow', 'min-h-0');
+                appContainer.classList.add('h-screen');
+            }
+            
             document.body.style.overflow = (viewName === 'landing' || viewName === 'dashboard') ? 'auto' : 'hidden';
 
             const themeSwitcher = document.getElementById('theme-switcher');
