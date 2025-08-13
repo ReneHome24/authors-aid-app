@@ -454,7 +454,6 @@
             } catch (e) { console.error("Error adding back matter page:", e); showNotification(`Error adding page: ${e.message}`, 'error'); return false; }
         }
         
-        // START: New function to delete a section
         async function deleteSection(userId, projectId, sectionId) {
             try {
                 const sectionRef = doc(dbInstance, `artifacts/${appId}/users/${userId}/projects/${projectId}/sections`, sectionId);
@@ -466,7 +465,6 @@
                 return false;
             }
         }
-        // END: New function
 
         async function getProjects(userId) { try { const qSnapshot = await getDocs(getProjectsCollection(userId)); const projects = []; qSnapshot.forEach(d => projects.push({ id: d.id, ...d.data() })); projects.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0)); return projects; } catch (e) { console.error("Error fetching projects:", e); showNotification(`Error fetching projects: ${e.message}`, 'error'); return []; } }
         async function getProject(userId, projectId) { try { const docRef = doc(getProjectsCollection(userId), projectId); const docSnap = await getDoc(docRef); return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null; } catch (e) { console.error("Error fetching project:", e); showNotification(`Error fetching project: ${e.message}`, 'error'); } }
@@ -544,7 +542,6 @@
         // --- utils.js content ---
         function debounce(func, wait) { let timeout; return function(...args) { const later = () => { clearTimeout(timeout); func(...args); args = null; }; clearTimeout(timeout); timeout = setTimeout(later, wait); }; }
         
-        // START: New Toast Notification System
         let toastTimeout;
         function showNotification(message, type = 'info', duration = 3000) {
             const container = document.getElementById('toast-notification');
@@ -566,7 +563,6 @@
                 container.classList.remove('show');
             }, duration);
         }
-        // END: New Toast Notification System
 
         function showModal(title, contentHtml, onConfirm, confirmText = 'Confirm', showCancel = true) {
             const modalContainer = document.getElementById('modal-container');
@@ -587,7 +583,6 @@
                         form.reportValidity();
                         return;
                     }
-                    // Pass the modal element to the confirm function so it can extract values
                     await onConfirm(modalContainer); 
                     closeModal();
                 });
@@ -734,9 +729,7 @@
                 showNotification(`AI call failed: ${e.message}`, 'error');
                 return `Error: API call failed: ${e.message}`;
             } finally {
-                // START: Ensure spinner is always cleared
                 if (outputDiv) outputDiv.innerHTML = '';
-                // END: Ensure spinner is always cleared
             }
         }
 
@@ -744,7 +737,6 @@
             const prompt = `You are an AI story consultant for Christian literature. Based on the user's basic idea, generate a numbered list of 5 distinct core concept ideas for a new Christian book. Each concept should be a single, concise paragraph describing the core idea. The tone should be encouraging and creative.\n\nBasic Idea: "${idea}"`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        // FIX: Removed bookTitle from prompt
         async function generateOutlineBeats(context) { 
             const prompt = `You are an AI outliner for a Christian author. Based on the provided project details (synopsis, characters, world-building), generate a detailed chapter-by-chapter outline with key beats for each chapter. Ensure the outline aligns with Christian themes and values established in the context.
             **IMPORTANT:** When referring to characters in the outline beats, ALWAYS use their specific character names (e.g., "Amara," "Nana Elena") instead of their roles (e.g., "protagonist," "mentor").
@@ -1293,7 +1285,6 @@
                         });
                     });
                     
-                    // START: Add event listeners for delete buttons
                     leftSidebar.querySelectorAll('.delete-section-btn').forEach(btn => {
                         btn.addEventListener('click', async (e) => {
                             e.stopPropagation();
@@ -1303,7 +1294,6 @@
                                 const success = await deleteSection(userId, projectId, sectionIdToDelete);
                                 if (success) {
                                     sections = await getProjectSections(userId, projectId);
-                                    // If the deleted section was active, switch to brainstorming
                                     if (activeSectionId === sectionIdToDelete) {
                                         activeSectionId = 'brainstorming';
                                         await loadSection(activeSectionId);
@@ -1314,7 +1304,6 @@
                             }, 'Delete');
                         });
                     });
-                    // END: Add event listeners for delete buttons
                 });
             };
             
@@ -1561,14 +1550,46 @@
                     const btn = document.getElementById(id);
                     if (btn) btn.addEventListener('click', handler);
                 };
+                
+                // START: Corrected Synopsis/Brainstorming button logic
+                const handleBrainstormingChoice = async (generatorFunction, title, idea = null) => {
+                    const context = await getFullProjectContext();
+                    if (!context && !idea) { showNotification("Please write a synopsis first.", "error"); return; }
+                    const resultsText = await generatorFunction(idea || context);
+                    const results = parseNumberedAiList(resultsText, false).map(c => stripMarkdownAndHtml(c.trim()));
+                    
+                    let modalContent = results.map((result, index) => 
+                        `<button data-content="${escapeHTML(result)}" class="brainstorm-choice-btn w-full text-left p-3 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">
+                            <strong>Option ${index + 1}:</strong> ${escapeHTML(result)}
+                        </button>`
+                    ).join('');
+
+                    showModal(title, modalContent, null, '', false);
+
+                    const modalContainer = document.getElementById('modal-container');
+                    const choiceHandler = (e) => {
+                        const target = e.target.closest('.brainstorm-choice-btn');
+                        if (target) {
+                            const content = target.dataset.content;
+                            if (editor) {
+                                editor.setText(content + '\n');
+                                showNotification("Content added to editor!", "success");
+                            }
+                            modalContainer.querySelector('#modal-close-btn')?.click();
+                            modalContainer.removeEventListener('click', choiceHandler); // Clean up listener
+                        }
+                    };
+                    modalContainer.addEventListener('click', choiceHandler);
+                };
 
                 addClickListener('generate-synopsis-concepts-btn', async () => {
                     const idea = document.getElementById('ai-idea-input').value.trim();
                     if (!idea) { showNotification("Please enter a basic idea.", "error"); return; }
-                    const conceptsText = await generateSynopsisIdeas(idea);
-                    const concepts = parseNumberedAiList(conceptsText, false).map(c => stripMarkdownAndHtml(c.trim()));
-                    outputDiv.innerHTML = concepts.map((concept, index) => `<button data-content="${escapeHTML(concept)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Concept ${index + 1}:</strong> ${escapeHTML(concept.substring(0, 80))}...</button>`).join('');
+                    handleBrainstormingChoice(generateSynopsisIdeas, 'Choose a Synopsis Idea', idea);
                 });
+                addClickListener('generate-pov-btn', () => handleBrainstormingChoice(suggestPOVs, 'Choose a Point of View'));
+                addClickListener('generate-structure-btn', () => handleBrainstormingChoice(suggestStructures, 'Choose a Structural Template'));
+                // END: Corrected Synopsis/Brainstorming button logic
 
                 addClickListener('generate-world-btn', async () => {
                     const context = await getFullProjectContext();
@@ -1628,22 +1649,6 @@
                             });
                         }
                     });
-                });
-                
-                addClickListener('generate-pov-btn', async () => {
-                    const context = await getFullProjectContext();
-                    if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
-                    const resultsText = await suggestPOVs(context);
-                    const results = parseNumberedAiList(resultsText, false).map(c => c.trim());
-                    outputDiv.innerHTML = results.map((result, index) => `<button data-content="${escapeHTML(result)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Option ${index + 1}:</strong> ${escapeHTML(result.substring(0, 80))}...</button>`).join('');
-                });
-
-                addClickListener('generate-structure-btn', async () => {
-                    const context = await getFullProjectContext();
-                    if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
-                    const resultsText = await suggestStructures(context);
-                    const results = parseNumberedAiList(resultsText, false).map(c => c.trim());
-                    outputDiv.innerHTML = results.map((result, index) => `<button data-content="${escapeHTML(result)}" class="ai-suggestion-modal-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2"><strong>Template ${index + 1}:</strong> ${escapeHTML(result.substring(0, 80))}...</button>`).join('');
                 });
                 
                 addClickListener('generate-titles-btn', async () => {
