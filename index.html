@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 2.4 - Removed Title from AI Prompts -->
+<!-- Version 2.5 - Focused Chapter Writing -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -904,10 +904,16 @@
             const prompt = `You are an AI art director for Christian book covers. Based on the provided book synopsis, generate 3 distinct and compelling visual concepts for a book cover. Each concept should be a short, descriptive paragraph that could be used as a prompt for an AI image generator. Focus on imagery that reflects Christian themes, symbolism, or the spiritual journey of the characters. Provide ONLY the descriptive image prompt text.\n\nSynopsis:\n---\n${context}\n---\n\nGenerate 3 book cover concepts:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        async function generateNext(currentText, outlineContent) {
-            const prompt = `You are a Christian ghostwriter. Your task is to continue the narrative.
-            Based on the following outline and the current text, write the next logical section of the story, focusing on advancing the plot according to the next relevant beat in the outline.
-            Ensure the tone, style, and Christian themes are consistent with the overall manuscript.
+        
+        // *** FIX START ***
+        // The function now accepts `chapterTitle` to provide specific context to the AI.
+        async function generateNext(currentText, outlineContent, chapterTitle) {
+            // The prompt is updated to be highly specific about the current chapter.
+            const prompt = `You are a Christian ghostwriter. Your task is to continue writing a specific chapter of a manuscript.
+
+            **Current Chapter Focus:** ${chapterTitle}
+
+            Your goal is to write the next logical section for THIS CHAPTER ONLY, based on the overall outline provided for context. Analyze the "Current Chapter Content" to see where the story left off, and then use the "Overall Outline" to write the very next story beat for the chapter you are focused on.
 
             Overall Outline:
             ---
@@ -919,9 +925,10 @@
             ${currentText}
             ---
 
-            Continue the story, adhering to the outline's progression:`;
+            Continue writing for chapter "${chapterTitle}":`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
+        // *** FIX END ***
         
         async function generateTitles(context) {
             const prompt = `You are an AI creative assistant for Christian authors. Based on the following synopsis or brainstorming content, generate a numbered list of 5 distinct and compelling title suggestions for a Christian book. Provide ONLY the numbered list of titles and optional subtitles.\n\nContent:\n---\n${context}\n---\n\nGenerate 5 title suggestions:`;
@@ -1377,7 +1384,11 @@
                 <div class="flex flex-grow overflow-hidden">
                     <div id="left-sidebar" class="w-2/12 bg-gray-800 p-4 border-r border-gray-700 flex flex-col overflow-y-auto"></div>
                     <div id="center-panel" class="w-7/12 p-8 flex flex-col overflow-y-auto bg-[#111827]">
-                        <h3 id="project-main-title" class="text-3xl font-lora font-bold mb-4 text-white">${stripMarkdownAndHtml(project.title || 'Untitled Page')}</h3>
+                        <h3 id="project-main-title" class="text-3xl font-lora font-bold mb-2 text-white">${stripMarkdownAndHtml(project.title || 'Untitled Page')}</h3>
+                        <!-- *** FIX START *** -->
+                        <!-- Added an H2 to display the current section/chapter title -->
+                        <h2 id="section-main-title" class="text-2xl font-lora font-semibold mb-6 text-gray-300"></h2>
+                        <!-- *** FIX END *** -->
                         <div id="editor-container" class="flex-grow relative flex flex-col">
                            <div id="editor-toolbar"></div>
                            <div id="editor" class="flex-grow"></div>
@@ -1744,10 +1755,7 @@
                         try { tempQuill.setContents(JSON.parse(section.content)); return tempQuill.getText().trim(); } 
                         catch (e) { return section.content; }
                     };
-                    // *** FIX START ***
-                    // Removed the "Book Title" from the context string.
                     return `Synopsis: ${getQuillText('brainstorming')}\nCharacters: ${getQuillText('character_development')}\nWorld-building: ${getQuillText('world_building')}\nOutline: ${getQuillText('outline')}`.trim();
-                    // *** FIX END ***
                 };
 
                 const getAuthorContext = async () => {
@@ -1986,8 +1994,14 @@
                 addClickListener('continue-writing-btn', async () => {
                     const currentText = editor.getText();
                     const context = await getFullProjectContext();
+                    // *** FIX START ***
+                    // Get the current section's title to pass to the AI.
+                    const currentSection = sections.find(s => s.id === activeSectionId);
+                    const chapterTitle = currentSection ? currentSection.title : 'the current chapter';
                     if (!context) { showNotification("Please ensure you have project details.", "error"); return; }
-                    showContentInModalAndSave('Suggested Continuation', generateNext(currentText, context));
+                    // Pass the chapter title to the generateNext function.
+                    showContentInModalAndSave('Suggested Continuation', generateNext(currentText, context, chapterTitle));
+                    // *** FIX END ***
                 });
 
                 addClickListener('analyze-chapter-btn', async () => {
@@ -2096,6 +2110,15 @@
                 const sectionData = await getSection(userId, projectId, sectionId);
                 project = await getProject(userId, projectId);
                 if (projectMainTitle) projectMainTitle.textContent = stripMarkdownAndHtml(project.title || 'Untitled Page');
+                
+                // *** FIX START ***
+                // Select and update the new section title element.
+                const sectionMainTitle = document.getElementById('section-main-title');
+                if (sectionMainTitle && sectionData) {
+                    sectionMainTitle.textContent = sectionData.title;
+                }
+                // *** FIX END ***
+
                 activeSectionId = sectionId;
 
                 editorContainer.classList.add('hidden');
