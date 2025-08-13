@@ -421,6 +421,20 @@
                 showNotification(`Error updating project title: ${e.message}`, 'error');
             }
         }
+        
+        // START: New function to auto-populate the copyright page
+        async function populateCopyrightPage(userId, projectId, metadata) {
+            if (!metadata.authorName || !metadata.copyrightYear) {
+                return; // Don't run if essential data is missing
+            }
+            const copyrightText = `Copyright © ${metadata.copyrightYear} by ${metadata.authorName}\n\nAll rights reserved. No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the publisher, except in the case of brief quotations embodied in critical reviews and certain other noncommercial uses permitted by copyright law.\n\nISBN: ${metadata.isbn || 'Not available'}\nLibrary of Congress Control Number: ${metadata.lccn || 'Not available'}`;
+            
+            const quillContent = JSON.stringify({ ops: [{ insert: copyrightText + '\n' }] });
+            await updateSectionContent(userId, projectId, 'copyright', quillContent);
+            showNotification('Copyright page auto-updated!', 'info', 2000);
+        }
+        // END: New function
+
         // New function to update project metadata
         async function updateProjectMetadata(userId, projectId, metadata) {
             try {
@@ -428,6 +442,11 @@
                 await updateDoc(sectionRef, { content: JSON.stringify(metadata) });
                 const projectRef = doc(getProjectsCollection(userId), projectId);
                 await updateDoc(projectRef, { lastModified: serverTimestamp() });
+                
+                // START: Call the new function to update copyright page
+                await populateCopyrightPage(userId, projectId, metadata);
+                // END: Call the new function
+                
                 showNotification('Project metadata saved!', 'success');
             } catch (e) {
                 console.error("Error updating project metadata:", e);
@@ -1322,17 +1341,46 @@ Generate 5 character profiles:`;
                         console.log("renderSidebar: Updated project data for sidebar:", project);
                     }
 
-                    leftSidebar.innerHTML = `
+                    const sidebarHeader = `
                         <div class="flex flex-col items-center mb-4">
                             ${project.bookCoverUrl ? `<img src="${project.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/120x180/1F2937/D1D5DB?text=Cover';" class="w-30 h-45 object-cover rounded-md shadow-md mb-2" alt="Book Cover Thumbnail"/>` : `<img src="https://placehold.co/120x180/1F2937/D1D5DB?text=No+Cover" class="w-30 h-45 object-cover rounded-md shadow-md mb-2" alt="Placeholder Cover"/>`}
-                        </div>
+                        </div>`;
+                    
+                    // START: Logic to group sections under headings
+                    const sectionGroups = {
+                        project: [],
+                        frontMatter: [],
+                        chapters: [],
+                        backMatter: []
+                    };
+
+                    sections.forEach(s => {
+                        if (s.order < 7) sectionGroups.project.push(s);
+                        else if (s.order >= 7 && s.order < 11) sectionGroups.frontMatter.push(s);
+                        else if (s.order >= 11 && s.order < 100) sectionGroups.chapters.push(s);
+                        else sectionGroups.backMatter.push(s);
+                    });
+
+                    const createSectionLinks = (group) => group.map(s => `<a href="#" data-section-id="${s.id}" class="section-link p-2 rounded-md text-gray-300 hover:bg-gray-700 transition-colors ${s.id === activeSectionId ? 'bg-blue-600 text-white' : ''}">${s.title}</a>`).join('');
+
+                    const sidebarNav = `
                         <nav id="project-sections" class="flex flex-col space-y-2 flex-grow overflow-y-auto">
-                            ${sections.map(s => {
-                                const displayTitle = s.title;
-                                return `<a href="#" data-section-id="${s.id}" class="section-link p-2 rounded-md text-gray-300 hover:bg-gray-700 transition-colors ${s.id === activeSectionId ? 'bg-blue-600 text-white' : ''}">${displayTitle}</a>`;
-                            }).join('')}
+                            ${createSectionLinks(sectionGroups.project)}
+                            
+                            ${sectionGroups.frontMatter.length > 0 ? `<div class="pt-4 mt-2 border-t border-gray-700"><h4 class="text-xs font-bold uppercase text-gray-500 px-2 mb-2">Front Matter</h4></div>` : ''}
+                            ${createSectionLinks(sectionGroups.frontMatter)}
+
+                            ${sectionGroups.chapters.length > 0 ? `<div class="pt-4 mt-2 border-t border-gray-700"><h4 class="text-xs font-bold uppercase text-gray-500 px-2 mb-2">Chapters</h4></div>` : ''}
+                            ${createSectionLinks(sectionGroups.chapters)}
+                            
+                            ${sectionGroups.backMatter.length > 0 ? `<div class="pt-4 mt-2 border-t border-gray-700"><h4 class="text-xs font-bold uppercase text-gray-500 px-2 mb-2">Back Matter</h4></div>` : ''}
+                            ${createSectionLinks(sectionGroups.backMatter)}
                         </nav>
                     `;
+                    // END: Logic to group sections
+
+                    leftSidebar.innerHTML = sidebarHeader + sidebarNav;
+
                     leftSidebar.querySelectorAll('.section-link').forEach(link => {
                         link.addEventListener('click', (e) => {
                             e.preventDefault();
