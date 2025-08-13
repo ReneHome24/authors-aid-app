@@ -264,19 +264,14 @@
 </head>
 <body>
     
-    <!-- Main Application Container -->
-    <!-- FIX: Moved Footer inside this container to ensure it's pushed down correctly -->
-    <div id="app-container" class="h-screen flex flex-col">
-        <!-- App content will be rendered here by JS -->
+    <div id="app-container">
         <div id="app-main-content" class="flex-grow flex flex-col"></div>
         
-        <!-- Global Footer for all views -->
         <footer id="app-global-footer" class="ui-bg p-4 border-t border-gray-700 flex-shrink-0 hidden">
             <div id="footer-content-landing-dashboard" class="container mx-auto text-center text-gray-500 hidden">
                 <p>&copy; 2025 Author's Aid. All Rights Reserved.</p>
             </div>
             <div id="footer-content-editor" class="container mx-auto flex justify-between items-center hidden">
-                 <!-- Chapter Navigation -->
                 <div class="flex items-center space-x-2">
                     <button id="prev-chapter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">&lt; Prev</button>
                     <button id="add-front-matter-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">+ New Front Matter Page</button>
@@ -1131,8 +1126,9 @@
             document.body.style.overflow = 'auto';
             document.getElementById('theme-switcher').style.display = 'block';
             appContainer.innerHTML = `
-                <div class="gradient-bg">
-                    <header class="absolute top-0 left-0 w-full z-10 p-4">
+                <div class="gradient-bg flex flex-col min-h-screen">
+                    <!-- FIX: Added sticky top-0 to keep header visible on scroll -->
+                    <header class="sticky top-0 left-0 w-full z-10 p-4 bg-black/30 backdrop-blur-sm">
                         <div class="container mx-auto flex justify-between items-center">
                             <h1 class="text-2xl font-bold font-lora text-white">Author's Aid</h1>
                             <nav class="hidden md:flex space-x-6 items-center">
@@ -1142,7 +1138,7 @@
                             </nav>
                         </div>
                     </header>
-                    <main class="relative pt-32 pb-20 md:pt-48 md:pb-32">
+                    <main class="relative pt-20 pb-20 md:pt-32 md:pb-32 flex-grow">
                         <div class="container mx-auto text-center px-4">
                             <h2 class="text-4xl md:text-6xl font-bold font-lora text-white leading-tight mb-4">Your AI Co-Author, Guided by Faith</h2>
                             <p class="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto mb-8">
@@ -1187,12 +1183,14 @@
 
         async function renderDashboard(userId) {
             currentUserId = userId;
-            document.body.style.overflow = 'auto';
+            document.body.style.overflow = 'hidden'; // Prevent body scroll on dashboard
             document.getElementById('theme-switcher').style.display = 'block';
             appContainer.innerHTML = '';
             appContainer.appendChild(renderHeader(true, false, userId));
+            
+            // FIX: Added overflow-y-auto to allow scrolling of the project list
             const mainContent = document.createElement('main');
-            mainContent.className = "container mx-auto p-8 flex-grow";
+            mainContent.className = "container mx-auto p-8 flex-grow overflow-y-auto";
             mainContent.innerHTML = `<div class="text-center text-gray-400">Loading projects...</div>`;
             appContainer.appendChild(mainContent);
 
@@ -1351,10 +1349,11 @@
                 document.getElementById('footer-content-landing-dashboard').classList.add('hidden');
             }
             
-            await setupEditorFunctionality(userId, projectId, project);
+            await setupEditorFunctionality(userId, projectId);
         }
 
-        async function setupEditorFunctionality(userId, projectId, project) {
+        async function setupEditorFunctionality(userId, projectId) {
+            let project = await getProject(userId, projectId);
             const projectMainTitle = document.getElementById('project-main-title');
             const leftSidebar = document.getElementById('left-sidebar');
             const rightSidebar = document.getElementById('right-sidebar');
@@ -1369,8 +1368,7 @@
             const renderSidebar = () => {
                 getProject(userId, projectId).then(updatedProject => {
                     if (updatedProject) {
-                        project.bookCoverUrl = updatedProject.bookCoverUrl;
-                        project.title = updatedProject.title;
+                        project = updatedProject;
                         projectMainTitle.textContent = stripMarkdownAndHtml(project.title || 'Untitled Page');
                     }
 
@@ -2028,8 +2026,8 @@
             
             const loadSection = async (sectionId) => {
                 const sectionData = await getSection(userId, projectId, sectionId);
-                const projectData = await getProject(userId, projectId);
-                if (projectMainTitle) projectMainTitle.textContent = stripMarkdownAndHtml(projectData.title || 'Untitled Page');
+                project = await getProject(userId, projectId);
+                if (projectMainTitle) projectMainTitle.textContent = stripMarkdownAndHtml(project.title || 'Untitled Page');
                 activeSectionId = sectionId;
 
                 editorContainer.classList.add('hidden');
@@ -2038,8 +2036,8 @@
 
                 if (sectionId === 'book_cover') {
                     coverDisplayContainer.classList.remove('hidden');
-                    if (projectData?.bookCoverUrl) {
-                        coverDisplayContainer.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4"><div class="cover-image-wrapper selected" data-image-url="${escapeHTML(projectData.bookCoverUrl)}"><img src="${projectData.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/400x600/FF0000/FFFFFF?text=Image+Load+Error';" class="w-full h-auto rounded-lg shadow-lg" alt="Selected Book Cover"/><div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div></div></div>`;
+                    if (project?.bookCoverUrl) {
+                        coverDisplayContainer.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4"><div class="cover-image-wrapper selected" data-image-url="${escapeHTML(project.bookCoverUrl)}"><img src="${project.bookCoverUrl}" onerror="this.onerror=null;this.src='https://placehold.co/400x600/FF0000/FFFFFF?text=Image+Load+Error';" class="w-full h-auto rounded-lg shadow-lg" alt="Selected Book Cover"/><div class="cover-selection-overlay"><i class="fas fa-check-circle"></i> Selected</div></div></div>`;
                     } else {
                         coverDisplayContainer.innerHTML = `<div class="text-center text-gray-400">Your generated book cover will appear here.</div>`;
                     }
