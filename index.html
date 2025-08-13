@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 2.1 -->
+<!-- Version 2.2 - Editor Footer Fix -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -1361,15 +1361,13 @@
                     <div id="right-sidebar" class="w-3/12 bg-gray-800 p-4 border-l border-gray-700 flex flex-col overflow-y-auto"></div>
                 </div>
             `;
-
-            const editorFooter = document.getElementById('app-global-footer');
-            if (editorFooter) {
-                appContainer.appendChild(editorFooter);
-                editorFooter.classList.remove('hidden');
-                document.getElementById('footer-content-editor').classList.remove('hidden');
-                document.getElementById('footer-content-landing-dashboard').classList.add('hidden');
-            }
             
+            // *** FIX START ***
+            // The redundant footer logic that was here has been removed.
+            // The `navigateTo` function is now the single source of truth for managing footer visibility,
+            // preventing conflicts and ensuring the footer appears correctly.
+            // *** FIX END ***
+
             await setupEditorFunctionality(userId, projectId);
         }
 
@@ -2174,37 +2172,43 @@
             const appContainer = document.getElementById('app-container');
             appContainer.innerHTML = ''; // Clear previous view
             const footer = document.getElementById('app-global-footer');
-
+            
+            // Render the main content for the requested route
             if (route === 'landing') {
-                document.body.className = `theme-default view-landing`;
-                if(footer) footer.classList.add('hidden');
                 renderLandingPage();
-            } else {
-                document.body.className = `theme-default view-app`;
-                const mainContent = document.createElement('div');
-                mainContent.id = 'app-main-content';
-                mainContent.innerHTML = `<div class="text-center text-gray-400 p-8">Loading...</div>`;
-                appContainer.appendChild(mainContent);
-                
-                if (route === 'dashboard') {
-                    renderDashboard(currentUserId);
-                } else if (route === 'editor') {
-                    renderEditor(currentUserId, params.projectId);
-                }
-                
-                if (footer) {
-                    appContainer.appendChild(footer);
+            } else if (route === 'dashboard') {
+                renderDashboard(currentUserId);
+            } else if (route === 'editor') {
+                renderEditor(currentUserId, params.projectId);
+            }
+
+            // *** FIX START ***
+            // Centralized and simplified footer visibility logic.
+            // This now runs *after* the view is rendered and correctly
+            // shows or hides the footer and its specific content based on the route.
+            if (footer) {
+                if (route === 'landing') {
+                    footer.classList.add('hidden');
+                } else {
+                    // Make the main footer visible for dashboard and editor
                     footer.classList.remove('hidden');
-                    if(route === 'editor'){
-                        document.getElementById('footer-content-editor').classList.remove('hidden');
-                        document.getElementById('footer-content-landing-dashboard').classList.add('hidden');
-                    } else {
-                        document.getElementById('footer-content-landing-dashboard').classList.remove('hidden');
-                        document.getElementById('footer-content-editor').classList.add('hidden');
+                    const editorContent = document.getElementById('footer-content-editor');
+                    const dashboardContent = document.getElementById('footer-content-landing-dashboard');
+                    
+                    if (route === 'editor') {
+                        // Show editor buttons, hide dashboard text
+                        editorContent.classList.remove('hidden');
+                        dashboardContent.classList.add('hidden');
+                    } else { // This covers the 'dashboard' case
+                        // Show dashboard text, hide editor buttons
+                        editorContent.classList.add('hidden');
+                        dashboardContent.classList.remove('hidden');
                     }
                 }
             }
+            // *** FIX END ***
         };
+
 
         // --- Main App Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
