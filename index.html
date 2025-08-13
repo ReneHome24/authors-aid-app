@@ -912,11 +912,13 @@
             Continue the story, adhering to the outline's progression:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        // FIX: Updated titles prompt to explicitly forbid prefixes.
+        
+        // FIX: Updated titles prompt to request a numbered list.
         async function generateTitles(context) {
-            const prompt = `You are an AI creative assistant for Christian authors. Based on the following synopsis or brainstorming content, generate 5 distinct and compelling title suggestions for a Christian book. **Do not add prefixes like "Title 1:"**. Provide ONLY the title and optional subtitle.\n\nContent:\n---\n${context}\n---\n\nGenerate 5 title suggestions:`;
+            const prompt = `You are an AI creative assistant for Christian authors. Based on the following synopsis or brainstorming content, generate a numbered list of 5 distinct and compelling title suggestions for a Christian book. Provide ONLY the numbered list of titles and optional subtitles.\n\nContent:\n---\n${context}\n---\n\nGenerate 5 title suggestions:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
+
         async function generateFrontMatter(context, topic) {
             const prompt = `You are an AI publishing assistant for Christian authors. For a book with the following details, generate content for the "${topic}" section of the front matter. Do not include a title or any template-like explanations.
             \n\nProject Details:\n---\n${context}\n---\n\nGenerate content for the ${topic}:`;
@@ -1763,8 +1765,12 @@
                     const context = await getFullProjectContext();
                     if (!context) { showNotification("Please write a synopsis first.", "error"); return; }
                     const titlesText = await generateTitles(context);
-                    const titles = parseNumberedAiList(titlesText, false).map(c => stripMarkdownAndHtml(c.trim()));
-                    outputDiv.innerHTML = titles.map((title) => `<button data-title="${escapeHTML(title)}" class="title-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHTML(title)}</button>`).join('');
+                    const titles = parseNumberedAiList(titlesText, true); // Keep numbers for display
+                    outputDiv.innerHTML = titles.map((title) => {
+                        // Remove the number for the data attribute
+                        const cleanTitle = title.replace(/^\d+\.\s*/, '');
+                        return `<button data-title="${escapeHTML(cleanTitle)}" class="title-suggestion-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2">${escapeHTML(title)}</button>`;
+                    }).join('');
                 });
 
                 // FIX: Generate Characters button now works and includes all context
