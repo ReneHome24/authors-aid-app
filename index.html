@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 2.5 - Focused Chapter Writing -->
+<!-- Version 2.6 - Character Relationship & Beat Tracker -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -257,6 +257,26 @@
         }
         .delete-section-btn:hover {
             color: #EF4444; /* Red on hover */
+        }
+        
+        /* Beat Tracker Styles */
+        #beat-tracker {
+            background-color: #111827;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 0.75rem;
+        }
+        #beat-tracker h4 {
+            color: #9CA3AF;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        #beat-tracker-content {
+            font-size: 0.875rem;
+            color: #D1D5DB;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
         }
 
 
@@ -825,14 +845,17 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         
+        // *** FIX START ***
+        // Updated the AI prompt to include "Relationship to Protagonist"
         async function generateCharacterProfiles(context, authorContext) {
             const prompt = `You are an AI character developer for Christian fiction. Your task is to generate a numbered list of 5 distinct character profiles based on the provided context.
 
             **Strict Formatting Rules:**
             1.  Start each profile with the character's name, followed immediately by their character type from the taxonomy in parentheses. Example: "1. Elara (Protagonist)".
-            2.  Do NOT use any markdown formatting like asterisks (* or **). All text should be plain.
-            3.  Each profile must include: a name, character type, age, a detailed backstory, core motivations, and personality quirks.
-            4.  Do not include any introductory text before the first numbered character.
+            2.  On the next line, add their relationship to the protagonist. Example: "Relationship to Protagonist: Mother".
+            3.  Do NOT use any markdown formatting like asterisks (* or **). All text should be plain.
+            4.  Each profile must include: a name, character type, relationship to protagonist, age, a detailed backstory, core motivations, and personality quirks.
+            5.  Do not include any introductory text before the first numbered character.
 
             --- Character Taxonomy for Reference ---
             ${characterTypesKnowledge}
@@ -851,6 +874,7 @@
             Generate 5 character profiles following all rules:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
+        // *** FIX END ***
 
         async function suggestAlternatives(selectedText, context) { 
             const prompt = `You are an AI thesaurus and editor for Christian literature. The user has selected a sentence and wants alternative phrasing for its key ideas. Analyze the following sentence and provide a list of alternative phrases for its most significant parts. Do not suggest alternatives for the entire sentence, but for its core components.
@@ -905,10 +929,7 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         
-        // *** FIX START ***
-        // The function now accepts `chapterTitle` to provide specific context to the AI.
         async function generateNext(currentText, outlineContent, chapterTitle) {
-            // The prompt is updated to be highly specific about the current chapter.
             const prompt = `You are a Christian ghostwriter. Your task is to continue writing a specific chapter of a manuscript.
 
             **Current Chapter Focus:** ${chapterTitle}
@@ -928,7 +949,6 @@
             Continue writing for chapter "${chapterTitle}":`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        // *** FIX END ***
         
         async function generateTitles(context) {
             const prompt = `You are an AI creative assistant for Christian authors. Based on the following synopsis or brainstorming content, generate a numbered list of 5 distinct and compelling title suggestions for a Christian book. Provide ONLY the numbered list of titles and optional subtitles.\n\nContent:\n---\n${context}\n---\n\nGenerate 5 title suggestions:`;
@@ -1385,10 +1405,7 @@
                     <div id="left-sidebar" class="w-2/12 bg-gray-800 p-4 border-r border-gray-700 flex flex-col overflow-y-auto"></div>
                     <div id="center-panel" class="w-7/12 p-8 flex flex-col overflow-y-auto bg-[#111827]">
                         <h3 id="project-main-title" class="text-3xl font-lora font-bold mb-2 text-white">${stripMarkdownAndHtml(project.title || 'Untitled Page')}</h3>
-                        <!-- *** FIX START *** -->
-                        <!-- Added an H2 to display the current section/chapter title -->
                         <h2 id="section-main-title" class="text-2xl font-lora font-semibold mb-6 text-gray-300"></h2>
-                        <!-- *** FIX END *** -->
                         <div id="editor-container" class="flex-grow relative flex flex-col">
                            <div id="editor-toolbar"></div>
                            <div id="editor" class="flex-grow"></div>
@@ -1594,6 +1611,15 @@
             const renderAiPanel = (sectionId) => {
                 let contextualButtonsHtml = '';
                 
+                // *** FIX START ***
+                // Added a placeholder for the beat tracker, which will only be shown for chapters.
+                const beatTrackerHtml = sectionId.startsWith('chapter_') ? `
+                    <div id="beat-tracker" class="mt-4">
+                        <h4>Current Chapter Beats</h4>
+                        <div id="beat-tracker-content">Loading beats...</div>
+                    </div>` : '';
+                // *** FIX END ***
+
                 const pageGenerators = `
                     <div class="pt-4 mt-4 border-t border-gray-700">
                         <p class="text-sm font-semibold mb-2 text-gray-200">Front & Back Matter</p>
@@ -1711,6 +1737,7 @@
                             <textarea id="ai-style-preference-input" class="w-full h-20 p-2 bg-gray-700 border border-gray-600 rounded-md text-sm" placeholder="e.g., Write in a formal, encouraging tone."></textarea>
                         </div>
                         ${contextualButtonsHtml}
+                        ${beatTrackerHtml}
                         <div class="pt-4 border-t border-gray-700 flex-shrink-0">
                             <p class="text-sm font-semibold mb-2 text-gray-200">Editing & Faith Tools</p>
                             <div class="grid grid-cols-2 gap-2">
@@ -1729,6 +1756,61 @@
 
             const setupAiPanelListeners = (userId, projectId, editor) => {
                 const outputDiv = document.getElementById('ai-output');
+
+                // *** FIX START ***
+                // New function to update the beat tracker UI.
+                const updateBeatTracker = async () => {
+                    const beatTrackerContent = document.getElementById('beat-tracker-content');
+                    if (!beatTrackerContent) return;
+
+                    const currentSection = sections.find(s => s.id === activeSectionId);
+                    if (!currentSection || !activeSectionId.startsWith('chapter_')) {
+                        return; // Not a chapter, do nothing
+                    }
+
+                    const outlineSection = await getSection(userId, projectId, 'outline');
+                    if (!outlineSection || !outlineSection.content) {
+                        beatTrackerContent.textContent = 'No outline created yet.';
+                        return;
+                    }
+                    
+                    let outlineText = '';
+                    try {
+                        const tempDiv = document.createElement('div');
+                        const tempQuill = new Quill(tempDiv);
+                        tempQuill.setContents(JSON.parse(outlineSection.content));
+                        outlineText = tempQuill.getText();
+                    } catch (e) {
+                        outlineText = outlineSection.content;
+                    }
+
+                    const lines = outlineText.split('\n');
+                    let chapterBeats = [];
+                    let inChapter = false;
+                    const chapterTitleRegex = new RegExp(`^${currentSection.title.trim()}`, 'i');
+
+                    for (const line of lines) {
+                        if (chapterTitleRegex.test(line.trim())) {
+                            inChapter = true;
+                            continue;
+                        }
+                        if (inChapter) {
+                            if (line.trim().match(/^Chapter \d+/i)) {
+                                break; // Found the next chapter, so stop.
+                            }
+                            if(line.trim()) {
+                                chapterBeats.push(line);
+                            }
+                        }
+                    }
+
+                    if (chapterBeats.length > 0) {
+                        beatTrackerContent.textContent = chapterBeats.join('\n');
+                    } else {
+                        beatTrackerContent.textContent = 'No beats found for this chapter in the outline.';
+                    }
+                };
+                // *** FIX END ***
 
                 const showContentInModal = (title, content, onAcceptCallback) => {
                     showModal(title, `<div class="whitespace-pre-wrap text-gray-300 text-sm">${escapeHTML(content)}</div>`, async () => {
@@ -1994,14 +2076,10 @@
                 addClickListener('continue-writing-btn', async () => {
                     const currentText = editor.getText();
                     const context = await getFullProjectContext();
-                    // *** FIX START ***
-                    // Get the current section's title to pass to the AI.
                     const currentSection = sections.find(s => s.id === activeSectionId);
                     const chapterTitle = currentSection ? currentSection.title : 'the current chapter';
                     if (!context) { showNotification("Please ensure you have project details.", "error"); return; }
-                    // Pass the chapter title to the generateNext function.
                     showContentInModalAndSave('Suggested Continuation', generateNext(currentText, context, chapterTitle));
-                    // *** FIX END ***
                 });
 
                 addClickListener('analyze-chapter-btn', async () => {
@@ -2104,6 +2182,11 @@
                 addClickListener('suggest-alternatives-btn', handleSelectionTools);
                 addClickListener('suggest-scripture-btn', handleSelectionTools);
                 addClickListener('suggest-youth-phrases-btn', handleSelectionTools);
+                
+                // *** FIX START ***
+                // Call the beat tracker update function whenever the AI panel is set up.
+                updateBeatTracker();
+                // *** FIX END ***
             };
             
             const loadSection = async (sectionId) => {
@@ -2111,13 +2194,10 @@
                 project = await getProject(userId, projectId);
                 if (projectMainTitle) projectMainTitle.textContent = stripMarkdownAndHtml(project.title || 'Untitled Page');
                 
-                // *** FIX START ***
-                // Select and update the new section title element.
                 const sectionMainTitle = document.getElementById('section-main-title');
                 if (sectionMainTitle && sectionData) {
                     sectionMainTitle.textContent = sectionData.title;
                 }
-                // *** FIX END ***
 
                 activeSectionId = sectionId;
 
