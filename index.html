@@ -710,6 +710,24 @@
             - Foil: A character who contrasts with the protagonist to highlight particular qualities.
             - Sidekick: A companion to the protagonist.
         `;
+        
+        // FIX: Added user-provided knowledge base for book structures
+        const BOOK_STRUCTURES_KNOWLEDGE = `
+            Core Dramatic Structures:
+            - Freytag's Pyramid: A five-part structure including Exposition, Rising Action, Climax, Falling Action, and Resolution.
+            - Three-Act Structure: A simplified version with Act I (Setup), Act II (Confrontation), and Act III (Resolution).
+            - The Hero's Journey (Monomyth): A 12-stage archetypal structure focusing on a character's transformative journey (e.g., Ordinary World, Call to Adventure, The Ordeal, Return with the Elixir).
+
+            Other Narrative Structures and Approaches:
+            - Linear Narrative: Events are presented in chronological order.
+            - Non-Linear Narrative: Events are out of chronological order, using techniques like flashbacks, flashforwards, or starting "in medias res" (in the middle of the action).
+            - Episodic Narrative: The story is told through a series of self-contained episodes that contribute to a larger arc.
+            - Serialized Narrative: The story unfolds continuously across multiple parts, often with cliffhangers.
+            - Frame Story (Frame Narrative): An introductory story that sets the stage for one or more "stories within a story."
+            - Circular Narrative: The story ends where it began, but characters are transformed by their experiences.
+            - Braided Narrative: Weaves together two or more distinct storylines or perspectives that may converge.
+            - Seven-Point Story Structure: A streamlined approach focusing on key plot points: Hook, Plot Point 1, Pinch Point 1, Midpoint, Pinch Point 2, Plot Point 2, and Resolution.
+        `;
 
         async function generateImage(prompt) {
             console.log("generateImage: Starting image generation for prompt:", prompt);
@@ -837,8 +855,31 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }], config); 
         }
         async function suggestPOVs(context) { const prompt = `You are an AI writing coach for Christian authors. Based on the story's synopsis, generate a numbered list of 3 potential Point of View (POV) & Voice choices. For each, briefly explain how that choice would shape the narration and affect the reader's experience, particularly in a Christian context.\n\nSynopsis:\n---\n${context}\n-\n\nGenerate 3 POV & Voice options:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
-        // FIX: Changed "structural templates" to "writing outlines" in the prompt
-        async function suggestWritingOutlines(context) { const prompt = `You are an AI writing coach for Christian authors. Based on the story's synopsis, suggest a numbered list of 3 potential writing outlines. For each, briefly explain why that outline would be a good fit for the story, considering its Christian themes.\n\nSynopsis:\n---\n${context}\n---\n\nSuggest 3 writing outlines:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
+        
+        // FIX: Renamed function and updated prompt to be concise and use the new knowledge base.
+        async function suggestBookStructures(context) { 
+            const prompt = `You are an AI writing coach for Christian authors. Your knowledge base of book structures is below.
+        
+            --- KNOWLEDGE BASE ---
+            ${BOOK_STRUCTURES_KNOWLEDGE}
+            --- END KNOWLEDGE BASE ---
+
+            Based on the story's synopsis below, suggest a numbered list of 3 potential book structures from your knowledge base. For each suggestion, provide only the name of the structure and a single, concise sentence explaining why it fits the synopsis.
+
+            **IMPORTANT FORMATTING RULES:**
+            - Do NOT include any introductory text or conversational filler before the list.
+            - Do NOT include any text other than the numbered list.
+            - Example of a perfect response item: "1. The Hero's Journey: This structure fits well because it frames the protagonist's spiritual crisis as a transformative quest."
+
+            Synopsis:
+            ---
+            ${context}
+            ---
+
+            Suggest 3 book structures:`;
+            return callGemini([{ role: "user", parts: [{ text: prompt }] }]); 
+        }
+
         async function analyzeChapter(chapterText, context) {
             const prompt = `You are an AI developmental editor for Christian manuscripts. Review the following book chapter in the context of the provided project details. Provide high-level feedback on Pacing, Plot Progression, and Character Consistency, specifically noting how well it integrates Christian themes or moral lessons. The feedback should be constructive and encouraging.\n\nProject Details:\n---\n${context}\n---\n\nChapter Text to Analyze:\n---\n${chapterText}\n---\n\nProvide your analysis:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
@@ -917,7 +958,7 @@
                         <li><strong>AI Style Preference:</strong> Use the text area at the top to describe the writing style or tone you'd like the AI to adopt (e.g., "Write in a formal, encouraging tone," "Use concise, impactful language"). This preference is applied to all AI-generated content.</li>
                         <li><strong>Generate Synopsis Ideas (Synopsis & Brainstorming):</strong> Provide a basic idea in the editor, and the AI will generate core concept ideas for your book.</li>
                         <li><strong>POV & Voice (Synopsis & Brainstorming):</strong> Based on your synopsis, the AI can suggest different points of view and narrative voices.</li>
-                        <li><strong>Writing Outline (Synopsis & Brainstorming):</strong> Get AI-generated structural ideas (e.g., Three-Act Structure) for your story.</li>
+                        <li><strong>Book Structure (Synopsis & Brainstorming):</strong> Get AI-generated structural ideas (e.g., Three-Act Structure) for your story.</li>
                         <li><strong>Generate Character Profiles (Character Development):</strong> The AI helps you create detailed character ideas based on your story's concept.</li>
                         <li><strong>Generate Chapter Beats (Outline):</strong> Get a detailed chapter-by-chapter outline based on your project's synopsis, characters, and world-building.</li>
                         <li><strong>Continue Writing (Chapters):</strong> Overcome writer's block! Click this button in any chapter to have the AI generate the next section of text, using your existing content and project context.</li>
@@ -1489,7 +1530,7 @@
                             <div class="grid grid-cols-2 gap-2">
                                 <button id="generate-pov-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">POV & Voice</button>
                                 <!-- FIX: Renamed button and ID -->
-                                <button id="generate-writing-outline-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Writing Outline</button>
+                                <button id="generate-book-structure-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Book Structure</button>
                             </div>
                         </div>`;
                 } else if (sectionId === 'book_titles') {
@@ -1654,8 +1695,9 @@
                     handleBrainstormingChoice(generateSynopsisIdeas, 'Choose a Synopsis Idea', idea);
                 });
                 addClickListener('generate-pov-btn', () => handleBrainstormingChoice(suggestPOVs, 'Choose a Point of View'));
+                
                 // FIX: Changed listener ID and function call
-                addClickListener('generate-writing-outline-btn', () => handleBrainstormingChoice(suggestWritingOutlines, 'Choose a Writing Outline'));
+                addClickListener('generate-book-structure-btn', () => handleBrainstormingChoice(suggestBookStructures, 'Choose a Book Structure'));
 
                 addClickListener('generate-world-btn', async () => {
                     const context = await getFullProjectContext();
