@@ -1667,7 +1667,7 @@ Generate 5 character profiles:`;
                                             const base64Url = selectedWrapper.dataset.imageUrl;
                                             showNotification('Saving cover... please wait.', 'info');
                                             try {
-                                                const storagePath = `artifacts/${appId}/users/${userId}/projects/${projectId}/covers/${Date.now()}.png`;
+                                                const storagePath = `artifacts/${appId}/users/${userId}/projects/${projectId}/project_covers/${Date.now()}.png`;
                                                 const storageRef = ref(storageInstance, storagePath);
                                                 const uploadResult = await uploadString(storageRef, base64Url, 'data_url');
                                                 const downloadUrl = await getDownloadURL(uploadResult.ref);
