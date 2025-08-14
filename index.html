@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 3.6 - UI and Copyright Fix -->
+<!-- Version 3.7 - Low-Content Prompts -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -277,6 +277,13 @@
             white-space: pre-wrap;
             max-height: 200px;
             overflow-y: auto;
+        }
+
+        .prompt-group h4 {
+            color: #9CA3AF;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            margin-top: 1rem;
         }
 
 
@@ -1754,6 +1761,35 @@
                          contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Book Titles</p><button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button></div>`;
                     } else if (sectionId === 'book_cover') {
                         contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Image Prompts</p><button id="generate-image-prompts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Image Prompts</button></div>`;
+                    } else if (sectionId.startsWith('chapter_')) {
+                        contextualButtonsHtml = `
+                            <div class="prompt-group">
+                                <h4>Prayer Journal Prompts</h4>
+                                <button class="low-content-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm" data-prompt="What are three specific things you are grateful for today, and why?">Gratitude Prompt</button>
+                                <button class="low-content-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm" data-prompt="Is there anything you need to confess or ask for forgiveness for today? Write a prayer of repentance.">Confession Prompt</button>
+                                <button class="low-content-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm" data-prompt="What is a specific prayer request you have for a friend or family member?">Request Prompt</button>
+                                <button class="low-content-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm" data-prompt="Write down any thoughts, feelings, or ideas that you feel God is placing on your heart today.">Listening Prompt</button>
+                            </div>
+                            <div class="prompt-group">
+                                <h4>Bible Study Prompts</h4>
+                                <button class="low-content-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm" data-prompt="What is the main theme or message of this passage?">Main Theme Prompt</button>
+                                <button class="low-content-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm" data-prompt="What does this passage reveal about God's character?">God's Character Prompt</button>
+                                <button class="low-content-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm" data-prompt="How can I apply the truth from this verse to my life this week?">Application Prompt</button>
+                                <button class="low-content-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm" data-prompt="Write a prayer based on this scripture.">Prayer Prompt</button>
+                            </div>
+                             <div class="prompt-group">
+                                <h4>Gratitude Journal Prompts</h4>
+                                <button class="low-content-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm" data-prompt="What is one small moment of joy you experienced today?">Moment of Joy Prompt</button>
+                                <button class="low-content-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm" data-prompt="List five people you are thankful for and a brief reason for each.">Thankful People Prompt</button>
+                            </div>
+                             <div class="prompt-group">
+                                <h4>Daily Planner Prompts</h4>
+                                <button class="low-content-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm" data-prompt="Scripture of the Day:">Scripture of the Day</button>
+                                <button class="low-content-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm" data-prompt="My Focus for Today:">Focus for Today</button>
+                                <button class="low-content-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm" data-prompt="Prayer Request:">Prayer Request</button>
+                                <button class="low-content-prompt-btn w-full text-left p-2 bg-gray-700 hover:bg-gray-600 rounded-md mb-2 text-sm" data-prompt="Reflections:">Reflections</button>
+                            </div>
+                        `;
                     }
                 }
 
@@ -2239,6 +2275,21 @@
                 addClickListener('suggest-alternatives-btn', handleSelectionTools);
                 addClickListener('suggest-scripture-btn', handleSelectionTools);
                 addClickListener('suggest-youth-phrases-btn', handleSelectionTools);
+                
+                // *** FIX START ***
+                // Add listener for new low-content prompt buttons
+                document.querySelectorAll('.low-content-prompt-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const promptText = e.target.dataset.prompt;
+                        if (editor && promptText) {
+                            editor.insertText(editor.getLength(), '\n\n' + promptText + '\n');
+                            const newEditorContent = JSON.stringify(editor.getContents());
+                            await updateSectionContent(currentUserId, projectId, activeSectionId, newEditorContent);
+                            showNotification("Prompt added!", "success");
+                        }
+                    });
+                });
+                // *** FIX END ***
                 
                 updateBeatTracker();
             };
