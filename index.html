@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 2.6 - Character Relationship & Beat Tracker -->
+<!-- Version 2.7 - Target Age Group -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -845,8 +845,6 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         
-        // *** FIX START ***
-        // Updated the AI prompt to include "Relationship to Protagonist"
         async function generateCharacterProfiles(context, authorContext) {
             const prompt = `You are an AI character developer for Christian fiction. Your task is to generate a numbered list of 5 distinct character profiles based on the provided context.
 
@@ -874,7 +872,6 @@
             Generate 5 character profiles following all rules:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        // *** FIX END ***
 
         async function suggestAlternatives(selectedText, context) { 
             const prompt = `You are an AI thesaurus and editor for Christian literature. The user has selected a sentence and wants alternative phrasing for its key ideas. Analyze the following sentence and provide a list of alternative phrases for its most significant parts. Do not suggest alternatives for the entire sentence, but for its core components.
@@ -1312,6 +1309,8 @@
             });
         }
 
+        // *** FIX START ***
+        // Updated the New Project modal to include the Target Age Group dropdown.
         function handleNewProject() {
             const content = `
                 <form id="new-project-form">
@@ -1359,6 +1358,16 @@
                                 <option>All Ages</option>
                             </select>
                         </div>
+                        <div>
+                            <label for="targetAgeGroup" class="block text-sm font-medium text-gray-300 mb-1">Target Age Group</label>
+                            <select id="targetAgeGroup" name="targetAgeGroup" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring">
+                                <option>Not Applicable</option>
+                                <option>Ages 5-8 (Early Readers)</option>
+                                <option>Ages 9-12 (Middle Grade)</option>
+                                <option>Ages 13-18 (Young Adult)</option>
+                                <option>Adults</option>
+                            </select>
+                        </div>
                     </div>
                 </form>
             `;
@@ -1367,11 +1376,13 @@
                 const bookType = document.getElementById('bookType').value;
                 const genre = document.getElementById('genre').value;
                 const targetAudience = document.getElementById('targetAudience').value;
-                const projectData = { title, bookType, genre, targetAudience };
+                const targetAgeGroup = document.getElementById('targetAgeGroup').value; // Get the new value
+                const projectData = { title, bookType, genre, targetAudience, targetAgeGroup }; // Add it to the project data
                 const newId = await createProject(currentUserId, projectData);
                 if (newId) navigateTo('editor', { projectId: newId });
             }, 'Create Project');
         }
+        // *** FIX END ***
 
         function handleDeleteProject(projectId) {
             showModal('Confirm Deletion', '<p>Are you sure you want to permanently delete this project and all its content?</p>', async () => {
@@ -1611,14 +1622,11 @@
             const renderAiPanel = (sectionId) => {
                 let contextualButtonsHtml = '';
                 
-                // *** FIX START ***
-                // Added a placeholder for the beat tracker, which will only be shown for chapters.
                 const beatTrackerHtml = sectionId.startsWith('chapter_') ? `
                     <div id="beat-tracker" class="mt-4">
                         <h4>Current Chapter Beats</h4>
                         <div id="beat-tracker-content">Loading beats...</div>
                     </div>` : '';
-                // *** FIX END ***
 
                 const pageGenerators = `
                     <div class="pt-4 mt-4 border-t border-gray-700">
@@ -1757,15 +1765,13 @@
             const setupAiPanelListeners = (userId, projectId, editor) => {
                 const outputDiv = document.getElementById('ai-output');
 
-                // *** FIX START ***
-                // New function to update the beat tracker UI.
                 const updateBeatTracker = async () => {
                     const beatTrackerContent = document.getElementById('beat-tracker-content');
                     if (!beatTrackerContent) return;
 
                     const currentSection = sections.find(s => s.id === activeSectionId);
                     if (!currentSection || !activeSectionId.startsWith('chapter_')) {
-                        return; // Not a chapter, do nothing
+                        return;
                     }
 
                     const outlineSection = await getSection(userId, projectId, 'outline');
@@ -1796,7 +1802,7 @@
                         }
                         if (inChapter) {
                             if (line.trim().match(/^Chapter \d+/i)) {
-                                break; // Found the next chapter, so stop.
+                                break;
                             }
                             if(line.trim()) {
                                 chapterBeats.push(line);
@@ -1810,7 +1816,6 @@
                         beatTrackerContent.textContent = 'No beats found for this chapter in the outline.';
                     }
                 };
-                // *** FIX END ***
 
                 const showContentInModal = (title, content, onAcceptCallback) => {
                     showModal(title, `<div class="whitespace-pre-wrap text-gray-300 text-sm">${escapeHTML(content)}</div>`, async () => {
@@ -1827,7 +1832,10 @@
                     }, 500));
                 }
                 
+                // *** FIX START ***
+                // Updated to fetch the full project data to get the targetAgeGroup.
                 const getFullProjectContext = async () => {
+                    const projectData = await getProject(userId, projectId); // Fetch full project
                     const allSections = await getProjectSections(userId, projectId);
                     const tempDiv = document.createElement('div');
                     const tempQuill = new Quill(tempDiv);
@@ -1837,8 +1845,15 @@
                         try { tempQuill.setContents(JSON.parse(section.content)); return tempQuill.getText().trim(); } 
                         catch (e) { return section.content; }
                     };
-                    return `Synopsis: ${getQuillText('brainstorming')}\nCharacters: ${getQuillText('character_development')}\nWorld-building: ${getQuillText('world_building')}\nOutline: ${getQuillText('outline')}`.trim();
+                    
+                    // Add the target age group to the context string if it exists.
+                    let contextString = `Synopsis: ${getQuillText('brainstorming')}\nCharacters: ${getQuillText('character_development')}\nWorld-building: ${getQuillText('world_building')}\nOutline: ${getQuillText('outline')}`;
+                    if (projectData.targetAgeGroup && projectData.targetAgeGroup !== 'Not Applicable') {
+                        contextString = `Target Age Group: ${projectData.targetAgeGroup}\n\n${contextString}`;
+                    }
+                    return contextString.trim();
                 };
+                // *** FIX END ***
 
                 const getAuthorContext = async () => {
                     const metadataSection = await getSection(userId, projectId, 'metadata');
@@ -2183,10 +2198,7 @@
                 addClickListener('suggest-scripture-btn', handleSelectionTools);
                 addClickListener('suggest-youth-phrases-btn', handleSelectionTools);
                 
-                // *** FIX START ***
-                // Call the beat tracker update function whenever the AI panel is set up.
                 updateBeatTracker();
-                // *** FIX END ***
             };
             
             const loadSection = async (sectionId) => {
