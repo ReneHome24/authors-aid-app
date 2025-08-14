@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 3.5 - Final Polish -->
+<!-- Version 3.6 - UI and Copyright Fix -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -1746,10 +1746,14 @@
                                 <button id="proofread-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg mt-2">Proofread</button>
                                 <button id="expand-text-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg mt-2">Expand on Selection</button>
                             </div>`;
+                    } else if (sectionId === 'book_cover') {
+                        contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Image Prompts</p><button id="generate-image-prompts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Image Prompts</button></div>`;
                     }
                 } else { // Low Content
                      if (sectionId === 'book_titles') {
                          contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Book Titles</p><button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button></div>`;
+                    } else if (sectionId === 'book_cover') {
+                        contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Image Prompts</p><button id="generate-image-prompts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Image Prompts</button></div>`;
                     }
                 }
 
