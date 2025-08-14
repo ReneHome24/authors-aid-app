@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 3.2 - Copyright Generation Fix -->
+<!-- Version 3.3 - Dynamic Copyright Page -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -559,9 +559,6 @@
                 const projectRef = doc(getProjectsCollection(userId), projectId);
                 await updateDoc(projectRef, { lastModified: serverTimestamp() });
                 
-                // *** FIX START ***
-                // Removed the automatic call to populateCopyrightPage
-                // *** FIX END ***
                 await populateAboutAuthorPage(userId, projectId);
                 
                 showNotification('Project metadata saved!', 'success');
@@ -932,10 +929,14 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
 
-        // *** FIX START ***
-        // New function to generate the copyright page using a specific template and data.
         async function generateCopyrightPage(projectData, metadata) {
-            const userTemplate = `${projectData.title || '[Insert Book Title]'}\n\nCopyright © ${metadata.copyrightYear || '[Insert Year]'} by ${metadata.authorName || '[Insert Author Name Here]'}\n\nAll rights reserved. No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the publisher, except in the case of brief quotations embodied in critical reviews and certain other noncommercial uses permitted by copyright law.\n\nPublished by ${metadata.publisher || 'Willow Creek Books'}\n${metadata.publisherWebsite || '[Insert Publisher Address/Website Here]'}\n\nISBN: ${metadata.isbn || '[Insert ISBN Here]'}\n\nScripture quotations marked (NIrV) are taken from the Holy Bible, New International Reader’s Version®, NIrV®. Copyright © 1995, 1996, 1998, 2014 by Biblica, Inc.® Used by permission. All rights reserved worldwide.\n\nThis is a work of fiction. Names, characters, places, and incidents are either the product of the author’s imagination or are used fictitiously. Any resemblance to actual persons, living or dead, events, or locales is entirely coincidental.\n\nPrinted in the United States of America.`;
+            let userTemplate = `${projectData.title || '[Insert Book Title]'}\n\nCopyright © ${metadata.copyrightYear || '[Insert Year]'} by ${metadata.authorName || '[Insert Author Name Here]'}\n\nAll rights reserved. No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the publisher, except in the case of brief quotations embodied in critical reviews and certain other noncommercial uses permitted by copyright law.\n\nPublished by ${metadata.publisher || 'Willow Creek Books'}\n${metadata.publisherWebsite || '[Insert Publisher Address/Website Here]'}\n\nISBN: ${metadata.isbn || '[Insert ISBN Here]'}\n\nScripture quotations marked (NIrV) are taken from the Holy Bible, New International Reader’s Version®, NIrV®. Copyright © 1995, 1996, 1998, 2014 by Biblica, Inc.® Used by permission. All rights reserved worldwide.`;
+            
+            if (projectData.bookType === 'Fiction') {
+                userTemplate += `\n\nThis is a work of fiction. Names, characters, places, and incidents are either the product of the author’s imagination or are used fictitiously. Any resemblance to actual persons, living or dead, events, or locales is entirely coincidental.`;
+            }
+
+            userTemplate += `\n\nPrinted in the United States of America.`;
 
             const prompt = `You are a publishing assistant. Your task is to generate a complete copyright page. You have been given a template with placeholders. Fill in the placeholders using the provided data.
 
@@ -953,7 +954,6 @@
 
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        // *** FIX END ***
 
         async function generateFrontMatter(context, topic) {
             const prompt = `You are an AI publishing assistant for Christian authors. For a book with the following details, generate content for the "${topic}" section of the front matter. Do not include a title or any template-like explanations.
@@ -2137,8 +2137,6 @@
                         const topic = e.target.dataset.topic;
                         const matterType = e.target.dataset.matterType;
 
-                        // *** FIX START ***
-                        // Special handling for the copyright button
                         if (topic === 'Copyright') {
                             const projectData = await getProject(currentUserId, projectId);
                             const metadataSection = await getSection(currentUserId, projectId, 'metadata');
@@ -2148,11 +2146,9 @@
                             }
                             showContentInModalAndSave('Generated Copyright Page', generateCopyrightPage(projectData, metadata));
                         } else {
-                        // Original logic for other buttons
                             const context = await getFullProjectContext();
                             showContentInModalAndSave(`${topic} Ideas`, matterType === 'front' ? generateFrontMatter(context, topic) : generateBackMatter(context, topic), `--- ${topic.toUpperCase()} ---\n\n`);
                         }
-                        // *** FIX END ***
                     });
                 });
 
