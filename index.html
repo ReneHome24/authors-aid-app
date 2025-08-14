@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 2.8 - Synopsis Prompt Fix -->
+<!-- Version 2.9 - Simplified Character Generation -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -822,13 +822,10 @@
             }
         }
 
-        // *** FIX START ***
-        // Updated the prompt to explicitly forbid creating a title.
         async function generateSynopsisIdeas(idea) {
             const prompt = `You are an AI story consultant for Christian literature. Based on the user's basic idea, generate a numbered list of 5 distinct core concept ideas for a new Christian book. Each concept should be a single, concise paragraph describing the core idea. Do NOT include a title for each idea. The tone should be encouraging and creative.\n\nBasic Idea: "${idea}"`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        // *** FIX END ***
 
         async function generateOutlineBeats(context) { 
             const prompt = `You are an AI outliner for a Christian author. Based on the provided project details (synopsis, characters, world-building), generate a detailed chapter-by-chapter outline with key beats for each chapter. Ensure the outline aligns with Christian themes and values established in the context.
@@ -849,8 +846,10 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         
+        // *** FIX START ***
+        // Updated the prompt to ask for "a list" instead of a specific number.
         async function generateCharacterProfiles(context, authorContext) {
-            const prompt = `You are an AI character developer for Christian fiction. Your task is to generate a numbered list of 5 distinct character profiles based on the provided context.
+            const prompt = `You are an AI character developer for Christian fiction. Your task is to generate a list of distinct character profiles based on the provided context.
 
             **Strict Formatting Rules:**
             1.  Start each profile with the character's name, followed immediately by their character type from the taxonomy in parentheses. Example: "1. Elara (Protagonist)".
@@ -873,9 +872,10 @@
             ${context}
             ---
 
-            Generate 5 character profiles following all rules:`;
+            Generate a list of character profiles following all rules:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
+        // *** FIX END ***
 
         async function suggestAlternatives(selectedText, context) { 
             const prompt = `You are an AI thesaurus and editor for Christian literature. The user has selected a sentence and wants alternative phrasing for its key ideas. Analyze the following sentence and provide a list of alternative phrases for its most significant parts. Do not suggest alternatives for the entire sentence, but for its core components.
@@ -1659,38 +1659,15 @@
                 } else if (sectionId === 'book_titles') {
                      contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Book Titles</p><button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button></div>`;
                 } else if (sectionId === 'character_development') {
+                    // *** FIX START ***
+                    // Simplified the character development section to one button.
                     contextualButtonsHtml = `
                         <div>
-                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Full Profiles</p>
-                            <button id="generate-characters-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate 5 Profiles</button>
-                        </div>
-                        <div class="pt-4 mt-4 border-t border-gray-700 space-y-4">
-                            <div>
-                                <p class="text-sm font-semibold mb-2 text-gray-200">Targeted Generation</p>
-                                <input type="text" id="character-name-input" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white text-sm" placeholder="Enter Character Name">
-                                <div class="grid grid-cols-2 gap-2 mt-2">
-                                    <button id="generate-backstory-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Backstory</button>
-                                    <button id="generate-arc-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Character Arc</button>
-                                </div>
-                            </div>
-                            <div>
-                                <p class="text-sm font-semibold mb-2 text-gray-200">Name Generation</p>
-                                <select id="character-type-select" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white text-sm">
-                                    <option>Protagonist</option>
-                                    <option>Antagonist</option>
-                                    <option>Love Interest</option>
-                                    <option>Mentor</option>
-                                    <option>Sidekick</option>
-                                    <option>Supporting Character</option>
-                                </select>
-                                <button id="generate-name-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Get Names</button>
-                            </div>
-                             <div>
-                                <p class="text-sm font-semibold mb-2 text-gray-200">Story Needs</p>
-                                <button id="identify-needed-characters-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Needed Characters</button>
-                            </div>
+                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Character Profiles</p>
+                            <button id="generate-characters-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Character Profiles</button>
                         </div>
                     `;
+                    // *** FIX END ***
                 } else if (sectionId === 'world_building') {
                     contextualButtonsHtml = `
                         <div class="space-y-4">
