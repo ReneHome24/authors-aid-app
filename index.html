@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 3.1 - Outline Prompt Fix -->
+<!-- Version 3.2 - Copyright Generation Fix -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -529,33 +529,6 @@
             }
         }
         
-        async function populateCopyrightPage(userId, projectId) {
-            const projectData = await getProject(userId, projectId);
-            const metadataSection = await getSection(userId, projectId, 'metadata');
-            if (!projectData || !metadataSection) return;
-
-            const metadata = JSON.parse(metadataSection.content);
-            const projectTitle = projectData.title || 'Untitled Project';
-
-            if (!metadata.authorName || !metadata.copyrightYear) {
-                return;
-            }
-
-            let copyrightText = `${projectTitle}\n\n`;
-            copyrightText += `Copyright © ${metadata.copyrightYear} by ${metadata.authorName}\n\n`;
-            copyrightText += `All rights reserved. No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the publisher, except in the case of brief quotations embodied in critical reviews and certain other noncommercial uses permitted by copyright law.\n\n`;
-            if(metadata.publisher) copyrightText += `Published by ${metadata.publisher}\n`;
-            if(metadata.publisherWebsite) copyrightText += `${metadata.publisherWebsite}\n\n`;
-            if(metadata.isbn) copyrightText += `ISBN: ${metadata.isbn}\n`;
-            if(metadata.lccn) copyrightText += `Library of Congress Control Number: ${metadata.lccn}\n\n`;
-            if(metadata.coverDesigner) copyrightText += `Cover design by ${metadata.coverDesigner}\n`;
-            if(metadata.interiorDesigner) copyrightText += `Interior design by ${metadata.interiorDesigner}\n`;
-
-            const quillContent = JSON.stringify({ ops: [{ insert: copyrightText + '\n' }] });
-            await updateSectionContent(userId, projectId, 'copyright', quillContent);
-            showNotification('Copyright page auto-updated!', 'info', 2000);
-        }
-
         async function populateAboutAuthorPage(userId, projectId) {
             const metadataSection = await getSection(userId, projectId, 'metadata');
             if (!metadataSection) return;
@@ -586,7 +559,9 @@
                 const projectRef = doc(getProjectsCollection(userId), projectId);
                 await updateDoc(projectRef, { lastModified: serverTimestamp() });
                 
-                await populateCopyrightPage(userId, projectId);
+                // *** FIX START ***
+                // Removed the automatic call to populateCopyrightPage
+                // *** FIX END ***
                 await populateAboutAuthorPage(userId, projectId);
                 
                 showNotification('Project metadata saved!', 'success');
@@ -827,8 +802,6 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
 
-        // *** FIX START ***
-        // Updated the prompt to be stricter about formatting.
         async function generateOutlineBeats(context) { 
             const prompt = `You are an AI outliner for a Christian author. Based on the provided project details, generate a detailed chapter-by-chapter outline.
 
@@ -851,7 +824,6 @@
             Generate the chapter-by-chapter outline following all rules:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        // *** FIX END ***
         
         async function generateCharacterProfiles(context, authorContext) {
             const prompt = `You are an AI character developer for Christian fiction. Your task is to generate a list of distinct character profiles based on the provided context.
@@ -960,6 +932,29 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
 
+        // *** FIX START ***
+        // New function to generate the copyright page using a specific template and data.
+        async function generateCopyrightPage(projectData, metadata) {
+            const userTemplate = `${projectData.title || '[Insert Book Title]'}\n\nCopyright © ${metadata.copyrightYear || '[Insert Year]'} by ${metadata.authorName || '[Insert Author Name Here]'}\n\nAll rights reserved. No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the publisher, except in the case of brief quotations embodied in critical reviews and certain other noncommercial uses permitted by copyright law.\n\nPublished by ${metadata.publisher || 'Willow Creek Books'}\n${metadata.publisherWebsite || '[Insert Publisher Address/Website Here]'}\n\nISBN: ${metadata.isbn || '[Insert ISBN Here]'}\n\nScripture quotations marked (NIrV) are taken from the Holy Bible, New International Reader’s Version®, NIrV®. Copyright © 1995, 1996, 1998, 2014 by Biblica, Inc.® Used by permission. All rights reserved worldwide.\n\nThis is a work of fiction. Names, characters, places, and incidents are either the product of the author’s imagination or are used fictitiously. Any resemblance to actual persons, living or dead, events, or locales is entirely coincidental.\n\nPrinted in the United States of America.`;
+
+            const prompt = `You are a publishing assistant. Your task is to generate a complete copyright page. You have been given a template with placeholders. Fill in the placeholders using the provided data.
+
+            **Strict Formatting Rules:**
+            - Output ONLY the final, complete text of the copyright page.
+            - Do NOT add any introductory text, conversational filler, or explanations.
+            - Replace every placeholder exactly as provided. If a piece of data is missing, use the placeholder text from the template (e.g., "[Insert ISBN Here]").
+            - Maintain the exact line breaks and formatting of the original template.
+
+            --- TEMPLATE & DATA ---
+            ${userTemplate}
+            ---
+
+            Generate the complete copyright page now:`;
+
+            return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
+        }
+        // *** FIX END ***
+
         async function generateFrontMatter(context, topic) {
             const prompt = `You are an AI publishing assistant for Christian authors. For a book with the following details, generate content for the "${topic}" section of the front matter. Do not include a title or any template-like explanations.
             \n\nProject Details:\n---\n${context}\n---\n\nGenerate content for the ${topic}:`;
@@ -997,7 +992,7 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateWeaponList(context) {
-            const prompt = `Generate a list of weapons that tie into the story idea and the plot. Do not use markdown formatting.\n\n${context}`;
+            const prompt = `Generate a list of weapons that tie into the story idea and the plot. Do not use any markdown formatting.\n\n${context}`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function createTransportationIdeas(context) {
@@ -1020,7 +1015,7 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateCharacterName(characterType) {
-            const prompt = `Generate a numbered list of 10 potential names for a ${characterType} character in a Christian novel. Do not use markdown formatting.`;
+            const prompt = `Generate a numbered list of 10 potential names for a ${characterType} character in a Christian novel. Do not use any markdown formatting.`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function expandOnText(selectedText, fullContext) {
@@ -2141,8 +2136,23 @@
                     btn.addEventListener('click', async (e) => {
                         const topic = e.target.dataset.topic;
                         const matterType = e.target.dataset.matterType;
-                        const context = await getFullProjectContext();
-                        showContentInModalAndSave(`${topic} Ideas`, matterType === 'front' ? generateFrontMatter(context, topic) : generateBackMatter(context, topic), `--- ${topic.toUpperCase()} ---\n\n`);
+
+                        // *** FIX START ***
+                        // Special handling for the copyright button
+                        if (topic === 'Copyright') {
+                            const projectData = await getProject(currentUserId, projectId);
+                            const metadataSection = await getSection(currentUserId, projectId, 'metadata');
+                            let metadata = {};
+                            if (metadataSection && metadataSection.content) {
+                                try { metadata = JSON.parse(metadataSection.content); } catch(e) {}
+                            }
+                            showContentInModalAndSave('Generated Copyright Page', generateCopyrightPage(projectData, metadata));
+                        } else {
+                        // Original logic for other buttons
+                            const context = await getFullProjectContext();
+                            showContentInModalAndSave(`${topic} Ideas`, matterType === 'front' ? generateFrontMatter(context, topic) : generateBackMatter(context, topic), `--- ${topic.toUpperCase()} ---\n\n`);
+                        }
+                        // *** FIX END ***
                     });
                 });
 
