@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 3.4 - Context-Aware UI -->
+<!-- Version 3.5 - Final Polish -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -906,9 +906,12 @@
         async function generateNext(currentText, outlineContent, chapterTitle) {
             const prompt = `You are a Christian ghostwriter. Your task is to continue writing a specific chapter of a manuscript.
 
-            Current Chapter Focus: ${chapterTitle}
+            **Current Chapter Focus:** ${chapterTitle}
 
             Your goal is to write the next logical beat for THIS CHAPTER ONLY, based on the overall outline provided for context. Analyze the "Current Chapter Content" to see where the story left off, and then use the "Overall Outline" to write the very next story beat for the chapter you are focused on.
+            
+            **Strict Formatting Rules:**
+            - Do NOT use any markdown formatting like asterisks (* or **). Use proper quotation marks (" ") for dialogue or emphasis.
 
             Overall Outline:
             ---
@@ -930,7 +933,7 @@
         }
 
         async function generateCopyrightPage(projectData, metadata) {
-            let userTemplate = `${projectData.title || '[Insert Book Title]'}\n\nCopyright © ${metadata.copyrightYear || '[Insert Year]'} by ${metadata.authorName || '[Insert Author Name Here]'}\n\nAll rights reserved. No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the publisher, except in the case of brief quotations embodied in critical reviews and certain other noncommercial uses permitted by copyright law.\n\nPublished by ${metadata.publisher || 'Willow Creek Books'}\n${metadata.publisherWebsite || '[Insert Publisher Address/Website Here]'}\n\nISBN: ${metadata.isbn || '[Insert ISBN Here]'}\n\nScripture quotations marked (NIrV) are taken from the Holy Bible, New International Reader’s Version®, NIrV®. Copyright © 1995, 1996, 1998, 2014 by Biblica, Inc.® Used by permission. All rights reserved worldwide.`;
+            let userTemplate = `${projectData.title || '[Insert Book Title]'}\n\nCopyright © ${metadata.copyrightYear || '[Insert Year]'} by ${metadata.authorName || '[Insert Author Name Here]'}\n\nAll rights reserved. No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the publisher, except in the case of brief quotations embodied in critical reviews and certain other noncommercial uses permitted by copyright law.\n\nPublished by ${metadata.publisher || 'Willow Creek Books'}\n${metadata.publisherWebsite || '[Insert Publisher Address/Website Here]'}\n\nISBN: ${metadata.isbn || '[Insert ISBN Here]'}\nLCCN: ${metadata.lccn || '[Insert LCCN Here]'}\nCover design by ${metadata.coverDesigner || '[Insert Cover Designer Here]'}\n\nScripture quotations marked (NIrV) are taken from the Holy Bible, New International Reader’s Version®, NIrV®. Copyright © 1995, 1996, 1998, 2014 by Biblica, Inc.® Used by permission. All rights reserved worldwide.`;
             
             if (projectData.bookType === 'Fiction') {
                 userTemplate += `\n\nThis is a work of fiction. Names, characters, places, and incidents are either the product of the author’s imagination or are used fictitiously. Any resemblance to actual persons, living or dead, events, or locales is entirely coincidental.`;
@@ -1462,8 +1465,6 @@
 
                     const corePages = ['metadata', 'brainstorming', 'book_titles', 'character_development', 'world_building', 'outline', 'book_cover', 'copyright', 'dedication', 'foreword', 'preface', 'acknowledgments', 'chapter_1', 'about_the_author', 'discussion_questions'];
 
-                    // *** FIX START ***
-                    // Filter sections based on the book type.
                     let visibleSections = sections;
                     if (project.bookType === 'Non-Fiction') {
                         const fictionOnly = ['character_development', 'world_building'];
@@ -1474,7 +1475,6 @@
                     }
 
                     visibleSections.forEach(s => {
-                    // *** FIX END ***
                         if (s.order < 7) sectionGroups.project.push(s);
                         else if (s.order >= 7 && s.order < 11) sectionGroups.frontMatter.push(s);
                         else if (s.order >= 11 && s.order < 100) sectionGroups.chapters.push(s);
@@ -1653,8 +1653,6 @@
                         </div>
                     </div>`;
 
-                // *** FIX START ***
-                // Conditional logic based on book type and section
                 if (project.bookType === 'Fiction') {
                     if (sectionId === 'brainstorming') {
                         contextualButtonsHtml = `
@@ -1754,7 +1752,6 @@
                          contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Book Titles</p><button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button></div>`;
                     }
                 }
-                // *** FIX END ***
 
                 const aiPanelHtml = `
                     <h3 class="text-lg font-bold mb-4">AI Co-Author</h3>
