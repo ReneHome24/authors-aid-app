@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 2.9 - Simplified Character Generation -->
+<!-- Version 3.0 - Beat Tracker Fix -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -846,8 +846,6 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         
-        // *** FIX START ***
-        // Updated the prompt to ask for "a list" instead of a specific number.
         async function generateCharacterProfiles(context, authorContext) {
             const prompt = `You are an AI character developer for Christian fiction. Your task is to generate a list of distinct character profiles based on the provided context.
 
@@ -875,7 +873,6 @@
             Generate a list of character profiles following all rules:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
-        // *** FIX END ***
 
         async function suggestAlternatives(selectedText, context) { 
             const prompt = `You are an AI thesaurus and editor for Christian literature. The user has selected a sentence and wants alternative phrasing for its key ideas. Analyze the following sentence and provide a list of alternative phrases for its most significant parts. Do not suggest alternatives for the entire sentence, but for its core components.
@@ -1659,15 +1656,12 @@
                 } else if (sectionId === 'book_titles') {
                      contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Book Titles</p><button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button></div>`;
                 } else if (sectionId === 'character_development') {
-                    // *** FIX START ***
-                    // Simplified the character development section to one button.
                     contextualButtonsHtml = `
                         <div>
                             <p class="text-sm font-semibold mb-2 text-gray-200">Generate Character Profiles</p>
                             <button id="generate-characters-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Character Profiles</button>
                         </div>
                     `;
-                    // *** FIX END ***
                 } else if (sectionId === 'world_building') {
                     contextualButtonsHtml = `
                         <div class="space-y-4">
@@ -1743,6 +1737,8 @@
             const setupAiPanelListeners = (userId, projectId, editor) => {
                 const outputDiv = document.getElementById('ai-output');
 
+                // *** FIX START ***
+                // This function now has improved logic to correctly parse chapter beats.
                 const updateBeatTracker = async () => {
                     const beatTrackerContent = document.getElementById('beat-tracker-content');
                     if (!beatTrackerContent) return;
@@ -1771,19 +1767,35 @@
                     const lines = outlineText.split('\n');
                     let chapterBeats = [];
                     let inChapter = false;
-                    const chapterTitleRegex = new RegExp(`^${currentSection.title.trim()}`, 'i');
+                    
+                    const currentChapterNumberMatch = currentSection.title.match(/\d+/);
+                    if (!currentChapterNumberMatch) {
+                        beatTrackerContent.textContent = 'Beat tracking only works for numbered chapters.';
+                        return;
+                    }
+                    const currentChapterNumber = parseInt(currentChapterNumberMatch[0], 10);
 
                     for (const line of lines) {
-                        if (chapterTitleRegex.test(line.trim())) {
+                        const lineTrimmed = line.trim();
+                        const chapterTitleRegex = new RegExp(`^Chapter ${currentChapterNumber}(:.*)?$`, 'i');
+
+                        if (chapterTitleRegex.test(lineTrimmed)) {
                             inChapter = true;
                             continue;
                         }
+
                         if (inChapter) {
-                            if (line.trim().match(/^Chapter \d+/i)) {
-                                break;
+                            // Check if we've hit the start of the *next* chapter
+                            const nextChapterMatch = lineTrimmed.match(/^Chapter (\d+)/i);
+                            if (nextChapterMatch) {
+                                const nextChapterNumber = parseInt(nextChapterMatch[1], 10);
+                                if (nextChapterNumber > currentChapterNumber) {
+                                    break; // Stop when the next chapter is found
+                                }
                             }
-                            if(line.trim()) {
-                                chapterBeats.push(line);
+                            
+                            if(lineTrimmed) {
+                                chapterBeats.push(lineTrimmed);
                             }
                         }
                     }
@@ -1794,6 +1806,7 @@
                         beatTrackerContent.textContent = 'No beats found for this chapter in the outline.';
                     }
                 };
+                // *** FIX END ***
 
                 const showContentInModal = (title, content, onAcceptCallback) => {
                     showModal(title, `<div class="whitespace-pre-wrap text-gray-300 text-sm">${escapeHTML(content)}</div>`, async () => {
