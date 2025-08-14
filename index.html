@@ -1737,8 +1737,6 @@
             const setupAiPanelListeners = (userId, projectId, editor) => {
                 const outputDiv = document.getElementById('ai-output');
 
-                // *** FIX START ***
-                // This function now has improved logic to correctly parse chapter beats.
                 const updateBeatTracker = async () => {
                     const beatTrackerContent = document.getElementById('beat-tracker-content');
                     if (!beatTrackerContent) return;
@@ -1785,12 +1783,11 @@
                         }
 
                         if (inChapter) {
-                            // Check if we've hit the start of the *next* chapter
                             const nextChapterMatch = lineTrimmed.match(/^Chapter (\d+)/i);
                             if (nextChapterMatch) {
                                 const nextChapterNumber = parseInt(nextChapterMatch[1], 10);
                                 if (nextChapterNumber > currentChapterNumber) {
-                                    break; // Stop when the next chapter is found
+                                    break;
                                 }
                             }
                             
@@ -1806,7 +1803,6 @@
                         beatTrackerContent.textContent = 'No beats found for this chapter in the outline.';
                     }
                 };
-                // *** FIX END ***
 
                 const showContentInModal = (title, content, onAcceptCallback) => {
                     showModal(title, `<div class="whitespace-pre-wrap text-gray-300 text-sm">${escapeHTML(content)}</div>`, async () => {
