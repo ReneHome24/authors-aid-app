@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 2.7 - Target Age Group -->
+<!-- Version 2.8 - Synopsis Prompt Fix -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -822,10 +822,14 @@
             }
         }
 
+        // *** FIX START ***
+        // Updated the prompt to explicitly forbid creating a title.
         async function generateSynopsisIdeas(idea) {
-            const prompt = `You are an AI story consultant for Christian literature. Based on the user's basic idea, generate a numbered list of 5 distinct core concept ideas for a new Christian book. Each concept should be a single, concise paragraph describing the core idea. The tone should be encouraging and creative.\n\nBasic Idea: "${idea}"`;
+            const prompt = `You are an AI story consultant for Christian literature. Based on the user's basic idea, generate a numbered list of 5 distinct core concept ideas for a new Christian book. Each concept should be a single, concise paragraph describing the core idea. Do NOT include a title for each idea. The tone should be encouraging and creative.\n\nBasic Idea: "${idea}"`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
+        // *** FIX END ***
+
         async function generateOutlineBeats(context) { 
             const prompt = `You are an AI outliner for a Christian author. Based on the provided project details (synopsis, characters, world-building), generate a detailed chapter-by-chapter outline with key beats for each chapter. Ensure the outline aligns with Christian themes and values established in the context.
             **IMPORTANT:** When referring to characters in the outline beats, ALWAYS use their specific character names (e.g., "Amara," "Nana Elena") instead of their roles (e.g., "protagonist," "mentor").
@@ -993,7 +997,7 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function createTransportationIdeas(context) {
-            const prompt = `Create a numbered list of ideas for interplanetary space travel for the civilization in the story, as well as for space marines. Include things like cruise ships, starships, and battleships, based on the following context. Do not use markdown formatting.\n\n${context}`;
+            const prompt = `Create a numbered list of ideas for interplanetary space travel for the civilization in the story, as well as for space marines. Include things like cruise ships, starships, and battleships, based on the following context. Do not use any markdown formatting.\n\n${context}`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function identifyNeededCharacters(context) {
@@ -1309,8 +1313,6 @@
             });
         }
 
-        // *** FIX START ***
-        // Updated the New Project modal to include the Target Age Group dropdown.
         function handleNewProject() {
             const content = `
                 <form id="new-project-form">
@@ -1376,13 +1378,12 @@
                 const bookType = document.getElementById('bookType').value;
                 const genre = document.getElementById('genre').value;
                 const targetAudience = document.getElementById('targetAudience').value;
-                const targetAgeGroup = document.getElementById('targetAgeGroup').value; // Get the new value
-                const projectData = { title, bookType, genre, targetAudience, targetAgeGroup }; // Add it to the project data
+                const targetAgeGroup = document.getElementById('targetAgeGroup').value;
+                const projectData = { title, bookType, genre, targetAudience, targetAgeGroup };
                 const newId = await createProject(currentUserId, projectData);
                 if (newId) navigateTo('editor', { projectId: newId });
             }, 'Create Project');
         }
-        // *** FIX END ***
 
         function handleDeleteProject(projectId) {
             showModal('Confirm Deletion', '<p>Are you sure you want to permanently delete this project and all its content?</p>', async () => {
@@ -1832,10 +1833,8 @@
                     }, 500));
                 }
                 
-                // *** FIX START ***
-                // Updated to fetch the full project data to get the targetAgeGroup.
                 const getFullProjectContext = async () => {
-                    const projectData = await getProject(userId, projectId); // Fetch full project
+                    const projectData = await getProject(userId, projectId);
                     const allSections = await getProjectSections(userId, projectId);
                     const tempDiv = document.createElement('div');
                     const tempQuill = new Quill(tempDiv);
@@ -1846,14 +1845,12 @@
                         catch (e) { return section.content; }
                     };
                     
-                    // Add the target age group to the context string if it exists.
                     let contextString = `Synopsis: ${getQuillText('brainstorming')}\nCharacters: ${getQuillText('character_development')}\nWorld-building: ${getQuillText('world_building')}\nOutline: ${getQuillText('outline')}`;
                     if (projectData.targetAgeGroup && projectData.targetAgeGroup !== 'Not Applicable') {
                         contextString = `Target Age Group: ${projectData.targetAgeGroup}\n\n${contextString}`;
                     }
                     return contextString.trim();
                 };
-                // *** FIX END ***
 
                 const getAuthorContext = async () => {
                     const metadataSection = await getSection(userId, projectId, 'metadata');
