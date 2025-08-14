@@ -908,7 +908,7 @@
             ${context}
             ---
 
-            Suggest 3 book structures:`;
+            Suggest book structures:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]); 
         }
 
@@ -970,15 +970,15 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateLocationIdeas(context) {
-            const prompt = `Write a numbered list of a few ideas where the story can take place based on the following Plot & Story idea. Do not use any markdown formatting. \n\n${context}`;
+            const prompt = `Write a list of a ideas where the story can take place based on the following Plot & Story idea. Do not use any markdown formatting. \n\n${context}`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateTechnologyIdeas(context) {
-            const prompt = `Write a numbered list of a few ideas about the technology in the story that helps the characters move through the plot, based on this context. Do not use any markdown formatting.\n\n${context}`;
+            const prompt = `Write a list of a ideas about the technology in the story that helps the characters move through the plot, based on this context. Do not use any markdown formatting.\n\n${context}`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function developTechnologyIdeas(context) {
-            const prompt = `The technology needed in the story will be communication systems, systems that allow the civilization to analyze planets, asteroids, and threats beyond the solar system, Space Armor, Mechanical space suits, and Defense systems. Develop a numbered list of a few ideas for some technology based off the information provided in the story context. Do not use any markdown formatting.\n\n${context}`;
+            const prompt = `The technology needed in the story will be communication systems, based on the following Plot & Story idea, systems that allow the civilization to analyze planets, asteroids, and threats beyond the solar system, Space Armor, Mechanical space suits, and Defense systems. Develop a numbered list of a few ideas for some technology based off the information provided in the story context. Do not use any markdown formatting.\n\n${context}`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function developPowerSystem(context) {
@@ -990,11 +990,11 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateWeaponList(context) {
-            const prompt = `Generate a numbered list of weapons that tie into the story idea and the plot. Do not use markdown formatting.\n\n${context}`;
+            const prompt = `Generate a list of weapons that tie into the story idea and the plot. Do not use markdown formatting.\n\n${context}`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function createTransportationIdeas(context) {
-            const prompt = `Create a numbered list of ideas for interplanetary space travel for the civilization in the story, as well as for space marines. Include things like cruise ships, starships, and battleships, based on the following context. Do not use any markdown formatting.\n\n${context}`;
+            const prompt = `Create a list of ideas based on the following Plot & Story idea, for interplanetary space travel for the civilization in the story, as well as for space marines. Include things like cruise ships, starships, and battleships, based on the following context. Do not use any markdown formatting.\n\n${context}`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function identifyNeededCharacters(context) {
