@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 3.7 - Low-Content Prompts -->
+<!-- Version 3.8 - Scripture Button Fix -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -1659,6 +1659,26 @@
                             <button data-topic="About the Author" data-matter-type="back" class="generate-matter-btn w-full col-span-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">About the Author</button>
                         </div>
                     </div>`;
+                
+                // *** FIX START ***
+                let faithToolsHtml = '';
+                if (project.bookType === 'Low Content') {
+                    faithToolsHtml = `<button id="suggest-scripture-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg col-span-2">Suggest Scripture</button>`;
+                } else {
+                    faithToolsHtml = `
+                        <button id="suggest-alternatives-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Alternative Words</button>
+                        <button id="suggest-scripture-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest Scripture</button>
+                        <button id="suggest-youth-phrases-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg col-span-2">Youth Phrases</button>
+                    `;
+                }
+                const faithToolsSection = `<div class="pt-4 border-t border-gray-700 flex-shrink-0">
+                            <p class="text-sm font-semibold mb-2 text-gray-200">Editing & Faith Tools</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                ${faithToolsHtml}
+                            </div>
+                        </div>`;
+                // *** FIX END ***
+
 
                 if (project.bookType === 'Fiction') {
                     if (sectionId === 'brainstorming') {
@@ -1802,14 +1822,7 @@
                         </div>
                         ${contextualButtonsHtml}
                         ${beatTrackerHtml}
-                        <div class="pt-4 border-t border-gray-700 flex-shrink-0">
-                            <p class="text-sm font-semibold mb-2 text-gray-200">Editing & Faith Tools</p>
-                            <div class="grid grid-cols-2 gap-2">
-                                <button id="suggest-alternatives-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Alternative Words</button>
-                                <button id="suggest-scripture-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Suggest Scripture</button>
-                                <button id="suggest-youth-phrases-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Youth Phrases</button>
-                            </div>
-                        </div>
+                        ${faithToolsSection}
                         ${pageGenerators}
                         <div id="ai-output" class="mt-4 text-sm text-gray-300 space-y-2 flex-grow overflow-y-auto"></div>
                     </div>`;
@@ -2276,8 +2289,6 @@
                 addClickListener('suggest-scripture-btn', handleSelectionTools);
                 addClickListener('suggest-youth-phrases-btn', handleSelectionTools);
                 
-                // *** FIX START ***
-                // Add listener for new low-content prompt buttons
                 document.querySelectorAll('.low-content-prompt-btn').forEach(btn => {
                     btn.addEventListener('click', async (e) => {
                         const promptText = e.target.dataset.prompt;
@@ -2289,7 +2300,6 @@
                         }
                     });
                 });
-                // *** FIX END ***
                 
                 updateBeatTracker();
             };
