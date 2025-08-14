@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 3.9 - Book Cover Fix -->
+<!-- Version 4.0 - Landing Page & Login Update -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -332,10 +332,13 @@
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
     <script type="module">
         // Firebase SDK Imports
+        // *** FIX START ***
+        // Added sendPasswordResetEmail to the imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInAnonymously, signOut as firebaseSignOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, linkWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously, signOut as firebaseSignOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, linkWithCredential, EmailAuthProvider, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, addDoc, getDoc, getDocs, updateDoc, deleteDoc, serverTimestamp, query, onSnapshot, setDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+        // *** FIX END ***
 
 
         // Your web app's Firebase configuration
@@ -414,6 +417,21 @@
                 return false;
             }
         }
+        
+        // *** FIX START ***
+        // Added a new function to handle password reset.
+        async function forgotPassword(email) {
+            try {
+                await sendPasswordResetEmail(authInstance, email);
+                showNotification('Password reset email sent!', 'success');
+                return true;
+            } catch (e) {
+                console.error("Password reset failed:", e);
+                showNotification(`Password reset failed: ${e.message}`, 'error');
+                return false;
+            }
+        }
+        // *** FIX END ***
 
         // --- firestore.js content ---
         let dbInstance;
@@ -1195,6 +1213,7 @@
                         <input type="password" id="login-password" name="password" required autocomplete="current-password" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring">
                         <span class="password-toggle" data-target="login-password"><i class="fas fa-eye"></i></span>
                     </div>
+                     <a href="#" id="forgot-password-link" class="text-sm accent-text-hover mt-2 block text-right">Forgot Password?</a>
                 </form>
             `;
             showModal('Log In', content, async () => {
@@ -1205,7 +1224,32 @@
                     if (user) navigateTo('dashboard');
                 }
             }, 'Login');
+
+            document.getElementById('forgot-password-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('modal-close-btn').click(); // Close login modal
+                renderForgotPasswordModal();
+            });
         }
+        
+        function renderForgotPasswordModal() {
+            const content = `
+                <form id="forgot-password-form">
+                    <p class="text-gray-400 mb-4">Enter your email address and we'll send you a link to reset your password.</p>
+                    <div class="mb-4">
+                        <label for="reset-email" class="block text-sm font-medium text-gray-300 mb-1">Email Address</label>
+                        <input type="email" id="reset-email" name="email" required autocomplete="email" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 accent-ring">
+                    </div>
+                </form>
+            `;
+            showModal('Reset Password', content, async () => {
+                const email = document.getElementById('reset-email').value;
+                if (email) {
+                    await forgotPassword(email);
+                }
+            }, 'Send Reset Link');
+        }
+
 
         function renderLandingPage() {
             document.body.className = `theme-default view-landing`;
@@ -1226,9 +1270,8 @@
                         <div class="container mx-auto text-center px-4">
                             <h2 class="text-4xl md:text-6xl font-bold font-lora text-white leading-tight mb-4">Your AI Co-Author, Guided by Faith</h2>
                             <p class="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto mb-8">
-                                Welcome, Rene' Stanly. Your personalized writing partner, trained on your unique style and grounded in Christian values. From manuscript to cover, let's bring your next masterpiece to life.
+                                Welcome, Rene' Stanley. Your personalized writing partner, trained on your unique style and grounded in Christian values. From manuscript to cover, let's bring your next masterpiece to life.
                             </p>
-                            <button id="guest-btn" class="accent-bg accent-bg-hover text-white font-bold py-3 px-8 rounded-lg text-lg transition-transform transform hover:scale-105 inline-block">Continue as Guest</button>
                         </div>
                     </main>
                     <section id="features" class="py-20 bg-black/30">
@@ -1255,11 +1298,7 @@
                     </section>
                 </div>
             `;
-            document.getElementById('guest-btn').addEventListener('click', async (e) => {
-                e.preventDefault();
-                showNotification('Signing in as guest...');
-                await signInAnon();
-            });
+
             document.getElementById('signup-free-btn').addEventListener('click', handleSignUpClick);
             document.getElementById('login-link').addEventListener('click', handleLoginClick);
             document.getElementById('sign-up-link').addEventListener('click', handleSignUpClick);
