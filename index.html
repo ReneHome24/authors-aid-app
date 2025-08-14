@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 4.0 - Landing Page & Login Update -->
+<!-- Version 4.1 - Updated Help Section -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -332,13 +332,10 @@
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
     <script type="module">
         // Firebase SDK Imports
-        // *** FIX START ***
-        // Added sendPasswordResetEmail to the imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInAnonymously, signOut as firebaseSignOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, linkWithCredential, EmailAuthProvider, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, addDoc, getDoc, getDocs, updateDoc, deleteDoc, serverTimestamp, query, onSnapshot, setDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
-        // *** FIX END ***
 
 
         // Your web app's Firebase configuration
@@ -418,8 +415,6 @@
             }
         }
         
-        // *** FIX START ***
-        // Added a new function to handle password reset.
         async function forgotPassword(email) {
             try {
                 await sendPasswordResetEmail(authInstance, email);
@@ -431,7 +426,6 @@
                 return false;
             }
         }
-        // *** FIX END ***
 
         // --- firestore.js content ---
         let dbInstance;
@@ -1081,37 +1075,30 @@
                     <p>Your AI Co-author is here to assist you through every step of your manuscript writing journey, grounded in Christian values.</p>
                     <h4 class="text-md font-semibold text-white mt-4">Getting Started:</h4>
                     <ul class="list-disc list-inside space-y-1">
-                        <li><strong>Sign Up/Login:</strong> Create an account to save your projects permanently across sessions. You can also continue as a guest, but guest data may not persist.</li>
-                        <li><strong>New Project:</strong> From the Dashboard, click "+ New Project" to start a new book. Provide a title and select its type, genre, and target audience.</li>
+                        <li><strong>Sign Up/Login:</strong> Create an account to save your projects permanently. If you forget your password, use the "Forgot Password?" link on the login screen.</li>
+                        <li><strong>New Project:</strong> From the Dashboard, click "+ New Project" to start a new book. Be sure to select the correct "Book Type" (Fiction, Non-Fiction, or Low Content) and "Target Age Group" to get the best AI suggestions.</li>
                         <li><strong>Dashboard:</strong> View all your existing projects, open them, or delete them.</li>
                     </ul>
                     <h4 class="text-md font-semibold text-white mt-4">Using the Editor:</h4>
-                    <p>The main editor screen is where your writing and AI tools come together. It's divided into three main panels:</p>
+                    <p>The editor adapts to your project type. You'll only see the sections and AI tools that are relevant to the kind of book you're writing.</p>
                     <ul class="list-disc list-inside space-y-1">
-                        <li><strong>Left Sidebar:</strong> Navigate between different sections of your project (Synopsis & Brainstorming, Book Titles, Character Development, Outline, Chapters, Book Cover, etc.).</li>
-                        <li><strong>Center Panel:</strong> This is your primary writing area, powered by Quill.js. Type directly here, and your progress is automatically saved.</li>
-                        <li><strong>Right Sidebar (AI Co-Author):</strong> This is where you interact with the AI tools.</li>
+                        <li><strong>Left Sidebar:</strong> Navigate between the different sections of your project. This list changes based on your project type.</li>
+                        <li><strong>Center Panel:</strong> This is your main writing area. Your work is saved automatically.</li>
+                        <li><strong>Right Sidebar (AI Co-Author):</strong> This panel provides contextual AI tools. For chapters, it also includes a "Current Chapter Beats" tracker to help you follow your outline.</li>
                     </ul>
-                    <h4 class="text-md font-semibold text-white mt-4">AI Co-Author Features:</h4>
+                    <h4 class="text-md font-semibold text-white mt-4">AI Co-Author Features by Book Type:</h4>
+                    <p class="text-sm text-gray-400">The available tools will change depending on what you're writing.</p>
                     <ul class="list-disc list-inside space-y-1">
-                        <li><strong>AI Style Preference:</strong> Use the text area at the top to describe the writing style or tone you'd like the AI to adopt (e.g., "Write in a formal, encouraging tone," "Use concise, impactful language"). This preference is applied to all AI-generated content.</li>
-                        <li><strong>Generate Synopsis Ideas (Synopsis & Brainstorming):</strong> Provide a basic idea in the editor, and the AI will generate core concept ideas for your book.</li>
-                        <li><strong>POV & Voice (Synopsis & Brainstorming):</strong> Based on your synopsis, the AI can suggest different points of view and narrative voices.</li>
-                        <li><strong>Book Structure (Synopsis & Brainstorming):</strong> Get AI-generated structural ideas (e.g., Three-Act Structure) for your story.</li>
-                        <li><strong>Generate Character Profiles (Character Development):</strong> The AI helps you create detailed character ideas based on your story's concept.</li>
-                        <li><strong>Generate Chapter Beats (Outline):</strong> Get a detailed chapter-by-chapter outline based on your project's synopsis, characters, and world-building.</li>
-                        <li><strong>Continue Writing (Chapters):</strong> Overcome writer's block! Click this button in any chapter to have the AI generate the next section of text, using your existing content and project context.</li>
-                        <li><strong>Analyze Chapter (Chapters):</strong> Get high-level feedback on pacing, plot progression, and character consistency for your chapter.</li>
-                        <li><strong>Proofread Chapter (Chapters):</strong> Receive suggested corrections for grammar, spelling, and punctuation. Click on a suggestion to apply the fix directly to your text.</li>
-                        <li><strong>Suggest Youth Phrases (Chapters):</strong> Select text (e.g., dialogue) and get contemporary youth slang suggestions, suitable for a Christian context.</li>
-                        <li><strong>Generate Image Prompts (Book Cover):</strong> Get descriptive prompts for an AI image generator based on your book's synopsis. Click a concept to generate a visual book cover.</li>
-                        <li><strong>Select Book Cover (Book Cover):</strong> After generating images, click on your preferred cover to highlight it and save its URL to your project.</li>
+                        <li><strong>For Fiction:</strong> You'll have access to all creative tools, including character development, world-building, plot structure ideas, and more.</li>
+                        <li><strong>For Non-Fiction:</strong> The tools are focused on structure and content, such as generating outlines and analyzing chapters, while hiding fiction-specific options.</li>
+                        <li><strong>For Low Content Books:</strong> When working on a page, you'll see buttons to quickly insert common prompts for journals, planners, and workbooks. You can also use the "Suggest Scripture" button.</li>
                     </ul>
-                    <h4 class="text-md font-semibold text-white mt-4">Exporting Your Work:</h4>
-                    <ul class="list-disc list-inside space-y-1">
-                        <li><strong>Export Project:</strong> Use the "Export Project" button in the footer to download your entire manuscript as a clean HTML file. This file is suitable for importing into professional book formatting software for eBook and print preparation.</li>
+                    <h4 class="text-md font-semibold text-white mt-4">Key Features:</h4>
+                     <ul class="list-disc list-inside space-y-1">
+                        <li><strong>Generate Character Profiles:</strong> Get a list of character ideas based on your synopsis. Now includes "Relationship to Protagonist."</li>
+                        <li><strong>Continue Writing:</strong> Overcome writer's block! The AI will write the next section of your chapter based on your outline and current text.</li>
+                        <li><strong>Generate Copyright Page:</strong> From the "Front & Back Matter" section of the AI panel, click "Copyright" to generate a complete page using the information from your project's metadata.</li>
                     </ul>
-                    <p class="text-sm text-gray-400 mt-4">Remember that AI generation relies on external services. If you encounter "API call failed" errors, please check your Google Cloud Project settings for API enablement and quotas.</p>
                 </div>
             `;
             showModal('How to Use Author\'s Aid', helpContent, null, 'Close', false);
