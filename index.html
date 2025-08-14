@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 3.0 - Beat Tracker Fix -->
+<!-- Version 3.1 - Outline Prompt Fix -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -827,24 +827,31 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
 
+        // *** FIX START ***
+        // Updated the prompt to be stricter about formatting.
         async function generateOutlineBeats(context) { 
-            const prompt = `You are an AI outliner for a Christian author. Based on the provided project details (synopsis, characters, world-building), generate a detailed chapter-by-chapter outline with key beats for each chapter. Ensure the outline aligns with Christian themes and values established in the context.
-            **IMPORTANT:** When referring to characters in the outline beats, ALWAYS use their specific character names (e.g., "Amara," "Nana Elena") instead of their roles (e.g., "protagonist," "mentor").
+            const prompt = `You are an AI outliner for a Christian author. Based on the provided project details, generate a detailed chapter-by-chapter outline.
 
-            For each chapter, list the chapter title, and then provide a numbered list of key beats for that chapter. For example:
+            **Strict Formatting Rules:**
+            - Do NOT use any markdown formatting like asterisks (* or **). All text should be plain.
+            - Do NOT include any introductory text or conversational filler before the outline.
+            - ALWAYS use specific character names (e.g., "Amara," "Nana Elena") instead of their roles (e.g., "protagonist," "mentor").
+            - For each chapter, list the chapter title, and then provide a numbered list of key beats for that chapter.
+
+            **Example of a perfect response item:**
             Chapter 1: The Beginning
-            1. Beat 1 of Chapter 1: Introduce protagonist and their core conflict.
-            2. Beat 2 of Chapter 1: Character meets mentor.
-            3. Beat 3 of Chapter 1: Call to adventure.
+            1. Introduce Leo in his home in Willow Creek.
+            2. Leo doodles an exciting new invention.
 
-            Project Details:
             ---
+            Project Details:
             ${context}
             ---
 
-            Generate the chapter-by-chapter outline:`;
+            Generate the chapter-by-chapter outline following all rules:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
+        // *** FIX END ***
         
         async function generateCharacterProfiles(context, authorContext) {
             const prompt = `You are an AI character developer for Christian fiction. Your task is to generate a list of distinct character profiles based on the provided context.
@@ -882,7 +889,7 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }], config); 
         }
         async function suggestScripture(selectedText, context) { 
-            const prompt = `You are a theological assistant specializing in the NIV Bible. Based on the following selected text, suggest a list of relevant NIV Bible scriptures.
+            const prompt = `You are a theological assistant specializing in the NIV Bible. Based on the following selected text, suggest a list of 3 relevant NIV Bible scriptures.
             \n\nSelected Text for Context:\n---\n${context}\n---\n\nProvide the response as a JSON array of objects, where each object has "reference" and "text" keys.`; 
             const config = { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { reference: { type: "STRING" }, text: { type: "STRING" } }, required: ["reference", "text"] } } };
             return callGemini([{ role: "user", parts: [{ text: prompt }] }], config); 
