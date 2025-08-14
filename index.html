@@ -753,7 +753,7 @@
             4 Act Structure: Divides the story into four parts: The setup, the rising action, the climax, and the resolution.
             5 Act Structure (Used by screenwriters & playwrights): Divides the story into five parts: The setup, the rising action, the climax, the falling action, and the resolution.
             Hero’s Journey: A narrative structure that involves a hero who goes on a journey, faces challenges, and ultimately returns home transformed. Stages include the call to adventure, meeting the mentor, crossing the threshold, trials and challenges, the innermost cave, the reward, the road back, the resurrection, and the return.
-            Story Circle - Dan Harmon’s (Rick & Morty): An eight-step structure focusing on a character's transformation: 1. A character is in a zone of comfort. 2. They want something. 3. They enter an unfamiliar situation. 4. They adapt to it. 5. They get what they wanted. 6. They pay a heavy price for it. 7. They return to their familiar situation. 8. They have changed as a result of the journey.
+            Story Circle: An eight-step structure focusing on a character's transformation: 1. A character is in a zone of comfort. 2. They want something. 3. They enter an unfamiliar situation. 4. They adapt to it. 5. They get what they wanted. 6. They pay a heavy price for it. 7. They return to their familiar situation. 8. They have changed as a result of the journey.
         `;
 
         async function generateImage(prompt) {
@@ -882,7 +882,7 @@
             return callGemini([{ role: "user", parts: [{ text: prompt }] }], config); 
         }
         async function suggestScripture(selectedText, context) { 
-            const prompt = `You are a theological assistant specializing in the NIV Bible. Based on the following selected text, suggest a list of 3 relevant NIV Bible scriptures.
+            const prompt = `You are a theological assistant specializing in the NIV Bible. Based on the following selected text, suggest a list of relevant NIV Bible scriptures.
             \n\nSelected Text for Context:\n---\n${context}\n---\n\nProvide the response as a JSON array of objects, where each object has "reference" and "text" keys.`; 
             const config = { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { reference: { type: "STRING" }, text: { type: "STRING" } }, required: ["reference", "text"] } } };
             return callGemini([{ role: "user", parts: [{ text: prompt }] }], config); 
@@ -896,7 +896,7 @@
             ${BOOK_STRUCTURES_KNOWLEDGE}
             --- END KNOWLEDGE BASE ---
 
-            Based on the story's synopsis below, suggest a numbered list of 3 potential book structures from your knowledge base. For each suggestion, provide only the name of the structure and a single, concise sentence explaining why it fits the synopsis.
+            Based on the story's synopsis below, suggest a numbered list of potential book structures from your knowledge base. For each suggestion, provide only the name of the structure and a single, concise sentence explaining why it fits the synopsis.
 
             **IMPORTANT FORMATTING RULES:**
             - Do NOT include any introductory text or conversational filler before the list.
@@ -923,16 +923,16 @@
         }
         async function suggestYouthPhrases(selectedText, context) { const prompt = `You are an AI dialogue coach. Given the following selected text (likely dialogue) and its surrounding context, provide a numbered list of 5 alternative phrases that sound more contemporary or like common youth slang. Ensure suggestions are appropriate and fit a Christian context if possible.\n\nContext:\n---\n${context}\n---\n\nSelected Text: "${selectedText}"\n\nProvide 5 youth phrase alternatives:`; return callGemini([{ role: "user", parts: [{ text: prompt }] }]); }
         async function generateCoverConcepts(context) {
-            const prompt = `You are an AI art director for Christian book covers. Based on the provided book synopsis, generate 3 distinct and compelling visual concepts for a book cover. Each concept should be a short, descriptive paragraph that could be used as a prompt for an AI image generator. Focus on imagery that reflects Christian themes, symbolism, or the spiritual journey of the characters. Provide ONLY the descriptive image prompt text.\n\nSynopsis:\n---\n${context}\n---\n\nGenerate 3 book cover concepts:`;
+            const prompt = `You are an AI art director for Christian book covers. Based on the provided book synopsis, generate 3 distinct and compelling visual concepts for a book cover. Each concept should be a short, descriptive paragraph that could be used as a prompt for an AI image generator. Inclued the title and author's name "Rene' Stanley". Focus on imagery that reflects Christian themes, symbolism, or the spiritual journey of the characters. Provide ONLY the descriptive image prompt text.\n\nSynopsis:\n---\n${context}\n---\n\nGenerate 3 book cover concepts:`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         
         async function generateNext(currentText, outlineContent, chapterTitle) {
             const prompt = `You are a Christian ghostwriter. Your task is to continue writing a specific chapter of a manuscript.
 
-            **Current Chapter Focus:** ${chapterTitle}
+            Current Chapter Focus: ${chapterTitle}
 
-            Your goal is to write the next logical section for THIS CHAPTER ONLY, based on the overall outline provided for context. Analyze the "Current Chapter Content" to see where the story left off, and then use the "Overall Outline" to write the very next story beat for the chapter you are focused on.
+            Your goal is to write the next logical beat for THIS CHAPTER ONLY, based on the overall outline provided for context. Analyze the "Current Chapter Content" to see where the story left off, and then use the "Overall Outline" to write the very next story beat for the chapter you are focused on.
 
             Overall Outline:
             ---
@@ -966,7 +966,7 @@
 
         // --- NEW WORLD-BUILDING & CHARACTER FUNCTIONS ---
         async function generateSettingDescription(location, setting, plot) {
-            const prompt = `This story will take place in ${location} within a ${setting} setting. Write a short, plain-text description about this environment that ties into the following plot. Do not use any markdown formatting. \n\n${plot}`;
+            const prompt = `This story will take place in ${location} within a ${setting} setting. Write a detailed, plain-text description about this environment that ties into the following plot. Do not use any markdown formatting. \n\n${plot}`;
             return callGemini([{ role: "user", parts: [{ text: prompt }] }]);
         }
         async function generateLocationIdeas(context) {
@@ -1018,7 +1018,7 @@
         }
         async function expandOnText(selectedText, fullContext) {
             const prompt = `You are an AI writing assistant. The user has highlighted a piece of text from their chapter and wants to expand on it.
-            Based on the highlighted text and the full chapter context, generate a numbered list of 3 distinct and compelling new paragraphs that could be inserted immediately after the highlighted text.
+            Based on the highlighted text and the full chapter context, generate a numbered list of 4 distinct and compelling new paragraphs that could be inserted immediately after the highlighted text.
             The new paragraphs should logically follow the highlighted text, add depth or detail, and maintain the existing tone and style.
 
             **Strict Formatting Rules:**
