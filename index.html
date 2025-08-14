@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 3.3 - Dynamic Copyright Page -->
+<!-- Version 3.4 - Context-Aware UI -->
 <html lang="en" class="theme-default">
 <head>
     <meta charset="UTF-8">
@@ -1462,7 +1462,19 @@
 
                     const corePages = ['metadata', 'brainstorming', 'book_titles', 'character_development', 'world_building', 'outline', 'book_cover', 'copyright', 'dedication', 'foreword', 'preface', 'acknowledgments', 'chapter_1', 'about_the_author', 'discussion_questions'];
 
-                    sections.forEach(s => {
+                    // *** FIX START ***
+                    // Filter sections based on the book type.
+                    let visibleSections = sections;
+                    if (project.bookType === 'Non-Fiction') {
+                        const fictionOnly = ['character_development', 'world_building'];
+                        visibleSections = sections.filter(s => !fictionOnly.includes(s.id));
+                    } else if (project.bookType === 'Low Content') {
+                        const lowContentAllowed = ['metadata', 'book_titles', 'copyright', 'book_cover'];
+                        visibleSections = sections.filter(s => lowContentAllowed.includes(s.id) || s.order >= 11); // Allow chapters
+                    }
+
+                    visibleSections.forEach(s => {
+                    // *** FIX END ***
                         if (s.order < 7) sectionGroups.project.push(s);
                         else if (s.order >= 7 && s.order < 11) sectionGroups.frontMatter.push(s);
                         else if (s.order >= 11 && s.order < 100) sectionGroups.chapters.push(s);
@@ -1641,75 +1653,108 @@
                         </div>
                     </div>`;
 
-                if (sectionId === 'brainstorming') {
-                    contextualButtonsHtml = `
-                        <div>
-                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Synopsis Ideas</p>
-                            <textarea id="ai-idea-input" class="w-full h-24 p-2 bg-gray-700 border border-gray-600 rounded-md text-sm" placeholder="e.g., A story about a family..."></textarea>
-                            <button id="generate-synopsis-concepts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate</button>
-                        </div>
-                        <div class="pt-4 border-t border-gray-700">
-                            <p class="text-sm font-semibold mb-2 text-gray-200">Brainstorming Tools</p>
-                            <div class="grid grid-cols-2 gap-2">
-                                <button id="generate-pov-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">POV & Voice</button>
-                                <button id="generate-book-structure-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Book Structure</button>
-                            </div>
-                        </div>`;
-                } else if (sectionId === 'book_titles') {
-                     contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Book Titles</p><button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button></div>`;
-                } else if (sectionId === 'character_development') {
-                    contextualButtonsHtml = `
-                        <div>
-                            <p class="text-sm font-semibold mb-2 text-gray-200">Generate Character Profiles</p>
-                            <button id="generate-characters-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Character Profiles</button>
-                        </div>
-                    `;
-                } else if (sectionId === 'world_building') {
-                    contextualButtonsHtml = `
-                        <div class="space-y-4">
+                // *** FIX START ***
+                // Conditional logic based on book type and section
+                if (project.bookType === 'Fiction') {
+                    if (sectionId === 'brainstorming') {
+                        contextualButtonsHtml = `
                             <div>
-                                <p class="text-sm font-semibold mb-2 text-gray-200">Setting & Location</p>
-                                <input type="text" id="wb-location-input" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white text-sm mb-2" placeholder="Location (e.g., Mars Colony)">
-                                <input type="text" id="wb-setting-input" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white text-sm mb-2" placeholder="Setting (e.g., Dystopian Future)">
-                                <button id="generate-setting-desc-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Describe Environment</button>
-                                <button id="generate-location-ideas-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm mt-2">Suggest Locations</button>
+                                <p class="text-sm font-semibold mb-2 text-gray-200">Generate Synopsis Ideas</p>
+                                <textarea id="ai-idea-input" class="w-full h-24 p-2 bg-gray-700 border border-gray-600 rounded-md text-sm" placeholder="e.g., A story about a family..."></textarea>
+                                <button id="generate-synopsis-concepts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate</button>
                             </div>
                             <div class="pt-4 border-t border-gray-700">
-                                <p class="text-sm font-semibold mb-2 text-gray-200">Technology</p>
-                                <button id="generate-tech-ideas-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Get Tech Ideas</button>
-                                <button id="develop-tech-ideas-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm mt-2">Develop Specific Tech</button>
+                                <p class="text-sm font-semibold mb-2 text-gray-200">Brainstorming Tools</p>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button id="generate-pov-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">POV & Voice</button>
+                                    <button id="generate-book-structure-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Book Structure</button>
+                                </div>
+                            </div>`;
+                    } else if (sectionId === 'book_titles') {
+                         contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Book Titles</p><button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button></div>`;
+                    } else if (sectionId === 'character_development') {
+                        contextualButtonsHtml = `
+                            <div>
+                                <p class="text-sm font-semibold mb-2 text-gray-200">Generate Character Profiles</p>
+                                <button id="generate-characters-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Character Profiles</button>
                             </div>
-                             <div class="pt-4 border-t border-gray-700">
-                                <p class="text-sm font-semibold mb-2 text-gray-200">Power Systems</p>
-                                <button id="develop-power-system-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Develop Power System</button>
+                        `;
+                    } else if (sectionId === 'world_building') {
+                        contextualButtonsHtml = `
+                            <div class="space-y-4">
+                                <div>
+                                    <p class="text-sm font-semibold mb-2 text-gray-200">Setting & Location</p>
+                                    <input type="text" id="wb-location-input" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white text-sm mb-2" placeholder="Location (e.g., Mars Colony)">
+                                    <input type="text" id="wb-setting-input" class="w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white text-sm mb-2" placeholder="Setting (e.g., Dystopian Future)">
+                                    <button id="generate-setting-desc-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Describe Environment</button>
+                                    <button id="generate-location-ideas-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm mt-2">Suggest Locations</button>
+                                </div>
+                                <div class="pt-4 border-t border-gray-700">
+                                    <p class="text-sm font-semibold mb-2 text-gray-200">Technology</p>
+                                    <button id="generate-tech-ideas-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Get Tech Ideas</button>
+                                    <button id="develop-tech-ideas-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm mt-2">Develop Specific Tech</button>
+                                </div>
+                                 <div class="pt-4 border-t border-gray-700">
+                                    <p class="text-sm font-semibold mb-2 text-gray-200">Power Systems</p>
+                                    <button id="develop-power-system-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Develop Power System</button>
+                                </div>
+                                <div class="pt-4 border-t border-gray-700">
+                                    <p class="text-sm font-semibold mb-2 text-gray-200">Weaponry</p>
+                                    <button id="describe-weapons-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Describe Weapons</button>
+                                    <button id="generate-weapon-list-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm mt-2">List Weapons</button>
+                                </div>
+                                <div class="pt-4 border-t border-gray-700">
+                                    <p class="text-sm font-semibold mb-2 text-gray-200">Transportation</p>
+                                    <button id="create-transport-ideas-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Get Vehicle Ideas</button>
+                                </div>
                             </div>
-                            <div class="pt-4 border-t border-gray-700">
-                                <p class="text-sm font-semibold mb-2 text-gray-200">Weaponry</p>
-                                <button id="describe-weapons-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Describe Weapons</button>
-                                <button id="generate-weapon-list-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm mt-2">List Weapons</button>
-                            </div>
-                            <div class="pt-4 border-t border-gray-700">
-                                <p class="text-sm font-semibold mb-2 text-gray-200">Transportation</p>
-                                <button id="create-transport-ideas-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg text-sm">Get Vehicle Ideas</button>
-                            </div>
-                        </div>
-                    `;
-                } else if (sectionId === 'outline') {
-                    contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Chapter Beats</p><button id="generate-outline-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Outline</button></div>`;
-                } else if (sectionId.startsWith('chapter_')) {
-                    contextualButtonsHtml = `
-                        <div>
-                            <p class="text-sm font-semibold mb-2 text-gray-200">Drafting & Revising</p>
-                            <div class="grid grid-cols-2 gap-2">
-                                <button id="continue-writing-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Continue Writing</button>
-                                <button id="analyze-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Analyze Chapter</button>
-                            </div>
-                            <button id="proofread-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg mt-2">Proofread</button>
-                            <button id="expand-text-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg mt-2">Expand on Selection</button>
-                        </div>`;
-                } else if (sectionId === 'book_cover') {
-                    contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Image Prompts</p><button id="generate-image-prompts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Image Prompts</button></div>`;
+                        `;
+                    } else if (sectionId === 'outline') {
+                        contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Chapter Beats</p><button id="generate-outline-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Outline</button></div>`;
+                    } else if (sectionId.startsWith('chapter_')) {
+                        contextualButtonsHtml = `
+                            <div>
+                                <p class="text-sm font-semibold mb-2 text-gray-200">Drafting & Revising</p>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button id="continue-writing-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Continue Writing</button>
+                                    <button id="analyze-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Analyze Chapter</button>
+                                </div>
+                                <button id="proofread-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg mt-2">Proofread</button>
+                                <button id="expand-text-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg mt-2">Expand on Selection</button>
+                            </div>`;
+                    } else if (sectionId === 'book_cover') {
+                        contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Image Prompts</p><button id="generate-image-prompts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Image Prompts</button></div>`;
+                    }
+                } else if (project.bookType === 'Non-Fiction') {
+                     if (sectionId === 'brainstorming') {
+                        contextualButtonsHtml = `
+                            <div>
+                                <p class="text-sm font-semibold mb-2 text-gray-200">Generate Synopsis Ideas</p>
+                                <textarea id="ai-idea-input" class="w-full h-24 p-2 bg-gray-700 border border-gray-600 rounded-md text-sm" placeholder="e.g., A book about leadership..."></textarea>
+                                <button id="generate-synopsis-concepts-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate</button>
+                            </div>`;
+                    } else if (sectionId === 'book_titles') {
+                         contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Book Titles</p><button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button></div>`;
+                    } else if (sectionId === 'outline') {
+                        contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Chapter Outline</p><button id="generate-outline-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Outline</button></div>`;
+                    } else if (sectionId.startsWith('chapter_')) {
+                        contextualButtonsHtml = `
+                            <div>
+                                <p class="text-sm font-semibold mb-2 text-gray-200">Drafting & Revising</p>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button id="continue-writing-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Continue Writing</button>
+                                    <button id="analyze-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Analyze Chapter</button>
+                                </div>
+                                <button id="proofread-chapter-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg mt-2">Proofread</button>
+                                <button id="expand-text-btn" class="w-full accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg mt-2">Expand on Selection</button>
+                            </div>`;
+                    }
+                } else { // Low Content
+                     if (sectionId === 'book_titles') {
+                         contextualButtonsHtml = `<div><p class="text-sm font-semibold mb-2 text-gray-200">Generate Book Titles</p><button id="generate-titles-btn" class="w-full mt-2 accent-bg accent-bg-hover text-white font-semibold py-2 px-4 rounded-lg">Generate Titles</button></div>`;
+                    }
                 }
+                // *** FIX END ***
 
                 const aiPanelHtml = `
                     <h3 class="text-lg font-bold mb-4">AI Co-Author</h3>
